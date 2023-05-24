@@ -24,7 +24,7 @@ The following instructions are a work in progress...
 
 ## Python Virtual Environment Setup Guide
 
-This README provides instructions on how to set up a Python virtual environment (venv) on macOS and Windows.
+This section provides instructions on how to set up a Python virtual environment (venv) on macOS and Windows.
 
 ### macOS
 
@@ -43,15 +43,13 @@ This README provides instructions on how to set up a Python virtual environment 
 
 4. To create a virtual environment, use the following command:
     ```bash
-    python3 -m venv venv
+    python3 -m venv streetview
     ```
-    Replace `venv` with the name you wish to give to your virtual environment.
 
 5. To activate the virtual environment, type:
     ```bash
-    source venv/bin/activate
+    source streetview/bin/activate
     ```
-    Again, replace `venv` with the name of your virtual environment.
 
 Now, you're inside your Python virtual environment!
 
@@ -72,18 +70,16 @@ Now, you're inside your Python virtual environment!
 
 4. To create a virtual environment, use the following command:
     ```cmd
-    python -m venv venv
+    python -m venv streetview
     ```
-    Replace `venv` with the name you wish to give to your virtual environment.
 
 5. To activate the virtual environment, type:
     ```cmd
-    venv\Scripts\activate
+    streetview\Scripts\activate
     ```
-    Again, replace `venv` with the name of your virtual environment.
 
 Now, you're inside your Python virtual environment!
 
-Remember to always activate the virtual environment whenever you're working on your project. When you're done, you can leave the virtual environment with the `deactivate` command. 
+Remember to always activate the virtual environment whenever you're running this app. When you're done, you can leave the virtual environment with the `deactivate` command. 
 
 
