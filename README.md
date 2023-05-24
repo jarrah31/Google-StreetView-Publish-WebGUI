@@ -1,6 +1,6 @@
-# Google StreetView API Publish
+# Google StreetView Publish
 
-This project helps you publish and view Google StreetView photosphere photos onto Google Maps.
+This project helps you publish and view Google StreetView photosphere photos onto Google Maps using the StreetView API.
 
 Unlike the Google Maps app (RIP StreetView App), publishing photospheres without an associated listing is possible, and if you do choose a listing, it won't snap the blue dot to that location.
 
