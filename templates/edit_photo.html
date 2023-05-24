@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Photo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container_photos">
+        <h1>Edit Photo</h1>
+        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="photo-details">
+            <h2>Photo Details:</h2>
+            <a href="{{ photo.shareLink }}" target="_blank">
+                <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
+            </a>  
+            <!-- <p>Photo ID: {{ photo.photoId.id }}</p> -->
+            <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
+            <p>View Count: {{ photo.viewCount }}</p>
+            <p>Capture Time: {{ photo.captureTime }}</p>
+            <p>Upload Time: {{ photo.uploadTime }}</p>
+            <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST">
+                <div class="form-group">
+                    <label for="latitude">Latitude:*</label>
+                    <input type="text" id="latitude" name="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
+                </div>
+                <div class="form-group">
+                    <label for="longitude">Longitude:*</label>
+                    <input type="text" id="longitude" name="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
+                </div>
+                <div class="form-group">
+                    <label for="placeId">Place ID:</label>
+                    <div class="form-group-wrapper">
+                        <div class="input-wrapper">
+                            <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
+                            <button type="submit" class="search-button">&#128269;</button> <!-- magnifying glass icon -->
+                        </div>
+                        <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="heading">Heading:</label>
+                    <div class="form-group-wrapper">
+                        <input type="text" id="heading" name="heading" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
+                        <sub>Heading values between 0 and 360</sub>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="pitch">Pitch:</label>
+                    <div class="form-group-wrapper">
+                        <input type="text" id="pitch" name="pitch" value="{{ (photo.pose.pitch if 'pose' in photo and 'pitch' in photo.pose and photo.pose.pitch != 'NaN' else '') }}">
+                        <sub>Pitch values between -90 and 90</sub>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="Submit">
+                </div>
+            </form>
+            
+        </div>
+       
+    </div>
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="radius-input">
+                <label for="radius">Radius (up to 1000):</label>
+                <input type="number" id="radius" value="300" min="1" max="1000">
+                <button class="refresh-button">Refresh</button>
+            </div>
+            <!-- Scrollable container for places -->
+            <div class="places-container">
+                <p id="modal-text">Please wait...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get the modal
+        var modal = document.getElementById("myModal");
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            function fetchPlaces() {
+                // Show loading message
+                document.getElementById("modal-text").innerHTML = 'Please wait...';
+
+                let latitude = document.querySelector("#latitude").value;
+                let longitude = document.querySelector("#longitude").value;
+                let radius = document.querySelector("#radius").value;
+        
+                let xhr = new XMLHttpRequest();
+                xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
+        
+                xhr.onload = function() {
+                    // console.log(this.status);
+                    if (this.status == 200) {
+                        let places_info = JSON.parse(this.responseText);
+                        // console.log(places_info);
+        
+                        // Count the places
+                        let count = places_info.length;
+
+                        // Sort the places by distance
+                        places_info.sort(function(a, b) {
+                            return a.distance - b.distance;
+                        });
+        
+
+                        // Prepare the text to display in the modal
+                        let text = "";
+                        for (let i = 0; i < places_info.length; i++) {
+                            let place = places_info[i];
+                            // console.log("Icon:", place.icon);
+                            let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
+                            // create a clickable div for each place
+                            text += `<div class="place">
+                                        ${iconHTML}
+                                        <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
+                                        <span class="place-distance"><strong>Distance:</strong>${place.distance} miles</span>
+                                        <span class="place-id"><strong>Place ID:</strong>${place.place_id}</span>
+                                    </div>`;
+                        }
+
+                        // Set the modal text
+                        document.getElementById("modal-text").innerHTML = text;
+
+                        // // Set the count text
+                        // let countText = `Found ${count} places... Please select a place or close to cancel`;
+                        // document.querySelector(".radius-input").insertAdjacentHTML('afterend', `<p>${countText}</p>`);
+
+                        // Check if the paragraph for the number of places found already exists
+                        let countText = document.querySelector(".count-text");
+
+                        if (countText) {
+                            // If it exists, just update the text
+                            countText.textContent = `Found ${places_info.length} places (max is 60)... Please select a place, or close to cancel`;
+                        } else {
+                            // If it doesn't exist, create a new paragraph
+                            countText = document.createElement("p");
+                            countText.className = "count-text";
+                            countText.textContent = `Found ${places_info.length} places... Please select a place or close to cancel`;
+
+                            // Append the new paragraph just after the radius input and refresh button
+                            document.querySelector(".radius-input").appendChild(countText);
+                        }
+
+                        // Show the modal
+                        modal.style.display = "block";
+                    }
+                };
+                xhr.send();
+            }
+        
+            document.querySelector(".search-button").addEventListener('click', function(event) {
+                event.preventDefault(); // prevent the form from being submitted
+
+                // Show the modal
+                modal.style.display = "block";
+
+                // Then fetch the places
+                fetchPlaces();
+            });
+
+            document.querySelector(".refresh-button").addEventListener('click', function(event) {
+                event.preventDefault(); // prevent the form from being submitted
+                fetchPlaces();
+            });
+
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
+
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        });
+
+        // function to handle place selection
+        function selectPlace(event, element) {
+            event.preventDefault(); // prevent the link from being followed
+            let placeId = element.getAttribute('data-place-id'); // get place id from data attribute
+
+            // set PlaceId input box value to the selected place id
+            document.querySelector("#placeId").value = placeId;
+
+            // close the modal
+            modal.style.display = 'none';
+        }
+    </script>
+        
+                
+</body>
+</html>
