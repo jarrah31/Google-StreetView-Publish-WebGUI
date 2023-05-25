@@ -1,22 +1,18 @@
-from functools import wraps
+
 import time
 import requests
 import json
 import os
 import tempfile
-import re
-from datetime import datetime
 import google_auth_oauthlib.flow
 
+from datetime import datetime
+from functools import wraps
 from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session
-from google.streetview.publish_v1.proto import resources_pb2
-from google.streetview.publish_v1 import street_view_publish_service_client as client
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
-import xml.etree.ElementTree as ET
-
 from google.oauth2.credentials import Credentials
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
