@@ -57,9 +57,7 @@ Remember to periodically update Homebrew and the packages installed through it w
 
 To update the code with a new version, simply run "git pull" from within the Google-StreetView-Publish-WebGUI folder.
 
-### Python Virtual Environment Setup Guide
-
-This section provides instructions on how to set up a Python virtual environment (venv) in Linux/macOS.
+### Set Up Python Virtual Environment
 
 1. **Open your terminal**
 2. **Navigate to the project directory:** `cd ~/Google-StreetView-Publish-WebGUI`
