@@ -33,61 +33,43 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
 
 # Installation Instructions
-## Linux / macOS
+## macOS
+### Install Python and Git
+Before you start, you should have [Homebrew](https://brew.sh/) installed on your macOS. If it's not installed, open a terminal window and paste the following command:
+
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+
+1. **Open Terminal:** You can open a Terminal window from Applications > Utilities > Terminal.
+2. **Update Homebrew:** Before you install anything with Homebrew, you should always update it to get the latest packages. You can do this with the command: `brew update`
+3. **Install Python:** After updating Homebrew, you can install Python with the command: `brew install python`
+4. **Verify Installation:** To check that Python was installed correctly, you can use the command: `python3 --version`
+5. **Install Git:** You can install Git with the command: `brew install git`
+6. **Verify Installation:** To check that Git was installed correctly, you can use the command: `git --version`
+Remember to periodically update Homebrew and the packages installed through it with the command: `brew update && brew upgrade`
+
+
 ### Git clone the project to your local machine
 
-1. Open your terminal.
+1. **Open your Terminal**
+2. **Navigate to Your Project Directory**: Use the `cd` command to navigate to the directory where you want to create the virtual environment. The default location of your home folder will be fine.
+3. **Clone the repository:** `git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git`
+4. **Navigate to the project directory:** `cd Google-StreetView-Publish-WebGUI`
 
-2. Navigate to your home folder or directory where you wish to run the project from
-    ```bash
-    cd ~
-    ```
-
-3. Clone the repository
-    ```bash
-    git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git
-    cd Google-StreetView-Publish-WebGUI
-    ```
-
-To update the code with a new version, simple run "git pull" from within the Google-StreetView-Publish-WebGUI folder.
+To update the code with a new version, simply run "git pull" from within the Google-StreetView-Publish-WebGUI folder.
 
 ### Python Virtual Environment Setup Guide
 
 This section provides instructions on how to set up a Python virtual environment (venv) in Linux/macOS.
 
-1. Open your terminal.
-
-2. Navigate to the project directory:
-    ```bash
-    cd ~/Google-StreetView-Publish-WebGUI
-    ```
-
-3. Check your Python version by typing:
-    ```bash
-    python3 --version
-    ```
-    This command should return Python 3.5 or higher. If not, you'll need to install a more recent version of Python.
-
-4. To create a virtual environment, use the following command:
-    ```bash
-    python3 -m venv streetview
-    ```
-
-5. To activate the virtual environment, type:
-    ```bash
-    source streetview/bin/activate
-    ```
-
-Now, you're inside your Python virtual environment!
+1. **Open your terminal**
+2. **Navigate to the project directory:** `cd ~/Google-StreetView-Publish-WebGUI`
+3. **Check your Python version:** `python3 --version`
+   This command should return Python 3.5 or higher. If not, you'll need to install a more recent version of Python.
+4. **Create a virtual environment:** `python3 -m venv streetview`
+5. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `source streetview/bin/activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
+6. **Install Required Python Libraries:** `pip install requests google-auth-oauthlib Flask google-auth`
 
 Remember to always activate the virtual environment whenever you're running this app. When you're done, you can leave the virtual environment with the `deactivate` command. 
-
-### Installing Required Libraries
-
-After setting up and activating your virtual environment, you need to install the required libraries within venv to run the project. 
-```bash
-pip install requests google-auth-oauthlib Flask google-auth
-```
 
 ## Windows
 
@@ -234,7 +216,7 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
     }
     ```
 
-** Caution on Windows **
+**Caution on Windows**
 If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
 To check, find the option to show filename extensions, and correct if necessary.
  
@@ -247,6 +229,7 @@ To check, find the option to show filename extensions, and correct if necessary.
     ```bash
     source streetview/bin/activate
     ```
+    Windows: `.\streetview\Scripts\activate`
 3. Start the app
     ```bash
     python app.py
