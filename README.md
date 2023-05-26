@@ -1,4 +1,4 @@
-# Google StreetView Publish
+# Google StreetView Publish WebGUI
 
 This project helps you publish and view Google StreetView photosphere/360 photos onto Google Maps using the StreetView API.
 
