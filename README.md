@@ -44,7 +44,7 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 3. Clone the repository
     ```bash
-    git clone https://github.com/jarrah31/Google-StreetView-Publish.git
+    git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git
     cd Google-StreetView-Publish
     ```
 
