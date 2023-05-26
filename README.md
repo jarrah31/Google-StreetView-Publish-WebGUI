@@ -179,8 +179,11 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 (for Windows, activate venv as described in the Windows instructions, and use notepad to edit the json files) 
 1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
 2. **Create a new file called "client_secrets.json":** (same place where app.py is located)
-   **macOS:** `nano client_secrets.json`
-   **Windows:** Create a new text file using notepad.
+   
+   macOS: `nano client_secrets.json`
+  
+   Windows: Create a new text file using notepad.
+   
    **Caution on Windows**
    If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
    To check, find the option to show filename extensions, and correct if necessary.
@@ -213,8 +216,11 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 # Running the StreetView Web App
 1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
 2. **Start venv**:
-   **macOS:** `source streetview/bin/activate`
-   **Windows:** `.\streetview\Scripts\activate`
+
+   macOS: `source streetview/bin/activate`
+   
+   Windows: `.\streetview\Scripts\activate`
+   
 3. **Start the app**: `python app.py`
 4. This should start the Flask web server and will look like this:
     ```
