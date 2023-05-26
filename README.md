@@ -21,8 +21,18 @@ You will need to:
 
 You can set up your Google Developer environment with a different Google account to what you use for publishing photospheres. 
 
+I wrote this whole project using ChatGPT's assistance! 
 
-The following instructions are a work in progress...
+## Screenshots
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a55a3d65-23ef-4222-93cf-18d190f7077c)
+
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/b3120e30-0c8d-4ec3-b75d-2cc3912beb07)
+
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/bef2d8bc-9042-4fad-aa73-85f5aafe01fc)
+
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/81b68220-6a4c-4cce-86e7-d5b0262a74c8)
+
+
 
 ## Git clone the project to your local machine
 
