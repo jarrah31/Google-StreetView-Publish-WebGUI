@@ -32,8 +32,9 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
 
-
-## Git clone the project to your local machine
+# Installation Instructions
+## Linux / macOS
+### Git clone the project to your local machine
 
 1. Open your terminal.
 
@@ -50,7 +51,7 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 To update the code with a new version, simple run "git pull" from within the Google-StreetView-Publish folder.
 
-## Python Virtual Environment Setup Guide
+### Python Virtual Environment Setup Guide
 
 This section provides instructions on how to set up a Python virtual environment (venv) in Linux/macOS.
 
@@ -81,14 +82,61 @@ Now, you're inside your Python virtual environment!
 
 Remember to always activate the virtual environment whenever you're running this app. When you're done, you can leave the virtual environment with the `deactivate` command. 
 
-## Installing Required Libraries
+### Installing Required Libraries
 
 After setting up and activating your virtual environment, you need to install the required libraries within venv to run the project. 
 ```bash
 pip install requests google-auth-oauthlib Flask google-auth
 ```
 
-## Setting Up a Google Cloud Developer Project
+## Windows
+
+### Install Python
+
+1. **Download Python Installer**: Go to the official Python website [here](https://www.python.org/downloads/windows/). Click on the link for the latest Python version.
+
+2. **Run Installer**: Once the installer is downloaded, run it.
+
+3. **Choose Install Options**: On the first page of the installer, check the box that says `Add Python.exe to PATH`, then click on `Install Now`.
+
+4. **Wait for Installation to Complete**: The installer will display a progress bar. Once it's finished, click `Close`.
+
+5. **Verify Installation**: Open a new command prompt (press `Win + R`, type `cmd`, then press `Enter`). In the command prompt, type `python --version`. If Python is installed correctly, this command should print the Python version number.
+
+### Install Git
+
+1. **Download Git Installer**: Go to the official Git website [here](https://git-scm.com/download/win) and select `Click here to download`.
+
+2. **Run Installer**: Once the installer is downloaded, run it.
+
+3. **Choose Install Options**: You can leave the defaults checked for most of the installation, except for `Choosing the default editor for git`. Instead, select your preferred editor from the drop-down list.
+
+4. **Wait for Installation to Complete**: The installer will display a progress bar. Once it's finished, click `Finish`.
+
+5. **Verify Installation**: From the Start menu, select `Git` -> `Git Cmd`. In the command prompt, type `git --version`. If Git is installed correctly, this command should print the Git version number.
+
+### Git Clone the Project and Set Up a Python Virtual Environment (venv)
+
+1. **Open Git Cmd**: From the Start menu, select `Git` -> `Git Cmd`.
+
+2. **Navigate to Your Project Directory**: Use the `cd` command to navigate to the directory where you want to create the virtual environment. The default location of your home folder will be fine.
+
+3. **Git Clone the Project**: Run this command: `git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git`
+
+4. **Navigate to the Git Repository folder**: `cd cd Google-StreetView-Publish-WebGUI`
+
+5. **Create Virtual Environment**: Type `python -m venv streetview`. This creates a new virtual environment in a directory called `streetview`.
+
+4. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `.\streetview\Scripts\activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
+
+5. **Install Packages**: You can now install Python packages that will only be available in this virtual environment. 
+   `pip install requests google-auth-oauthlib Flask google-auth`
+
+6. **Deactivate Virtual Environment**: When you're done working in the virtual environment, you can deactivate it by typing `deactivate` in the command prompt. This returns you to your regular system Python environment.
+
+
+
+# Setting Up a Google Cloud Developer Project
 
 1. Visit the [Google Cloud Console](https://console.cloud.google.com).
 
@@ -98,7 +146,7 @@ pip install requests google-auth-oauthlib Flask google-auth
 
 4. After the project is created, click "SELECT PROJECT".
 
-### Enabling APIs and Setting Up API Key
+## Enabling APIs and Setting Up API Key
 
 1. In your project dashboard, hover over "APIs and Services" in the left-hand menu bar and click on "Enabled APIs and Services". If you can't see the menu bar, press the hamburger icon top-left (three horizontal lines) which is named the Navigation Menu.
 
@@ -115,7 +163,7 @@ pip install requests google-auth-oauthlib Flask google-auth
 7. Untick the "Enable all Google Maps APIs for this project", and leave the "Create budget alerts" option enabled. Next click "Go to Google Maps Platform"
 
 
-### Setting Up OAuth 2.0 Client IDs
+## Setting Up OAuth 2.0 Client IDs
 
 1. Navigate to the Credentials page by clicking the Navigation (hamburger) menu -> APIs and Services -> Enabled APIs and Services -> Crendentials
 
@@ -146,9 +194,10 @@ pip install requests google-auth-oauthlib Flask google-auth
 
 Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 Client IDs, and you have a billing account for API usage.
 
-## Setting Up client_secrets.json and config.json
+# Setting Up client_secrets.json and config.json
 
-1. Within the terminal, navigate to project directory
+(for Windows, activate venv as described in the Windows instructions, and use notepad to edit the json files) 
+1. Within the terminal, navigate to project directory 
     ```bash
     cd ~/Google-StreetView-Publish
     ```
@@ -184,7 +233,7 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
         "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS"
     }
     ```
-## Running the StreetView Web App
+# Running the StreetView Web App
 1. Within the terminal, navigate to project directory
     ```bash
     cd ~/Google-StreetView-Publish
