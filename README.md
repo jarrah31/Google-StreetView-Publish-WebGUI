@@ -8,16 +8,16 @@ Features include:
 - Local web server presenting a web GUI to interact with the API
 - Publish photosphere photos to Google Maps
 - Verify if a photo contains valid XMP photosphere metadata
-- Optionally add Listings to a 360 photo whilst maintaining blue dot GPS position
+- Optionally add a Listing/PlaceID to a 360 photo whilst maintaining blue dot GPS position
 - View all your photospheres, showing their viewcount, publish and capture dates, and place names
 - Edit existing 360 photos by changing their location and placeID
 - Delete your 360 photos
 
-You will need to:
+You will need to (full insructions below):
 - Run this Python script within a venv environment on your local machine
 - Create a Google Cloud Developer Project
 - Create an API Key and OAuth 2.0 Client ID
-- Add your credit card for API billing. (I don't think you will be changed because interacting with your own photos doesn't cost anything, and Google lets you spend up to $200 for free a month anyway. Don't hold me to this though!)
+- Add a credit card within your Google Cloud Developer project for API billing. (I don't think you will be changed because interacting with your own photos doesn't cost anything, and Google lets you spend up to $200 for free a month anyway. Don't hold me to this though!)
 
 You can set up your Google Developer environment with a different Google account to what you use for publishing photospheres. 
 
@@ -26,12 +26,11 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 ## Screenshots
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a55a3d65-23ef-4222-93cf-18d190f7077c)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/b3120e30-0c8d-4ec3-b75d-2cc3912beb07)
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a9214aba-229e-4087-a923-60741a624416)
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/bef2d8bc-9042-4fad-aa73-85f5aafe01fc)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/81b68220-6a4c-4cce-86e7-d5b0262a74c8)
-
+![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
 
 
 ## Git clone the project to your local machine
@@ -48,6 +47,8 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
     git clone https://github.com/jarrah31/Google-StreetView-Publish.git
     cd Google-StreetView-Publish
     ```
+
+To update the code with a new version, simple run "git pull" from within the Google-StreetView-Publish folder.
 
 ## Python Virtual Environment Setup Guide
 
