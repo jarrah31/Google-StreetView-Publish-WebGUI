@@ -107,12 +107,12 @@ Remember to always activate the virtual environment whenever you're running this
 
 5. **Create Virtual Environment**: Type `python -m venv streetview`. This creates a new virtual environment in a directory called `streetview`.
 
-4. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `.\streetview\Scripts\activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
+6. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `.\streetview\Scripts\activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
 
-5. **Install Packages**: You can now install Python packages that will only be available in this virtual environment. 
+7. **Install Packages**: You can now install Python packages that will only be available in this virtual environment. 
    `pip install requests google-auth-oauthlib Flask google-auth`
 
-6. **Deactivate Virtual Environment**: When you're done working in the virtual environment, you can deactivate it by typing `deactivate` in the command prompt. This returns you to your regular system Python environment.
+8. **Deactivate Virtual Environment**: When you're done working in the virtual environment, you can deactivate it by typing `deactivate` in the command prompt. This returns you to your regular system Python environment.
 
 
 
@@ -165,11 +165,11 @@ Remember to always activate the virtual environment whenever you're running this
 
 8. Select "Web application" as the Application type and give it a name such as "StreetViewOAuth"
 
-10. Within "Authorized redirect URIs" click "+ADD URI" and paste in "http://127.0.0.1:5000/oauth2callback" (without the quotes)
+9. Within "Authorized redirect URIs" click "+ADD URI" and paste in "http://127.0.0.1:5000/oauth2callback" (without the quotes)
 
-11. Click "Create"
+10. Click "Create"
 
-9. Your client ID and client secret will be created and shown to you. Note these down as you will need them for the project. Once done, press Ok.
+11. Your client ID and client secret will be created and shown to you. Note these down as you will need them for the project. Once done, press Ok.
 
 
 Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 Client IDs, and you have a billing account for API usage.
@@ -177,19 +177,15 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 # Setting Up client_secrets.json and config.json
 
 (for Windows, activate venv as described in the Windows instructions, and use notepad to edit the json files) 
-1. Within the terminal, navigate to project directory 
-    ```bash
-    cd ~/Google-StreetView-Publish-WebGUI
-    ```
-2. Start venv if not done so already
-    ```bash
-    source streetview/bin/activate
-    ```
-3. Create a new file called "client_secrets.json" within the root of project direcotry (same place where app.py is located)
-    ```bash
-    nano client_secrets.json
-    ```
-4. Paste in the json below and replace the following text within the quotes (keeping the quotes)
+1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
+2. **Create a new file called "client_secrets.json":** (same place where app.py is located)
+   **macOS:** `nano client_secrets.json`
+   **Windows:** Create a new text file using notepad.
+   **Caution on Windows**
+   If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
+   To check, find the option to show filename extensions, and correct if necessary.
+    
+3. Paste in the json below and replace the following text within the quotes (keeping the quotes)
     ```
     YOUR_OAUTH_CLIENT ID
     YOUR_OAUTH_CLIENT_SECRET
@@ -207,31 +203,19 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
         }
     }
     ```
-5. Create a new file called "config.json" and paste in the following
+4. **Create a new file called "config.json"** and paste in the following:
     ```bash
     {
         "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS"
     }
     ```
-
-**Caution on Windows**
-If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
-To check, find the option to show filename extensions, and correct if necessary.
  
 # Running the StreetView Web App
-1. Within the terminal, navigate to project directory
-    ```bash
-    cd ~/Google-StreetView-Publish-WebGUI
-    ```
-2. Start venv if not done so already
-    ```bash
-    source streetview/bin/activate
-    ```
-    Windows: `.\streetview\Scripts\activate`
-3. Start the app
-    ```bash
-    python app.py
-    ```
+1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
+2. **Start venv**:
+   **macOS:** `source streetview/bin/activate`
+   **Windows:** `.\streetview\Scripts\activate`
+3. **Start the app**: `python app.py`
 4. This should start the Flask web server and will look like this:
     ```
      * Serving Flask app 'app'
@@ -243,7 +227,7 @@ To check, find the option to show filename extensions, and correct if necessary.
      * Debugger is active!
      * Debugger PIN: 200-769-643
     ```
-5. In your browser, navigate to: http://127.0.0.1:5000. You should see tow icons!
+5. In your browser, navigate to: `http://127.0.0.1:5000`. You should see now see the icons!
  
 6. Click "View Photos". You will be redirected to "Sign in with Google"
 
