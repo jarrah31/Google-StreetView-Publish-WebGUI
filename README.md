@@ -123,7 +123,7 @@ pip install requests google-auth-oauthlib Flask google-auth
 
 3. **Git Clone the Project**: Run this command: `git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git`
 
-4. **Navigate to the Git Repository folder**: `cd cd Google-StreetView-Publish-WebGUI`
+4. **Navigate to the Git Repository folder**: `cd Google-StreetView-Publish-WebGUI`
 
 5. **Create Virtual Environment**: Type `python -m venv streetview`. This creates a new virtual environment in a directory called `streetview`.
 
@@ -233,6 +233,11 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
         "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS"
     }
     ```
+
+** Caution on Windows **
+If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
+To check, find the option to show filename extensions, and correct if necessary.
+ 
 # Running the StreetView Web App
 1. Within the terminal, navigate to project directory
     ```bash
