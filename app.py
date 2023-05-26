@@ -130,7 +130,7 @@ def oauth2callback():
     credentials = flow.credentials
     save_credentials(credentials)
 
-    flash("Account successfully authenticated test.")
+    flash("Account successfully authenticated.")
     return redirect(url_for('index'))
 
 
@@ -512,8 +512,8 @@ def create_photo(token, upload_ref, latitude, longitude, heading, placeId):
 
     response = requests.post(url, headers=headers, json=body)
 
-    print(f"Response status code: {response.status_code}")
-    print(f"Response text: {response.text}")
+    # print(f"Response status code: {response.status_code}")
+    # print(f"Response text: {response.text}")
 
     if response.status_code == 200:
         return response.json()
@@ -562,7 +562,7 @@ def get_nearby_places(latitude, longitude, radius, api_key):
         data = response.json()
 
         # debug - print the number of results
-        print("Number of results: ", len(data["results"]))
+        # print("Number of results: ", len(data["results"]))
 
         for place in data["results"]:
             place_id = place["place_id"]
