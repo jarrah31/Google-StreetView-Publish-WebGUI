@@ -46,10 +46,10 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 3. Clone the repository
     ```bash
     git clone https://github.com/jarrah31/Google-StreetView-Publish-WebGUI.git
-    cd Google-StreetView-Publish
+    cd Google-StreetView-Publish-WebGUI
     ```
 
-To update the code with a new version, simple run "git pull" from within the Google-StreetView-Publish folder.
+To update the code with a new version, simple run "git pull" from within the Google-StreetView-Publish-WebGUI folder.
 
 ### Python Virtual Environment Setup Guide
 
@@ -59,7 +59,7 @@ This section provides instructions on how to set up a Python virtual environment
 
 2. Navigate to the project directory:
     ```bash
-    cd ~/Google-StreetView-Publish
+    cd ~/Google-StreetView-Publish-WebGUI
     ```
 
 3. Check your Python version by typing:
@@ -199,7 +199,7 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 (for Windows, activate venv as described in the Windows instructions, and use notepad to edit the json files) 
 1. Within the terminal, navigate to project directory 
     ```bash
-    cd ~/Google-StreetView-Publish
+    cd ~/Google-StreetView-Publish-WebGUI
     ```
 2. Start venv if not done so already
     ```bash
@@ -236,7 +236,7 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 # Running the StreetView Web App
 1. Within the terminal, navigate to project directory
     ```bash
-    cd ~/Google-StreetView-Publish
+    cd ~/Google-StreetView-Publish-WebGUI
     ```
 2. Start venv if not done so already
     ```bash
