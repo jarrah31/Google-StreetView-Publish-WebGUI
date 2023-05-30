@@ -28,7 +28,7 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a9214aba-229e-4087-a923-60741a624416)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/bef2d8bc-9042-4fad-aa73-85f5aafe01fc)
+![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ac72b7a7-b9e6-42bc-a867-e22b0652e650)
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
 
