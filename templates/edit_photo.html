@@ -48,7 +48,7 @@
                         <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                     </div>
                 </div>
-                <div class="form-group">
+                <!-- <div class="form-group">
                     <label for="heading">Heading:</label>
                     <div class="form-group-wrapper">
                         <input type="text" id="heading" name="heading" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
@@ -61,7 +61,7 @@
                         <input type="text" id="pitch" name="pitch" value="{{ (photo.pose.pitch if 'pose' in photo and 'pitch' in photo.pose and photo.pose.pitch != 'NaN' else '') }}">
                         <sub>Pitch values between -90 and 90</sub>
                     </div>
-                </div>
+                </div> -->
                 <div class="form-group">
                     <input type="submit" value="Submit">
                 </div>
