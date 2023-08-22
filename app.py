@@ -15,6 +15,9 @@ from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
 
+# Find the placedID by using this page:
+# https://developers.google.com/maps/documentation/places/web-service/place-id
+
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 uploads_dir = "uploads"
@@ -48,30 +51,54 @@ import os
 import json
 from google.oauth2.credentials import Credentials
 
+# def get_credentials():
+#     creds_file = 'creds.data'
+#     if not os.path.exists(creds_file):
+#         with open(creds_file, 'w') as f:
+#             # Write a default (invalid) credential data
+#             json.dump({
+#                 'token': None,
+#                 'refresh_token': None,
+#                 'token_uri': 'https://accounts.google.com/o/oauth2/token',
+#                 'client_id': None,
+#                 'client_secret': None,
+#                 'scopes': ['https://www.googleapis.com/auth/streetviewpublish']
+#             }, f)
+
+#     credentials = Credentials.from_authorized_user_file(
+#         creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
+
+#     if credentials is None or not credentials.valid:
+#         if credentials and credentials.expired and credentials.refresh_token:
+#             credentials.refresh(Request())
+#         else:
+#             return None
+
+#     return credentials
+
 def get_credentials():
     creds_file = 'creds.data'
-    if not os.path.exists(creds_file):
-        with open(creds_file, 'w') as f:
-            # Write a default (invalid) credential data
-            json.dump({
-                'token': None,
-                'refresh_token': None,
-                'token_uri': 'https://accounts.google.com/o/oauth2/token',
-                'client_id': None,
-                'client_secret': None,
-                'scopes': ['https://www.googleapis.com/auth/streetviewpublish']
-            }, f)
+    if os.path.exists(creds_file):
+        credentials = Credentials.from_authorized_user_file(
+            creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
+        if credentials is None or not credentials.valid:
+            if credentials and credentials.expired and credentials.refresh_token:
+                try:
+                    credentials.refresh(Request())
+                except google.auth.exceptions.RefreshError:
+                    # Refresh failed - delete the credential file and return None
+                    os.remove(creds_file)
+                    return None
+                save_credentials(credentials)
+            else:
+                # Not expired, but not valid - delete the credential file and return None
+                os.remove(creds_file)
+                return None
+        return credentials
+    else:
+        # No credential file exists
+        return None
 
-    credentials = Credentials.from_authorized_user_file(
-        creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
-
-    if credentials is None or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-        else:
-            return None
-
-    return credentials
 
 def save_credentials(credentials):
     with open('creds.data', 'w') as f:
