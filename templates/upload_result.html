@@ -9,7 +9,7 @@
   <body>
     <div class="container">
       <h1>Upload Result</h1>
-      <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back</a>
+      <a href="{{ url_for('index') }}" class="back-link">Back</a>
       <!-- <p>{{ upload_ref_message }}</p>
       <p>{{ upload_status_message }}</p>
       <p>{{ create_photo_response_message }}</p>
@@ -26,6 +26,7 @@
       {% if create_photo_response.get('thumbnailUrl') %}
         <img src="{{ create_photo_response.get('thumbnailUrl') }}" alt="Thumbnail">
       {% endif %}
+      <br>
       <ul>
         <li><a href="{{ url_for('list_photos_page') }}" class="icon-link">
             <img src="{{ url_for('static', filename='icons8-panorama-96-favicon.png') }}" alt="List your photos" />

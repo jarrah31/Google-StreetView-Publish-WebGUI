@@ -31,8 +31,10 @@
         <p id="CroppedAreaImageWidthPixels-label"><span class="metadata-label">CroppedAreaImageWidthPixels:</span> <span id="CroppedAreaImageWidthPixels-display"></span></p>
         <p id="FullPanoHeightPixels-label"><span class="metadata-label">FullPanoHeightPixels:</span> <span id="FullPanoHeightPixels-display"></span></p>
         <p id="FullPanoWidthPixels-label"><span class="metadata-label">FullPanoWidthPixels:</span> <span id="FullPanoWidthPixels-display"></span></p>
-        <p id="PlaceID-label"><span class="metadata-label">Place ID (optional):</span> <span id="placeID-display"></span> <button type="submit" class="search-button">&#128269;</button></p>
-        <input type="hidden" id="placeID-input" name="placeId">
+        <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional):</span> <span id="placeID-display"></span> <button type="submit" class="search-button">&#128269;</button></p> -->
+        <p id="PlaceID-label"><span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span> <div class="input-wrapper"><input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}"> <button type="submit" class="search-button">&#128269;</button></div></p>
+
+        <!-- <input type="hidden" id="placeID-input" name="placeId"> -->
         <input type="submit" value="Upload" id="upload-button" disabled>
         <div id="message"></div>
 
@@ -289,10 +291,12 @@
           event.preventDefault(); // prevent the link from being followed
           let placeId = element.getAttribute('data-place-id'); // get place id from data attribute
 
-          // set PlaceId input box value to the selected place id
-          document.querySelector("#placeID-input").value = placeId;
-          document.querySelector("#placeID-display").textContent = placeId;
+        //   // set PlaceId input box value to the selected place id
+        //   document.querySelector("#placeID-input").value = placeId;
+        //   document.querySelector("#placeID-display").textContent = placeId;
 
+          // set PlaceId input box value to the selected place id
+          document.querySelector("#placeId").value = placeId;
 
           // close the modal
           modal.style.display = 'none';
