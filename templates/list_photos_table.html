@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List your photos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="overlay">
+        <div id="waitMessage">
+            <div class="loader"></div>
+            <p>Please wait...</p>
+        </div>
+    </div>
+    <div class="container_photos">
+        <h1>View Your Photos</h1>
+        <a href="{{ url_for('index') }}" class="back-link">Back</a>
+        
+        <!-- Display the number of available photos -->
+        <p>Total Photos: {{ photos_list|length }}</p>
+
+
+        <!-- Display photos in a table -->
+        <div class="main-container">
+            <table id="photoTable" class="photo-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0, false)">Place</th>
+                        <th onclick="sortTable(1, false)">Published Status</th>
+                        <th onclick="sortTable(2, true)">View Count</th>
+                        <th onclick="sortTable(3, false)">Capture Time</th>
+                        <th onclick="sortTable(4, false)">Upload Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for photo in photos_list %}
+                        <tr data-share-link="{{ photo.shareLink }}">
+                            <td data-column="place">
+                                {% if 'places' in photo %}
+                                    {% for place in photo.places %}
+                                        {{ place.name }}
+                                    {% endfor %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td data-column="publishedStatus">{{ photo.mapsPublishStatus }}</td>
+                            <td data-column="viewCount">{{ photo.viewCount }}</td>
+                            <td data-column="captureTime">{{ photo.captureTime }}</td>
+                            <td data-column="uploadTime">{{ photo.uploadTime }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <script>
+        // Function to open the share link in a new tab when a row is clicked
+        function openShareLink(event) {
+            // Get the clicked element
+            const clickedElement = event.target;
+
+            // Check if the clicked element is a table header
+            if (clickedElement.tagName === 'TH') {
+                // Do nothing if it's a table header
+                return;
+            }
+
+            // Check if the click event occurred on a row
+            if (clickedElement.parentElement.tagName === 'TR') {
+                // Get the share link from the data-share-link attribute
+                const shareLink = clickedElement.parentElement.getAttribute('data-share-link');
+
+                // Open the share link in a new tab
+                window.open(shareLink, '_blank');
+            }
+        }
+
+        // Attach the click event handler to the table rows
+        document.getElementById('photoTable').addEventListener('click', openShareLink);
+
+
+        // Function to show the "Please Wait" message
+        function showPleaseWait() {
+            document.getElementById("overlay").style.display = "block";
+        }
+
+        // Function to hide the "Please Wait" message
+        function hidePleaseWait() {
+            document.getElementById("overlay").style.display = "none";
+        }
+        function sortTable(n, isNumeric) {
+            showPleaseWait(); // Show the "Please Wait" message before sorting
+
+            setTimeout(function() {
+                var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+                table = document.getElementById("photoTable");
+                switching = true;
+                dir = "asc"; // Set the sorting direction to ascending by default
+
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
+
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("TD")[n];
+                        y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                        if (isNumeric) {
+                            // Convert the inner HTML content to numeric values for comparison
+                            x = parseFloat(x.innerHTML.replace(/,/g, ""));
+                            y = parseFloat(y.innerHTML.replace(/,/g, ""));
+                        } else {
+                            // For non-numeric columns, including date columns
+                            x = x.innerHTML.toLowerCase();
+                            y = y.innerHTML.toLowerCase();
+                        }
+
+                        if (n === 3 || n === 4) {
+                            // Check if the column is "Capture Time" or "Upload Time"
+                            x = new Date(x);
+                            y = new Date(y);
+                        }
+
+                        if (dir === "asc") {
+                            if (x > y) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir === "desc") {
+                            if (x < y) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                        switchcount++;
+                    } else {
+                        if (switchcount === 0 && dir === "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
+                }
+
+                hidePleaseWait(); // Hide the "Please Wait" message after sorting
+            }, 0); // Using setTimeout to allow the "Please Wait" message to render
+
+        }
+
+    </script>
+</body>
+</html>
