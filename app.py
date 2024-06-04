@@ -51,60 +51,31 @@ import os
 import json
 from google.oauth2.credentials import Credentials
 
-# def get_credentials():
-#     creds_file = 'creds.data'
-#     if not os.path.exists(creds_file):
-#         with open(creds_file, 'w') as f:
-#             # Write a default (invalid) credential data
-#             json.dump({
-#                 'token': None,
-#                 'refresh_token': None,
-#                 'token_uri': 'https://accounts.google.com/o/oauth2/token',
-#                 'client_id': None,
-#                 'client_secret': None,
-#                 'scopes': ['https://www.googleapis.com/auth/streetviewpublish']
-#             }, f)
-
-#     credentials = Credentials.from_authorized_user_file(
-#         creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
-
-#     if credentials is None or not credentials.valid:
-#         if credentials and credentials.expired and credentials.refresh_token:
-#             credentials.refresh(Request())
-#         else:
-#             return None
-
-#     return credentials
+def refresh_credentials(credentials):
+    try:
+        credentials.refresh(Request())
+    except google.auth.exceptions.RefreshError:
+        os.remove('creds.data')
+        return None
+    save_credentials(credentials)
+    return credentials
 
 def get_credentials():
     creds_file = 'creds.data'
     if os.path.exists(creds_file):
-        credentials = Credentials.from_authorized_user_file(
-            creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
+        credentials = Credentials.from_authorized_user_file(creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
         if credentials is None or not credentials.valid:
             if credentials and credentials.expired and credentials.refresh_token:
-                try:
-                    credentials.refresh(Request())
-                except google.auth.exceptions.RefreshError:
-                    # Refresh failed - delete the credential file and return None
-                    os.remove(creds_file)
-                    return None
-                save_credentials(credentials)
-            else:
-                # Not expired, but not valid - delete the credential file and return None
-                os.remove(creds_file)
-                return None
+                return refresh_credentials(credentials)
+            os.remove(creds_file)
+            return None
         return credentials
-    else:
-        # No credential file exists
-        return None
+    return None
 
 
 def save_credentials(credentials):
     with open('creds.data', 'w') as f:
         f.write(credentials.to_json())
-
-
 
 def token_required(f):
     @wraps(f)
@@ -118,7 +89,6 @@ def token_required(f):
                 return redirect(url_for('authorize'))
         return f(*args, **kwargs)
     return decorated_function
-
 
 @app.route('/')
 def index():
@@ -160,15 +130,18 @@ def oauth2callback():
     flash("Account successfully authenticated.")
     return redirect(url_for('index'))
 
-
 @app.route('/list_photos', methods=['GET'])
 @token_required
 def list_photos_page():
-    page_size = request.args.get('page_size', None)
-    if page_size is not None:
-        session['page_size'] = page_size  # Store as string
-    else:
-        page_size = session.get('page_size', 10) # Retrieve as string, with default value of "10"
+
+    # page_size = request.args.get('page_size', None)
+    # if page_size is not None:
+    #     session['page_size'] = page_size  # Store as string
+    # else:
+    #     page_size = session.get('page_size', 10) # Retrieve as string, with default value of "10"
+
+    page_size = request.args.get('page_size', session.get('page_size', '10'))
+    session['page_size'] = page_size
 
     action = request.args.get('action', None)
     page_token = request.args.get('page_token', None)
@@ -197,10 +170,51 @@ def list_photos_page():
         photo['captureTime'] = format_capture_time(photo['captureTime'])
         photo['uploadTime'] = format_capture_time(photo['uploadTime'])
         photo['filename'] = photoId_to_filename.get(photo['photoId']['id'])
+        # Retrieve heading if available
+        if 'pose' in photo and 'heading' in photo['pose']:
+            heading_value = photo['pose']['heading']
+            if isinstance(heading_value, str) and heading_value.lower() == 'nan':
+                photo['heading'] = None
+            else:
+                try:
+                    photo['heading'] = float(heading_value)
+                except ValueError:
+                    photo['heading'] = None
+        else:
+            photo['heading'] = None
+
 
     next_page_token = response.get('nextPageToken')
 
     return render_template('list_photos.html', photos_list=photos_list, page_size=page_size, next_page_token=next_page_token)
+
+@app.route('/list_photos_table', methods=['GET'])
+@token_required
+def list_photos_table_page():
+    page_size = request.args.get('page_size', 100)  # Default to 100 items per page
+    credentials = get_credentials()
+    
+    photos_list = []
+    page_token = None
+    
+    while True:
+        response = list_photos(credentials.token, page_size=int(page_size), page_token=page_token)
+        photos_list.extend(response.get("photos", []))
+        
+        # Check if there's a next page
+        if 'nextPageToken' in response:
+            page_token = response['nextPageToken']
+        else:
+            break
+
+    photoId_to_filename = get_filenames('uploads')
+
+    for photo in photos_list:
+        photo['captureTime'] = format_capture_time(photo['captureTime'])
+        photo['uploadTime'] = format_capture_time(photo['uploadTime'])
+        photo['filename'] = photoId_to_filename.get(photo['photoId']['id'])
+
+    return render_template('list_photos_table.html', photos_list=photos_list, page_size=page_size)
 
 
 @app.route('/edit_photo/<photo_id>', methods=['GET'])
@@ -214,7 +228,7 @@ def edit_photo(photo_id):
     page_token = session.get('page_token', None)
     page_size = session.get('page_size', None)
 
-    # print(f"Response: {response}")
+    # Display json result in console
     # pretty-print the JSON response using the pprint function from the pprint module in Python.
     print("Photo details:")
     pprint(response)
@@ -224,94 +238,58 @@ def edit_photo(photo_id):
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_photo.html' template with the photo details.
-    return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size)
+    return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size, api_key=api_key)
 
 
 @app.route('/update_photo/<photo_id>', methods=['POST'])
 @token_required
 def update_photo(photo_id):
-    # Retrieve the photo details from the form.
+    def parse_float(value):
+        try:
+            return round(float(value), 7) if value not in [None, ''] else None
+        except ValueError:
+            return None
+
     photo = {
         "pose": {
             "latLngPair": {
-                "latitude": request.form.get('latitude'),
-                "longitude": request.form.get('longitude')
+                "latitude": parse_float(request.form.get('latitude')),
+                "longitude": parse_float(request.form.get('longitude'))
             },
-            "heading": int(float(request.form.get('heading'))) if request.form.get('heading') not in ['', None] else None,
-            "pitch": int(float(request.form.get('pitch'))) if request.form.get('pitch') not in ['', None] else None,
-            "roll": int(float(request.form.get('roll'))) if request.form.get('roll') not in ['', None] else None,
-            "altitude": int(float(request.form.get('altitude'))) if request.form.get('altitude') not in ['', None] else None
+            "heading": parse_float(request.form.get('heading'))
+            # "pitch": parse_float(request.form.get('pitch')),
+            # "roll": parse_float(request.form.get('roll')),
+            # "altitude": parse_float(request.form.get('altitude'))
         }
     }
 
-    page_token = session.get('page_token', None)
-    page_size = session.get('page_size', None)
+    if not (0 <= photo["pose"]["heading"] < 360 if photo["pose"]["heading"] is not None else True):
+        flash("Heading must be between 0 and 360", "error")
+        return redirect(url_for('edit_photo', photo_id=photo_id))
 
-    # If placeId is not empty, add it to the photo dictionary
+    # if not (-90 <= photo["pose"]["pitch"] <= 90 if photo["pose"]["pitch"] is not None else True):
+    #     flash("Pitch must be between -90 and 90", "error")
+    #     return redirect(url_for('edit_photo', photo_id=photo_id))
+
     place_id = request.form.get('placeId')
     if place_id:
-        photo["places"] = [{
-            "placeId": place_id,
-            "languageCode": "en"
-        }]
+        photo["places"] = [{"placeId": place_id, "languageCode": "en"}]
 
-    # Convert all fields to floats, ignoring any fields that are empty or not numeric.
-    for key, value in photo["pose"].items():
-        if key == "latLngPair":
-            for subkey in value:
-                try:
-                    value[subkey] = round(float(value[subkey]), 7) if value[subkey] not in [None, ''] else None
-                except ValueError:
-                    pass
-        else:
-            try:
-                photo["pose"][key] = round(float(value), 7) if value not in [None, ''] else None
-            except ValueError:
-                pass
-
-    if photo["pose"]["heading"] is not None:
-        if not 0 <= photo["pose"]["heading"] <= 360:
-            flash("Heading must be between 0 and 360", "error")
-            return redirect(url_for('edit_photo', photo_id=photo_id))
-
-    if photo["pose"]["pitch"] is not None:
-        if not -90 <= photo["pose"]["pitch"] <= 90:
-            flash("Pitch must be between -90 and 90", "error")
-            return redirect(url_for('edit_photo', photo_id=photo_id))
-
-    print("Update_photo photo submission:")
-    print(json.dumps(photo, indent=4))  # Add this line to print out the JSON data
-
-
-    # Update the photo using the Streetview API.
     credentials = get_credentials()
     response = update_photo_api(credentials.token, photo_id, photo)
-
-    
-    # print("Update_photo Response:")
-    # pprint(response)
-
     if response.status_code == 200:
         flash('Photo updated successfully', 'success')
-        return render_template('delay_redirect.html', redirect_url=url_for('edit_photo', photo_id=photo_id), page_token=page_token, page_size=page_size)
-
-        # return render_template('update_result.html', response=response_json)
-
-    # If the status code is not 200, handle other possibilities
-    if response.text:
-        try:
-            response_json = response.json()
-        except json.JSONDecodeError:
-            flash('Error: The server response could not be decoded.', 'error')
-        else:
-            # Render the update_result.html template with the response dictionary.
-            return render_template('update_result.html', response=response_json)
+        return render_template('delay_redirect.html', redirect_url=url_for('edit_photo', photo_id=photo_id), page_token=session.get('page_token'), page_size=session.get('page_size'))
+    
+    try:
+        response_json = response.json()
+    except json.JSONDecodeError:
+        flash('Error: The server response could not be decoded.', 'error')
+        return redirect(url_for('edit_photo', photo_id=photo_id))
 
     flash('Error: The server returned an unexpected response.', 'error')
-    return redirect(url_for('edit_photo', photo_id=photo_id))
+    return render_template('update_result.html', response=response_json)
 
-    # # Render the update_result.html template with the response dictionary.
-    # return render_template('update_result.html', response=response)
 
 
 @app.route('/nearby_places', methods=['GET'])
@@ -329,8 +307,6 @@ def nearby_places():
 
     places_info = get_nearby_places(latitude, longitude, radius, api_key)
     return jsonify(places_info)
-
-
 
 @app.route('/upload', methods=['GET', 'POST'])
 @token_required
@@ -389,7 +365,6 @@ def upload_photosphere():
 
     return render_template('upload.html')
 
-
 @app.route('/delete_photo', methods=['POST'])
 @token_required
 def delete_photo():
@@ -413,7 +388,6 @@ def delete_photo():
 
     return redirect(url_for('list_photos_page'))
 
-
 def get_filenames(directory):
     mapping = {}
     for filename in os.listdir(directory):
@@ -429,9 +403,6 @@ def get_filenames(directory):
                 except json.JSONDecodeError:
                     print(f"Skipping file due to JSONDecodeError: {filename}")
     return mapping
-
-
-
 
 def list_photos(token, page_size=10, page_token=None):
     url = "https://streetviewpublish.googleapis.com/v1/photos"
@@ -494,7 +465,6 @@ def update_photo_api(token, photo_id, photo):
     # print(f"Update_photo_api Response: {response}")
     # return response.json()
     return response
-
 
 def start_upload(token):
     url = "https://streetviewpublish.googleapis.com/v1/photo:startUpload"
@@ -568,7 +538,6 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     distance = round(distance * 0.621371, 2)
     return distance
 
-
 def get_nearby_places(latitude, longitude, radius, api_key):
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     
@@ -626,4 +595,12 @@ def load_config():
 if __name__ == '__main__':
     config = load_config()
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or config.get('SECRET_KEY')
-    app.run(debug=True)
+    try:
+        port = int(os.getenv('PORT', 5000))
+        app.run(debug=True, port=port)
+    except OSError as e:
+        if e.errno == 98:  # Address already in use
+            print(f"Port {port} is already in use. Please specify a different port.")
+        else:
+            raise
+

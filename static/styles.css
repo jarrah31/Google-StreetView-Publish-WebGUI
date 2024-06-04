@@ -10,6 +10,57 @@ body {
     min-height: 100vh;
 }
 
+.content-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width: 100%; /* Ensure the container takes full width */
+    gap: 20px; /* Add some space between elements */
+}
+
+.photo-details {
+    flex: 1;
+    max-width: 50%; /* Ensure it doesn't take too much space */
+}
+
+.map-container {
+    flex: 1;
+    max-width: 45%; /* Ensure it fits next to the photo details */
+}
+
+#map {
+    width: 100%; /* Ensure it takes full width of the container */
+    height: 600px;
+}
+
+.map-description {
+    margin-bottom: 10px; /* Space between description and map */
+}
+
+.enlarged-photo-container {
+    position: relative;
+    display: inline-block; /* Change to inline-block to maintain left alignment */
+    width: 100%;
+    /*max-width: 600px;  Ensure max-width aligns with the image */
+}
+
+.enlarged-photo {
+    width: 100%; /* Ensure it takes full width of the container */
+    display: block;
+    margin: 0px;
+}
+
+.dashed-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: 2px dashed #ff0101; /* Adjust the color and width of the dashed line as needed */
+    transform: translateX(-50%);
+}
+
+
+
 .container {
     width: 90%;
     height: 90vh;
@@ -406,4 +457,112 @@ input[type="submit"]:hover {
 }
 
 
+/* Apply styles to the photo-table */
+.photo-table {
+    width: 800px;
+    table-layout: auto;
+    max-width: none;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin-bottom: 20px;
+}
 
+/* Style table header */
+.photo-table th {
+    background-color: #f2f2f2;
+    text-align: center;
+    padding: 8px;
+    font-weight: bold;
+    border: 1px solid #ddd;
+    cursor: pointer; 
+    text-decoration: underline; 
+
+}
+
+/* Style table rows */
+.photo-table tr {
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+/* Style alternating rows for better readability */
+.photo-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Style table cells */
+.photo-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis for overflowing text */
+    max-width: 600px; /* Adjust as needed */
+    vertical-align: middle;
+}
+
+/* Style the thumbnail cell */
+.photo-table td:first-child {
+    max-width: 100px; /* Adjust as needed for your thumbnail size */
+    text-align: center;
+}
+
+/* Add hover effect to rows */
+.photo-table tr:hover {
+    background-color: #e6e6e6;
+}
+
+.photo-table td:nth-child(2) {
+    width: 100px; /* Set the desired width for the "Place" column */
+}
+.photo-table td:nth-child(3) {
+    width: 100px; /* Set the desired width for the "Place" column */
+}
+.photo-table td:nth-child(4) {
+    width: 100px; /* Set the desired width for the "Place" column */
+}
+.photo-table td:nth-child(5) {
+    width: 100px; /* Set the desired width for the "Place" column */
+}
+
+/* CSS for the overlay */
+#overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* CSS for the "Please Wait" message */
+#waitMessage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* CSS for the loading animation */
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 2s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

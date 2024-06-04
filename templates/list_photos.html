@@ -62,6 +62,7 @@
                   <p>View count: {{ photo.viewCount }}</p>
                   <p>Capture time: {{ photo.captureTime }}</p>
                   <p>Upload time: {{ photo.uploadTime }}</p>
+                  <p>Heading set?: {% if photo.heading is not none %}Yes{% else %}No{% endif %}</p>
                   {% if photo.filename %}
                   <p>Filename: {{ photo.filename }}</p>
                   {% endif %}
@@ -83,15 +84,7 @@
                 </div>
             {% endfor %}
         </div>
-        <div class="navigation-buttons">
-          {% if next_page_token %}
-              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
-                  <input type="hidden" name="action" value="next">
-                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
-                  <input type="hidden" name="page_size" value="{{ page_size }}">
-                  <button type="submit">Next</button>
-              </form>
-          {% endif %}        
+        <div class="navigation-buttons">      
           {% if session['page_tokens'] %}
               <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
                   <input type="hidden" name="action" value="prev">
@@ -100,6 +93,14 @@
                   <button type="submit">Previous</button>
               </form>
           {% endif %}
+          {% if next_page_token %}
+              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
+                  <input type="hidden" name="action" value="next">
+                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
+                  <input type="hidden" name="page_size" value="{{ page_size }}">
+                  <button type="submit">Next</button>
+              </form>
+          {% endif %}  
         </div> 
     </div>
     <script>

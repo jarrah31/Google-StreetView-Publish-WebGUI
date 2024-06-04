@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Photo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
 </head>
 <body>
     <div class="container_photos">
@@ -19,54 +20,51 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        <div class="photo-details">
-            <h2>Photo Details:</h2>
-            <a href="{{ photo.shareLink }}" target="_blank">
-                <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
-            </a>  
-            <!-- <p>Photo ID: {{ photo.photoId.id }}</p> -->
-            <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
-            <p>View Count: {{ photo.viewCount }}</p>
-            <p>Capture Time: {{ photo.captureTime }}</p>
-            <p>Upload Time: {{ photo.uploadTime }}</p>
-            <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST">
-                <div class="form-group">
-                    <label for="latitude">Latitude:*</label>
-                    <input type="text" id="latitude" name="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
-                </div>
-                <div class="form-group">
-                    <label for="longitude">Longitude:*</label>
-                    <input type="text" id="longitude" name="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
-                </div>
-                <div class="form-group">
-                    <label for="placeId">Place ID:</label>
-                    <div class="form-group-wrapper">
-                        <div class="input-wrapper">
-                            <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
-                            <button type="submit" class="search-button">&#128269;</button> <!-- magnifying glass icon -->
+        <div class="content-container">
+            <div class="photo-details">
+                <h2>Photo Details:</h2>
+                <a href="{{ photo.shareLink }}" target="_blank" class="enlarged-photo-container">
+                    <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail" class="enlarged-photo">
+                    <div class="dashed-line"></div>
+                </a>  
+                <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
+                <p>View Count: {{ photo.viewCount }}</p>
+                <p>Capture Time: {{ photo.captureTime }}</p>
+                <p>Upload Time: {{ photo.uploadTime }}</p>
+                <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST">
+                    <div class="form-group">
+                        <label for="latitude">Latitude:*</label>
+                        <input type="text" id="latitude" name="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="longitude">Longitude:*</label>
+                        <input type="text" id="longitude" name="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="placeId">Place ID:</label>
+                        <div class="form-group-wrapper">
+                            <div class="input-wrapper">
+                                <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
+                                <button type="submit" class="search-button">&#128269;</button> <!-- magnifying glass icon -->
+                            </div>
+                            <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                         </div>
-                        <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                     </div>
-                </div>
-                <!-- <div class="form-group">
-                    <label for="heading">Heading:</label>
-                    <div class="form-group-wrapper">
-                        <input type="text" id="heading" name="heading" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
-                        <sub>Heading values between 0 and 360</sub>
+                    <div class="form-group">
+                        <label for="heading">Heading:</label>
+                        <input type="number" id="heading" name="heading" min="0" max="360" step="1" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="pitch">Pitch:</label>
-                    <div class="form-group-wrapper">
-                        <input type="text" id="pitch" name="pitch" value="{{ (photo.pose.pitch if 'pose' in photo and 'pitch' in photo.pose and photo.pose.pitch != 'NaN' else '') }}">
-                        <sub>Pitch values between -90 and 90</sub>
+                    <div class="form-group">
+                        <!-- Change the submit button to Please Wait when pressed. See JS code below. -->
+                        <input type="submit" id="submit-button" value="Submit">
                     </div>
-                </div> -->
-                <div class="form-group">
-                    <input type="submit" value="Submit">
-                </div>
-            </form>
-            
+                </form>
+            </div>
+            <div class="map-container">
+                <h2>Photo Heading:</h2>                
+                <div id="map" style="height: 600px; width: 100%;"></div>
+                <p class="map-description">Use the marker on the map to set the correct heading for your photo. Drag the marker to point in the direction of the centre of the photo as indicated by the dashed line.</p>
+            </div>
         </div>
        
     </div>
@@ -88,10 +86,97 @@
     </div>
 
     <script>
+
+        let map;
+        let anchorMarker;
+        let headingMarker;
+        let headingInput = document.getElementById('heading');
+        let polyline;
+
+        function initializeMap() {
+            let lat = parseFloat(document.getElementById('latitude').value);
+            let lng = parseFloat(document.getElementById('longitude').value);
+
+            const anchorPosition = { lat: lat, lng: lng };
+            const headingValue = parseFloat(headingInput.value);
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: anchorPosition,
+                zoom: 17,
+                mapTypeId: 'satellite'
+            });
+
+            // Marker at the photo's GPS position
+            anchorMarker = new google.maps.Marker({
+                position: anchorPosition,
+                map: map,
+                draggable: false,
+                title: "Photo's GPS Position"
+            });
+
+            // Calculate the initial heading position if headingValue is available
+            let headingPosition;
+            if (!isNaN(headingValue)) {
+                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 100, headingValue);
+            } else {
+                headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
+            }
+
+            // Marker to adjust heading
+            headingMarker = new google.maps.Marker({
+                position: headingPosition,
+                map: map,
+                draggable: true,
+                title: "Adjust Heading",
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/kml/paddle/red-stars.png', // URL to custom icon
+                    scaledSize: new google.maps.Size(32, 32) // Adjust size if needed
+                }
+            });
+
+            // Create the initial polyline
+            polyline = new google.maps.Polyline({
+                path: [anchorPosition, headingPosition],
+                geodesic: true,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                map: map
+            });
+
+            google.maps.event.addListener(headingMarker, 'drag', updatePolylineAndHeading);
+        }
+
+        function updatePolylineAndHeading() {
+            const anchorPosition = anchorMarker.getPosition();
+            const headingPosition = headingMarker.getPosition();
+
+            // Update polyline
+            polyline.setPath([anchorPosition, headingPosition]);
+
+            // Calculate and update heading
+            let heading = google.maps.geometry.spherical.computeHeading(anchorPosition, headingPosition);
+            if (heading < 0) {
+                heading += 359;
+            }
+            headingInput.value = Math.round(heading); // Round the heading to the nearest whole number
+        }
+
         // Get the modal
         var modal = document.getElementById("myModal");
 
         document.addEventListener('DOMContentLoaded', (event) => {
+
+            // Change the submit button to Please Wait when pressed.
+            const form = document.querySelector('form');
+            const submitButton = document.getElementById('submit-button');
+
+            form.addEventListener('submit', function(event) {
+                submitButton.value = 'Please wait...';
+                submitButton.disabled = true;
+            });
+
+
             function fetchPlaces() {
                 // Show loading message
                 document.getElementById("modal-text").innerHTML = 'Please wait...';
@@ -135,10 +220,6 @@
 
                         // Set the modal text
                         document.getElementById("modal-text").innerHTML = text;
-
-                        // // Set the count text
-                        // let countText = `Found ${count} places... Please select a place or close to cancel`;
-                        // document.querySelector(".radius-input").insertAdjacentHTML('afterend', `<p>${countText}</p>`);
 
                         // Check if the paragraph for the number of places found already exists
                         let countText = document.querySelector(".count-text");
