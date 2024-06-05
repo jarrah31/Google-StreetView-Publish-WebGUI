@@ -33,6 +33,7 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
 
 # Installation Instructions
+The comprehensive installation steps for the Google StreetView Publish WebGUI are required because this is a self-hosted setup. It covers configuring your local environment with Python and Git, cloning the project repository, and setting up a virtual environment to manage dependencies. Additionally, you need to create a Google Cloud Developer Project to access the required APIs for publishing photospheres. This involves creating API keys and OAuth 2.0 credentials, ensuring secure and authenticated interactions with Google StreetView services. The detailed steps ensure your system is correctly configured to run the web app locally.
 ## macOS
 ### Install Python and Git
 Before you start, you should have [Homebrew](https://brew.sh/) installed on your macOS. If it's not installed, open a terminal window and paste the following command:
