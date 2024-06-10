@@ -31,6 +31,9 @@
         <p id="CroppedAreaImageWidthPixels-label"><span class="metadata-label">CroppedAreaImageWidthPixels:</span> <span id="CroppedAreaImageWidthPixels-display"></span></p>
         <p id="FullPanoHeightPixels-label"><span class="metadata-label">FullPanoHeightPixels:</span> <span id="FullPanoHeightPixels-display"></span></p>
         <p id="FullPanoWidthPixels-label"><span class="metadata-label">FullPanoWidthPixels:</span> <span id="FullPanoWidthPixels-display"></span></p>
+        <p id="FlightYawDegree-label"><span class="metadata-label">FlightYawDegree:</span> <span id="FlightYawDegree-display"></span></p>
+        <input type="hidden" id="heading-input" name="heading" required> 
+
         <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional):</span> <span id="placeID-display"></span> <button type="submit" class="search-button">&#128269;</button></p> -->
         <p id="PlaceID-label"><span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span> <div class="input-wrapper"><input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}"> <button type="submit" class="search-button">&#128269;</button></div></p>
 
@@ -58,128 +61,132 @@
     </div>
     <script>
 
-      document.getElementById('upload-form').addEventListener('submit', function() {
-          const submitButton = document.querySelector('input[type="submit"]');
-          submitButton.disabled = true;
-          submitButton.value = 'Uploading, please wait...';
-      });
+        document.getElementById('upload-form').addEventListener('submit', function() {
+            const submitButton = document.querySelector('input[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.value = 'Uploading, please wait...';
+        });
 
-      async function extractMetadata() {
-        const fileInput = document.getElementById('file');
-        const file = fileInput.files[0];
-        const preview = document.getElementById('preview');
+        async function extractMetadata() {
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+            const preview = document.getElementById('preview');
 
-        // get submit button
-        const submitButton = document.querySelector('input[type="submit"]');
-        const messageDiv = document.getElementById('message');
+            const submitButton = document.querySelector('input[type="submit"]');
+            const messageDiv = document.getElementById('message');
 
-        submitButton.disabled = false;
-        messageDiv.textContent = '';
+            submitButton.disabled = false;
+            messageDiv.textContent = '';
 
-        // Display image preview
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(file);
+            // Display image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
 
-        // Read EXIF and XMP metadata using ExifReader
-        const arrayBuffer = await file.arrayBuffer();
-        const exifReader = await ExifReader.load(arrayBuffer, {expanded: true});
+            // Read EXIF and XMP metadata using ExifReader
+            const arrayBuffer = await file.arrayBuffer();
+            const exifReader = await ExifReader.load(arrayBuffer, {expanded: true});
 
-        // // Print EXIF and XMP data to the console
-        // console.log(exifReader.gps['Latitude']);
-        // console.log(exifReader.gps['Longitude']);
-        // console.log(exifReader.xmp['CroppedAreaTopPixels'].value);
-        // console.log(exifReader);
+            const xmpMetadataIds = [
+                'ProjectionType', 'UsePanoramaViewer', 'CroppedAreaTopPixels', 
+                'CroppedAreaLeftPixels', 'CroppedAreaImageHeightPixels', 
+                'CroppedAreaImageWidthPixels', 'FullPanoHeightPixels', 
+                'FullPanoWidthPixels', 'FlightYawDegree'
+            ];
 
-
-        // Define XMP metadata IDs
-        const xmpMetadataIds = [
-            'ProjectionType', 'UsePanoramaViewer', 'CroppedAreaTopPixels', 
-            'CroppedAreaLeftPixels', 'CroppedAreaImageHeightPixels', 
-            'CroppedAreaImageWidthPixels', 'FullPanoHeightPixels', 
-            'FullPanoWidthPixels'
-        ];
-
-        // Clear old values and color all labels red
-        for (const id of xmpMetadataIds) {
-            const displayId = id + '-display';
-            const labelId = id + '-label';
-            const labelSpan = document.getElementById(labelId).querySelector('.metadata-label');
-            document.getElementById(displayId).textContent = '';
-            labelSpan.classList.remove('has-value');
-            labelSpan.classList.add('no-value');
-        }
-
-        // Clear old GPS values and color GPS labels red
-        document.getElementById('latitude-display').textContent = '';
-        document.getElementById('longitude-display').textContent = '';
-
-        const latLabelSpan = document.getElementById('latitude-label').querySelector('.metadata-label');
-        const lonLabelSpan = document.getElementById('longitude-label').querySelector('.metadata-label');
-
-        latLabelSpan.classList.remove('has-value');
-        latLabelSpan.classList.add('no-value');
-        lonLabelSpan.classList.remove('has-value');
-        lonLabelSpan.classList.add('no-value');
-
-
-
-        // Extract GPS data
-        let hasGpsData = false;
-        if (exifReader['gps'] && exifReader.gps['Latitude'] && exifReader.gps['Longitude']) {
-            const lat = exifReader.gps['Latitude'];
-            const lon = exifReader.gps['Longitude'];
-
-            document.getElementById('latitude-display').textContent = parseFloat(lat.toFixed(7));
-            document.getElementById('latitude-input').value = parseFloat(lat.toFixed(7));
-
-            document.getElementById('longitude-display').textContent = parseFloat(lon.toFixed(7));
-            document.getElementById('longitude-input').value = parseFloat(lon.toFixed(7));
-
-            latLabelSpan.classList.remove('no-value');
-            latLabelSpan.classList.add('has-value');
-            lonLabelSpan.classList.remove('no-value');
-            lonLabelSpan.classList.add('has-value');
-
-            // GPS data is present, so we can enable the upload button
-            hasGpsData = true;
-          } else {
-            latLabelSpan.classList.add('no-value');
-            lonLabelSpan.classList.add('no-value');
-          }
-
-        // Extract XMP data
-        let hasXmpData = false;
-        if (exifReader['xmp']) {
+            // Clear old values and color all labels red
             for (const id of xmpMetadataIds) {
                 const displayId = id + '-display';
                 const labelId = id + '-label';
                 const labelSpan = document.getElementById(labelId).querySelector('.metadata-label');
-                if (exifReader.xmp[id] && exifReader.xmp[id].value) {
-                    document.getElementById(displayId).textContent = exifReader.xmp[id].value;
-                    labelSpan.classList.remove('no-value');
-                    labelSpan.classList.add('has-value');
-                }
+                document.getElementById(displayId).textContent = '';
+                labelSpan.classList.remove('has-value');
+                labelSpan.classList.add('no-value');
             }
-            // XMP data is present, so we can enable the upload button
-            hasXmpData = true;
-        } 
 
-        // Enable or disable submit button based on whether necessary data is present
-        if (!hasGpsData || !hasXmpData) {
-            submitButton.disabled = true;
-            submitButton.value = 'Required photo metadata is missing, please fix and try again...';
-            messageDiv.innerHTML = 'See this webpage for details: <a href="https://developers.google.com/streetview/spherical-metadata">Photo Sphere XMP Metadata</a>';
-        } else {
-            submitButton.disabled = false;
-            submitButton.value = 'Upload';
-            messageDiv.textContent = '';
+            // Clear old GPS values and color GPS labels red
+            document.getElementById('latitude-display').textContent = '';
+            document.getElementById('longitude-display').textContent = '';
+
+            const latLabelSpan = document.getElementById('latitude-label').querySelector('.metadata-label');
+            const lonLabelSpan = document.getElementById('longitude-label').querySelector('.metadata-label');
+
+            latLabelSpan.classList.remove('has-value');
+            latLabelSpan.classList.add('no-value');
+            lonLabelSpan.classList.remove('has-value');
+            lonLabelSpan.classList.add('no-value');
+
+            // Extract GPS data
+            let hasGpsData = false;
+            if (exifReader['gps'] && exifReader.gps['Latitude'] && exifReader.gps['Longitude']) {
+                const lat = exifReader.gps['Latitude'];
+                const lon = exifReader.gps['Longitude'];
+
+                document.getElementById('latitude-display').textContent = parseFloat(lat.toFixed(7));
+                document.getElementById('latitude-input').value = parseFloat(lat.toFixed(7));
+
+                document.getElementById('longitude-display').textContent = parseFloat(lon.toFixed(7));
+                document.getElementById('longitude-input').value = parseFloat(lon.toFixed(7));
+
+                latLabelSpan.classList.remove('no-value');
+                latLabelSpan.classList.add('has-value');
+                lonLabelSpan.classList.remove('no-value');
+                lonLabelSpan.classList.add('has-value');
+
+                hasGpsData = true;
+            } else {
+                latLabelSpan.classList.add('no-value');
+                lonLabelSpan.classList.add('no-value');
+            }
+
+            // Extract XMP data
+            let hasXmpData = false;
+            if (exifReader['xmp']) {
+                for (const id of xmpMetadataIds) {
+                    const displayId = id + '-display';
+                    const labelId = id + '-label';
+                    const labelSpan = document.getElementById(labelId).querySelector('.metadata-label');
+                    if (exifReader.xmp[id] && exifReader.xmp[id].value) {
+                        let value = exifReader.xmp[id].value;
+                        
+                        // Special handling for FlightYawDegree
+                        if (id === 'FlightYawDegree') {
+                            let degree = parseFloat(value);
+                            if (!isNaN(degree)) {
+                                if (degree < 0) {
+                                    degree = 360 + degree;
+                                }
+                                degree = Math.round(degree % 360);
+                                if (degree === 360) {
+                                    degree = 359;
+                                }
+                                value = degree;
+                                document.getElementById('heading-input').value = degree;
+                            }
+                        }
+
+                        document.getElementById(displayId).textContent = value;
+                        labelSpan.classList.remove('no-value');
+                        labelSpan.classList.add('has-value');
+                    }
+                }
+                hasXmpData = true;
+            }
+
+            // Enable or disable submit button based on whether necessary data is present
+            if (!hasGpsData || !hasXmpData) {
+                submitButton.disabled = true;
+                submitButton.value = 'Required photo metadata is missing, please fix and try again...';
+                messageDiv.innerHTML = 'See this webpage for details: <a href="https://developers.google.com/streetview/spherical-metadata">Photo Sphere XMP Metadata</a>';
+            } else {
+                submitButton.disabled = false;
+                submitButton.value = 'Upload';
+                messageDiv.textContent = '';
+            }
         }
-
-      }
 
       // Get the modal
       var modal = document.getElementById("myModal");

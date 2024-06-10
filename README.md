@@ -66,7 +66,7 @@ To update the code with a new version, simply run "git pull" from within the Goo
    This command should return Python 3.5 or higher. If not, you'll need to install a more recent version of Python.
 4. **Create a virtual environment:** `python3 -m venv streetview`
 5. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `source streetview/bin/activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
-6. **Install Required Python Libraries:** `pip install requests google-auth-oauthlib Flask google-auth`
+6. **Install Required Python Libraries:** `pip install requests google-auth-oauthlib Flask google-auth piexif pillow`
 
 Remember to always activate the virtual environment whenever you're running this app. When you're done, you can leave the virtual environment with the `deactivate` command. 
 

@@ -5,6 +5,9 @@ import json
 import os
 import tempfile
 import google_auth_oauthlib.flow
+import piexif
+import re
+
 
 from datetime import datetime
 from functools import wraps
@@ -14,11 +17,15 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
+from PIL import Image
+
 
 # Find the placedID by using this page:
 # https://developers.google.com/maps/documentation/places/web-service/place-id
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+debug = True  # Set this to True to enable debug messages, False to disable
 
 uploads_dir = "uploads"
 if not os.path.exists(uploads_dir):
@@ -312,34 +319,49 @@ def nearby_places():
 @token_required
 def upload_photosphere():
     if request.method == 'POST':
-        # print(request.form)
-        # print(request.form['latitude'])
-        # print(request.form['longitude'])
+        if debug:
+            print("Received POST request for uploading photosphere.")
+            print("Form data:", request.form)
+
         credentials = get_credentials()
 
         # Start the upload
         upload_ref = start_upload(credentials.token)
         upload_ref_message = f"Created upload url: {upload_ref}"
+        if debug:
+            print(upload_ref_message)
 
         # Save the uploaded file to a temporary location on the server
         file = request.files['file']
         file_path = os.path.join(tempfile.gettempdir(), file.filename)
         file.save(file_path)
+        if debug:
+            print(f"Saved file to {file_path}")
+
+        # Get the heading value from the form
+        heading = request.form['heading']
 
         # Upload the photo bytes to the Upload URL
-        upload_status = upload_photo(credentials.token, upload_ref, file_path)
+        upload_status = upload_photo(credentials.token, upload_ref, file_path, heading)
         upload_status_message = f"Upload status: {upload_status}"
+        if debug:
+            print(upload_status_message)
 
         # Remove the temporary file
         os.remove(file_path)
+        if debug:
+            print(f"Removed temporary file {file_path}")
 
         # Upload the metadata of the photo
         latitude = float(request.form['latitude'])
         longitude = float(request.form['longitude'])
         placeId = request.form['placeId']
-        heading = "0"
-        create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, heading, placeId)
+
+        create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
         create_photo_response_message = f"Create photo response: {create_photo_response}"
+        if debug:
+            print(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
+            print(create_photo_response_message)
 
         # Save the create_photo_response JSON data to a file named after the photo filename
         uploads_directory = "uploads"
@@ -446,6 +468,8 @@ def update_photo_api(token, photo_id, photo):
             # If 'places' is not empty, add it to the updateMask
             updateMask.append('places')
     updateMask = ','.join(updateMask)
+    if debug:
+        print(updateMask)
 
 
     # updateMask = "places"
@@ -475,8 +499,60 @@ def start_upload(token):
     response = requests.post(url, headers=headers)
     return response.json()
 
-def upload_photo(token, upload_ref, file_path):
+def add_or_update_xmp_metadata(file_path, heading):
+    # Read the image
     with open(file_path, "rb") as f:
+        img_data = f.read()
+
+    # Search for existing XMP metadata
+    start_marker = b"<?xpacket begin="
+    end_marker = b"<?xpacket end="
+    xmp_start = img_data.find(start_marker)
+    xmp_end = img_data.find(end_marker)
+
+    if xmp_start != -1 and xmp_end != -1:
+        xmp_data = img_data[xmp_start:xmp_end + len(end_marker)].decode("utf-8")
+    else:
+        xmp_data = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about=""
+                    xmlns:GPano="http://ns.google.com/photos/1.0/panorama/">
+                </rdf:Description>
+            </rdf:RDF>
+        </x:xmpmeta>
+        """
+
+    # Check if PoseHeadingDegrees exists, if not add it
+    if '<GPano:PoseHeadingDegrees>' not in xmp_data:
+        xmp_data = re.sub(
+            r'(<rdf:Description[^>]*>)',
+            r'\1<GPano:PoseHeadingDegrees>{}</GPano:PoseHeadingDegrees>'.format(heading),
+            xmp_data
+        )
+    else:
+        xmp_data = re.sub(
+            r'<GPano:PoseHeadingDegrees>.*?</GPano:PoseHeadingDegrees>',
+            f'<GPano:PoseHeadingDegrees>{heading}</GPano:PoseHeadingDegrees>',
+            xmp_data
+        )
+
+    # Save the image with the new XMP metadata
+    temp_file_path = file_path + "_temp.jpg"
+    with open(temp_file_path, "wb") as out_file:
+        out_file.write(img_data[:xmp_start])
+        out_file.write(xmp_data.encode('utf-8'))
+        out_file.write(img_data[xmp_end:])
+
+    return temp_file_path
+
+def upload_photo(token, upload_ref, file_path, heading):
+    # Add XMP metadata to the photo
+    temp_file_path = add_or_update_xmp_metadata(file_path, heading)
+    if debug:
+        print(temp_file_path)
+
+    with open(temp_file_path, "rb") as f:
         raw_data = f.read()
     
     headers = {
@@ -488,7 +564,8 @@ def upload_photo(token, upload_ref, file_path):
     response = requests.post(upload_ref["uploadUrl"], data=raw_data, headers=headers)
     return response.status_code
 
-def create_photo(token, upload_ref, latitude, longitude, heading, placeId):
+def create_photo(token, upload_ref, latitude, longitude, placeId):
+
     url = "https://streetviewpublish.googleapis.com/v1/photo"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -501,13 +578,19 @@ def create_photo(token, upload_ref, latitude, longitude, heading, placeId):
                 "latitude": latitude,
                 "longitude": longitude
             },
-            "heading": heading,
         },
     }
     if placeId:
         body["places"] = [{"placeId": placeId}]
 
+    if debug:
+        print("Sending create_photo request with body:", json.dumps(body, indent=2))
+
     response = requests.post(url, headers=headers, json=body)
+
+    if debug:
+        print(f"Response status code: {response.status_code}")
+        print(f"Response text: {response.text}")
 
     # print(f"Response status code: {response.status_code}")
     # print(f"Response text: {response.text}")
