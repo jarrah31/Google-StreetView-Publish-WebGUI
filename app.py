@@ -812,7 +812,7 @@ if __name__ == '__main__':
     config = load_config()
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or config.get('SECRET_KEY')
     try:
-        port = int(os.getenv('PORT', 5000))
+        port = int(os.getenv('PORT', config.get('PORT', 5000)))
         app.run(debug=True, port=port)
     except OSError as e:
         if e.errno == 98:  # Address already in use
