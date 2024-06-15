@@ -121,7 +121,7 @@ Remember to always activate the virtual environment whenever you're running this
 6. **Activate Virtual Environment**: To start using the virtual environment, you need to activate it. In the command prompt, type `.\streetview\Scripts\activate`. Your command prompt should now show `(streetview)` at the beginning of the line, indicating that the virtual environment is active.
 
 7. **Install Packages**: You can now install Python packages that will only be available in this virtual environment. 
-   `pip install requests google-auth-oauthlib Flask google-auth`
+   `pip install requests google-auth-oauthlib Flask google-auth piexif pillow`
 
 8. **Deactivate Virtual Environment**: When you're done working in the virtual environment, you can deactivate it by typing `deactivate` in the command prompt. This returns you to your regular system Python environment.
 
