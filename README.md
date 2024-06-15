@@ -220,7 +220,8 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 4. **Create a new file called "config.json"** and paste in the following:
     ```bash
     {
-        "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS"
+        "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS",
+        "PORT": 5000
     }
     ```
  
