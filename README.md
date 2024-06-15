@@ -255,3 +255,15 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
 9. Click "Continue" to allow access to the StreetViewApp
 
 10. You should now be authenticated!
+
+# Updating to the latest version 
+1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
+2. **Fetch the latest changes from the remote repository**: `git fetch`
+3. **Pull the latest changes from the remote repository**: `git pull`
+4. **Start venv again**:
+   
+   macOS: `source streetview/bin/activate`
+   
+   Windows: `.\streetview\Scripts\activate`
+
+   5. **Start the app**: `python app.py`
