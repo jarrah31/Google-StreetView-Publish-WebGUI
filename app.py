@@ -5,7 +5,6 @@ import json
 import os
 import tempfile
 import google_auth_oauthlib.flow
-import piexif
 import re
 
 
