@@ -13,8 +13,13 @@
       <h1>Upload Photosphere</h1>
       <a href="{{ url_for('index') }}">Back</a><br><br>
       <form id="upload-form" action="{{ url_for('upload_photosphere') }}" method="post" enctype="multipart/form-data">
-        <label for="file">Select a file:</label>
-        <input type="file" id="file" name="file" accept="image/*" onchange="extractMetadata()" required>
+        <div class="file-input-container">
+            <label for="file-input" class="button-22">Select a File</label>
+            <input type="file" id="file-input" name="file" accept="image/*" style="display:none;">
+            <p id="file-name">No file selected</p>
+        </div>
+        <!-- <label for="file">Select a file:</label>
+        <input type="file" id="file" name="file" accept="image/*" onchange="extractMetadata()" required> -->
         <img id="preview" style="display:none;max-width:100%;">
        
         <p id="latitude-label"><span class="metadata-label">Latitude:</span> <span id="latitude-display"></span></p>
@@ -35,10 +40,16 @@
         <input type="hidden" id="heading-input" name="heading" required> 
 
         <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional):</span> <span id="placeID-display"></span> <button type="submit" class="search-button">&#128269;</button></p> -->
-        <p id="PlaceID-label"><span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span> <div class="input-wrapper"><input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}"> <button type="submit" class="search-button">&#128269;</button></div></p>
-
+        <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span> <div class="input-wrapper"><input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}"> <button type="submit" class="search-button">&#128269;</button></div></p> -->
+        <p id="PlaceID-label">
+            <span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span>
+            <div class="placeID-input-wrapper">
+                <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
+                <button type="button" class="button-22" id="placeID-search-button">Search for nearby Place IDs</button>
+            </div>
+        </p>
         <!-- <input type="hidden" id="placeID-input" name="placeId"> -->
-        <input type="submit" value="Upload" id="upload-button" disabled>
+        <button type="submit" class="button-22" id="upload-button" disabled>Upload</button>
         <div id="message"></div>
 
       </form>
@@ -60,19 +71,52 @@
       </div>
     </div>
     <script>
+        // function displayFilename() {
+        //     const fileInput = document.getElementById('file');
+        //     const filenameDisplay = document.getElementById('filename-display');
+        //     const fileName = fileInput.files[0] ? fileInput.files[0].name : '';
+            
+        //     if (fileName) {
+        //         filenameDisplay.textContent = fileName;
+        //         filenameDisplay.style.display = 'block';
+        //     } else {
+        //         filenameDisplay.textContent = '';
+        //         filenameDisplay.style.display = 'none';
+        //     }
+        // }
 
-        document.getElementById('upload-form').addEventListener('submit', function() {
-            const submitButton = document.querySelector('input[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.value = 'Uploading, please wait...';
+        document.getElementById('file-input').addEventListener('change', async function() {
+            const fileInput = this;
+            const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : 'No file selected';
+            document.getElementById('file-name').textContent = fileName;
+
+            const preview = document.getElementById('preview');
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.addEventListener('load', function() {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }, false);
+
+            if (file) {
+                reader.readAsDataURL(file);
+                await extractMetadata(file);  // Ensure metadata is extracted
+            } else {
+                preview.style.display = 'none';
+                document.getElementById('upload-button').disabled = true;  // Disable upload button if no file is selected
+            }
         });
 
-        async function extractMetadata() {
-            const fileInput = document.getElementById('file');
-            const file = fileInput.files[0];
-            const preview = document.getElementById('preview');
+        document.getElementById('upload-form').addEventListener('submit', function() {
+            const submitButton = document.getElementById('upload-button');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Uploading, please wait...';
+        });
 
-            const submitButton = document.querySelector('input[type="submit"]');
+        async function extractMetadata(file) {
+            const preview = document.getElementById('preview');
+            const submitButton = document.getElementById('upload-button');
             const messageDiv = document.getElementById('message');
 
             submitButton.disabled = false;
@@ -174,140 +218,135 @@
                     }
                 }
                 hasXmpData = true;
-            }
+            }       
 
             // Enable or disable submit button based on whether necessary data is present
             if (!hasGpsData || !hasXmpData) {
                 submitButton.disabled = true;
-                submitButton.value = 'Required photo metadata is missing, please fix and try again...';
-                messageDiv.innerHTML = 'See this webpage for details: <a href="https://developers.google.com/streetview/spherical-metadata">Photo Sphere XMP Metadata</a>';
+                submitButton.textContent = 'Upload';
+                messageDiv.innerHTML = 'Required photo metadata is missing, please fix and try again... <br>See this webpage for details: <a href="https://developers.google.com/streetview/spherical-metadata">Photo Sphere XMP Metadata</a>';
             } else {
                 submitButton.disabled = false;
-                submitButton.value = 'Upload';
+                submitButton.textContent = 'Upload';
                 messageDiv.textContent = '';
             }
         }
 
-      // Get the modal
-      var modal = document.getElementById("myModal");
+        // Get the modal
+        var modal = document.getElementById("myModal");
 
-      document.addEventListener('DOMContentLoaded', (event) => {
-          function fetchPlaces() {
-              let latitude = document.querySelector("#latitude-input").value;
-              let longitude = document.querySelector("#longitude-input").value;
-              let radius = document.querySelector("#radius").value;
+        document.addEventListener('DOMContentLoaded', (event) => {
+            function fetchPlaces() {
+                let latitude = document.querySelector("#latitude-input").value;
+                let longitude = document.querySelector("#longitude-input").value;
+                let radius = document.querySelector("#radius").value;
+        
+                let xhr = new XMLHttpRequest();
+                xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
+        
+                xhr.onload = function() {
+                    // console.log(this.status);
+                    if (this.status == 200) {
+                        let places_info = JSON.parse(this.responseText);
+                        // console.log(places_info);
+        
+                        // Count the places
+                        let count = places_info.length;
+
+                        // Sort the places by distance
+                        places_info.sort(function(a, b) {
+                            return a.distance - b.distance;
+                        });
+        
+
+                        // Prepare the text to display in the modal
+                        let text = "";
+                        for (let i = 0; i < places_info.length; i++) {
+                            let place = places_info[i];
+                            // console.log("Icon:", place.icon);
+                            let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
+                            // create a clickable div for each place
+                            text += `<div class="place">
+                                        ${iconHTML}
+                                        <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
+                                        <span class="place-distance"><strong>Distance:</strong>${place.distance} miles</span>
+                                        <span class="place-id"><strong>Place ID:</strong>${place.place_id}</span>
+                                    </div>`;
+                        }
+
+                        // Set the modal text
+                        document.getElementById("modal-text").innerHTML = text;
+
+                        // Check if the paragraph for the number of places found already exists
+                        let countText = document.querySelector(".count-text");
+
+                        if (countText) {
+                            // If it exists, just update the text
+                            countText.textContent = `Found ${places_info.length} places (max is 60)... Please select a place, or close to cancel`;
+                        } else {
+                            // If it doesn't exist, create a new paragraph
+                            countText = document.createElement("p");
+                            countText.className = "count-text";
+                            countText.textContent = `Found ${places_info.length} places... Please select a place or close to cancel`;
+
+                            // Append the new paragraph just after the radius input and refresh button
+                            document.querySelector(".radius-input").appendChild(countText);
+                        }
+
+                        // Show the modal
+                        modal.style.display = "block";
+                    }
+                };
+                xhr.send();
+            }
       
-              let xhr = new XMLHttpRequest();
-              xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
-      
-              xhr.onload = function() {
-                  // console.log(this.status);
-                  if (this.status == 200) {
-                      let places_info = JSON.parse(this.responseText);
-                      // console.log(places_info);
-      
-                      // Count the places
-                      let count = places_info.length;
+            document.getElementById('placeID-search-button').addEventListener('click', async function(event) {
+                event.preventDefault(); // prevent the form from being submitted
+                const searchButton = this;
+                searchButton.textContent = 'Searching...';
+                await fetchPlaces().then(() => {
+                    searchButton.textContent = 'Search for nearby Place IDs';
+                }).catch(() => {
+                    searchButton.textContent = 'Search for nearby Place IDs';
+                });
+            });
 
-                      // Sort the places by distance
-                      places_info.sort(function(a, b) {
-                          return a.distance - b.distance;
-                      });
-      
+            document.querySelector(".refresh-button").addEventListener('click', function(event) {
+                event.preventDefault(); // prevent the form from being submitted
+                fetchPlaces();
+            });
 
-                      // Prepare the text to display in the modal
-                      let text = "";
-                      for (let i = 0; i < places_info.length; i++) {
-                          let place = places_info[i];
-                          // console.log("Icon:", place.icon);
-                          let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
-                          // create a clickable div for each place
-                          text += `<div class="place">
-                                      ${iconHTML}
-                                      <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
-                                      <span class="place-distance"><strong>Distance:</strong>${place.distance} miles</span>
-                                      <span class="place-id"><strong>Place ID:</strong>${place.place_id}</span>
-                                  </div>`;
-                      }
+            // Get the <span> element that closes the modal
+            var span = document.getElementsByClassName("close")[0];
 
-                      // Set the modal text
-                      document.getElementById("modal-text").innerHTML = text;
+            // When the user clicks on <span> (x), close the modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
 
-                      // // Set the count text
-                      // let countText = `Found ${count} places... Please select a place or close to cancel`;
-                      // document.querySelector(".radius-input").insertAdjacentHTML('afterend', `<p>${countText}</p>`);
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        });
 
-                      // Check if the paragraph for the number of places found already exists
-                      let countText = document.querySelector(".count-text");
+        // function to handle place selection
+        function selectPlace(event, element) {
+            event.preventDefault(); // prevent the link from being followed
+            let placeId = element.getAttribute('data-place-id'); // get place id from data attribute
 
-                      if (countText) {
-                          // If it exists, just update the text
-                          countText.textContent = `Found ${places_info.length} places (max is 60)... Please select a place, or close to cancel`;
-                      } else {
-                          // If it doesn't exist, create a new paragraph
-                          countText = document.createElement("p");
-                          countText.className = "count-text";
-                          countText.textContent = `Found ${places_info.length} places... Please select a place or close to cancel`;
+            // set PlaceId input box value to the selected place id
+            document.querySelector("#placeId").value = placeId;
 
-                          // Append the new paragraph just after the radius input and refresh button
-                          document.querySelector(".radius-input").appendChild(countText);
-                      }
+            // close the modal
+            modal.style.display = 'none';
 
-                      // Show the modal
-                      modal.style.display = "block";
-                  }
-              };
-              xhr.send();
-          }
-      
-          document.querySelector(".search-button").addEventListener('click', function(event) {
-              event.preventDefault(); // prevent the form from being submitted
-              fetchPlaces();
-          });
-
-          document.querySelector(".refresh-button").addEventListener('click', function(event) {
-              event.preventDefault(); // prevent the form from being submitted
-              fetchPlaces();
-          });
-
-          // // Check if the modal was selected correctly
-          // if (modal === null) {
-          //     console.error("Could not find the modal. Check the id in the HTML.");
-          // } else {
-          //     console.log("Modal found:", modal);
-          // }
-
-          // Get the <span> element that closes the modal
-          var span = document.getElementsByClassName("close")[0];
-
-          // When the user clicks on <span> (x), close the modal
-          span.onclick = function() {
-              modal.style.display = "none";
-          }
-
-          // When the user clicks anywhere outside of the modal, close it
-          window.onclick = function(event) {
-              if (event.target == modal) {
-                  modal.style.display = "none";
-              }
-          }
-      });
-
-      // function to handle place selection
-      function selectPlace(event, element) {
-          event.preventDefault(); // prevent the link from being followed
-          let placeId = element.getAttribute('data-place-id'); // get place id from data attribute
-
-        //   // set PlaceId input box value to the selected place id
-        //   document.querySelector("#placeID-input").value = placeId;
-        //   document.querySelector("#placeID-display").textContent = placeId;
-
-          // set PlaceId input box value to the selected place id
-          document.querySelector("#placeId").value = placeId;
-
-          // close the modal
-          modal.style.display = 'none';
-      }
+            // reset the button text
+            const searchButton = document.getElementById('placeID-search-button');
+            searchButton.textContent = 'Search for nearby Place IDs';
+        }
     </script>
     
   

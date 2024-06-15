@@ -15,7 +15,7 @@
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="flash-message {{ category }}">
-                        {{ message }}
+                        {{ message|safe }}
                     </div>
                 {% endfor %}
             {% endif %}
@@ -56,8 +56,10 @@
                     </div>
                     <div class="form-group">
                         <!-- Change the submit button to Please Wait when pressed. See JS code below. -->
-                        <input type="submit" id="submit-button" value="Submit">
+                        <!-- <input type="submit" id="submit-button" value="Submit"> -->
+                        <button class="button-22" type="submit" id="submit-button">Submit Changes</button>
                     </div>
+                    
                 </form>
             </div>
             <div class="map-container">
@@ -172,7 +174,7 @@
             const submitButton = document.getElementById('submit-button');
 
             form.addEventListener('submit', function(event) {
-                submitButton.value = 'Please wait...';
+                submitButton.textContent = 'Please wait...';
                 submitButton.disabled = true;
             });
 

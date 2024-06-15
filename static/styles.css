@@ -10,31 +10,68 @@ body {
     min-height: 100vh;
 }
 
-.content-container {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    width: 100%; /* Ensure the container takes full width */
-    gap: 20px; /* Add some space between elements */
+.container_connections {
+    width: 90%;
+    min-height: 95%;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+    text-align: left;
 }
 
-.photo-details {
-    flex: 1;
-    max-width: 50%; /* Ensure it doesn't take too much space */
+.content-container {
+    display: grid;  /* Use grid layout */
+    grid-template-columns: 1fr 1fr;  /* Two columns */
+    gap: 20px;  /* Add some space between elements */
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;  /* Add some space between elements in the left column */
+}
+
+.photo-details, .nearby-photos {
+    width: 100%;  /* Ensure each section takes full width */
 }
 
 .map-container {
-    flex: 1;
-    max-width: 45%; /* Ensure it fits next to the photo details */
+    grid-column: 2;  /* Ensure the map container is in the second column */
+    width: 100%;  /* Ensure the map takes full width */
 }
 
 #map {
-    width: 100%; /* Ensure it takes full width of the container */
+    width: 100%;  /* Ensure it takes full width of the container */
     height: 600px;
 }
 
 .map-description {
-    margin-bottom: 10px; /* Space between description and map */
+    margin-bottom: 10px;  /* Space between description and map */
+}
+
+#distance-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;  /* Adjust gap as needed */
+    flex-direction: row;  /* Ensure row direction */
+}
+
+#distance-form label,
+#distance-form input,
+#distance-form button {
+    /* display: inline-block; */
+    margin-right: 10px;
+}
+
+#distance-form input {
+    width: 100px;  /* Ensure the input width adjusts properly */
+    /* flex-grow: 1;  Allow the input to grow */
+}
+
+#distance-form button {
+    padding: 5px 10px;  /* Adjust padding as needed */
+    flex-shrink: 0;  /* Prevent the button from shrinking */
 }
 
 .enlarged-photo-container {
@@ -90,7 +127,10 @@ body {
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
     /* margin-left: 5%; */
     text-align: left;
+    display: flex;
+    flex-direction: column;
 }
+
 .container_upload {
     width: 90%;
     /* height: 90vh; */
@@ -202,6 +242,24 @@ a:hover {
     border: 1px solid transparent;
     border-radius: 4px;
 }
+.flash-details {
+    font-size: 16px;
+    margin-top: 5px;
+    color: #f1f1f1; /* Adjust color as needed */
+}
+.flash-message-details {
+    font-size: 14px;
+    margin-top: 5px;
+    color: #555;
+}
+.flash-message-details.error-details {
+    background-color: #fdd;
+    color: #900;
+}
+.flash-message-details.success-details {
+    background-color: #dff0d8;
+    color: #3c763d;
+}
 
 .delete-btn {
     background: none;
@@ -220,20 +278,30 @@ a:hover {
 }
 
 /* New styles for form elements */
-form {
+/* form {
     display: flex;
     flex-direction: column;
-    /* Add a max-width to the form to prevent input fields from being too wide */
-    max-width: 600px; /* Adjust the value to your preference */
-    /* margin: 0 auto; /* Centers the form */
+    max-width: 600px; 
 }
 .form-group {
-    display: flex; /* Change from flex-direction: column; to display: flex; */
-    align-items: center; /* Aligns items vertically in the center */
-    margin-bottom: 10px; /* Adds some space below each form group */
-    /* justify-content: space-between; This will make sure there's some space between your label and input field */
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    justify-content: flex-start;
+} */
+
+ /* General form styles */
+form {
+    max-width: 600px;
+}
+
+.form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
     justify-content: flex-start;
 }
+
 .form-group input {
     width: 70%; /* Adjust this to your preference */
 }
@@ -272,8 +340,6 @@ input[type="number"],
 input[type="file"],
 input[type="submit"],
 select {
-    width: 100%;
-    max-width: 100%; /* Add this line to limit the input field width */
     padding: 4px;
     margin-top: 5px;
     margin-bottom: 5px;
@@ -281,9 +347,21 @@ select {
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
-    flex-grow: 1; /* Allow input fields to take up remaining space */
     display: inline-block;
 }
+/* select {
+    width: 100%;
+    max-width: 100%; 
+    padding: 4px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    flex-grow: 1; 
+    display: inline-block;
+} */
 
 /* list_photos form */
 .form-inline {
@@ -565,4 +643,143 @@ input[type="submit"]:hover {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+
+
+.custom-table-container {
+    margin: 24px auto;
+    max-width: 960px;
+}
+
+.custom-photo-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.custom-photo-table--bordered {
+    border: 1px solid #d7d7d7;
+}
+
+.custom-photo-table--shaded {
+    border-bottom: 2px solid #c6d5e3;
+}
+
+.custom-table__head {
+    border-bottom: 2px solid #c6d5e3;
+    color: #4a4a4a;
+
+    .custom-photo-table--shaded & {
+        background: #f7fafc;
+    }
+}
+
+.custom-table__row {
+    &:not(:last-of-type) {
+        border-bottom: 1px solid #eaeaea;
+    }
+}
+
+.custom-table__cell {
+    padding: 16px 12px 14px;
+
+    .custom-table__head & {
+        padding: 10px 12px 8px;
+    }
+    
+    .custom-photo-table--bordered &:not(:last-of-type) {
+        border-right: 1px solid #eaeaea;
+    }
+    
+    .custom-table__head & {
+        font-weight: 700;
+    }
+}
+
+.custom-table__cell--checkbox {
+    max-width: 25px;
+    padding: 16px 0 14px 12px;
+
+    .custom-table__head & {
+        padding: 10px 0 8px 12px;
+    }
+}
+
+.custom-table__cell--no-wrap {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-table__cell--remainder {
+    width: 99%;
+}
+
+.custom-photo-table__label {
+    max-width: 200px;
+}
+
+
+
+/* CSS */
+.button-22 {
+  align-items: center;
+  appearance: button;
+  background-color: #0276FF;
+  border-radius: 8px;
+  border-style: none;
+  box-shadow: rgba(255, 255, 255, 0.26) 0 1px 2px inset;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  font-family: "RM Neue",sans-serif;
+  font-size: 100%;
+  line-height: 1.15;
+  margin: 0;
+  padding: 10px 21px;
+  text-align: center;
+  text-transform: none;
+  transition: color .13s ease-in-out,background .13s ease-in-out,opacity .13s ease-in-out,box-shadow .13s ease-in-out;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.button-22:active {
+  background-color: #006AE8;
+}
+
+.button-22:hover {
+  background-color: #1C84FF;
+}
+
+.file-input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Adjusts alignment to the left */
+    margin-bottom: 20px;
+}
+
+.file-input-container label {
+    cursor: pointer;
+}
+
+#file-name {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #555;
+}
+
+.placeID-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;  /* Adjust gap as needed */
+}
+
+.placeID-input-wrapper input {
+    flex-grow: 1;  /* Allow the input to grow */
+    width: auto;
 }

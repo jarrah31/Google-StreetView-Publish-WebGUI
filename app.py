@@ -54,10 +54,6 @@ def format_capture_time(capture_time):
     dt = datetime.fromisoformat(capture_time[:-1])
     return dt.strftime('%d %b %Y')
 
-import os
-import json
-from google.oauth2.credentials import Credentials
-
 def refresh_credentials(credentials):
     try:
         credentials.refresh(Request())
@@ -140,12 +136,6 @@ def oauth2callback():
 @app.route('/list_photos', methods=['GET'])
 @token_required
 def list_photos_page():
-
-    # page_size = request.args.get('page_size', None)
-    # if page_size is not None:
-    #     session['page_size'] = page_size  # Store as string
-    # else:
-    #     page_size = session.get('page_size', 10) # Retrieve as string, with default value of "10"
 
     page_size = request.args.get('page_size', session.get('page_size', '10'))
     session['page_size'] = page_size
@@ -247,6 +237,115 @@ def edit_photo(photo_id):
     # Render the 'edit_photo.html' template with the photo details.
     return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size, api_key=api_key)
 
+@app.route('/edit_connections/<photo_id>', methods=['GET'])
+@token_required
+def edit_connections(photo_id):
+    print(f"Editing connections with ID: {photo_id}")
+    # Retrieve the photo details from the Streetview API.
+    credentials = get_credentials()
+    response = get_photo(credentials.token, photo_id)
+
+    page_token = session.get('page_token', None)
+    page_size = session.get('page_size', None)
+
+    # Display json result in console
+    if debug:
+        print("Photo details:")
+        pprint(response)
+
+    response['captureTime'] = format_capture_time(response['captureTime'])
+    response['uploadTime'] = format_capture_time(response['uploadTime'])
+
+    # Validate and filter connections
+    connections = response.get('connections', [])
+    valid_connections = [conn for conn in connections if conn.get('target') and conn['target'].get('id')]
+
+    response['connections'] = valid_connections
+
+    # Get the distance from the query parameters or use a default value
+    distance = request.args.get('distance', 200, type=int)
+    if debug:
+        print(f"Distance: {distance}")
+
+    nearby_photos = []
+    if 'pose' in response and 'latLngPair' in response['pose']:
+        latitude = response['pose']['latLngPair']['latitude']
+        longitude = response['pose']['latLngPair']['longitude']
+        response['latitude'] = latitude
+        response['longitude'] = longitude
+        
+        min_lat, max_lat, min_lng, max_lng = calculate_bounding_box(latitude, longitude, distance)
+        filters = f"min_latitude={min_lat} max_latitude={max_lat} min_longitude={min_lng} max_longitude={max_lng}"
+        
+        page_token = None
+        while True:
+            try:
+                nearby_photos_response = list_photos(credentials.token, page_size=50, page_token=page_token, filters=filters)
+                photos = nearby_photos_response.get('photos', [])
+                
+                for nearby_photo in photos:
+                    if 'pose' in nearby_photo and 'latLngPair' in nearby_photo['pose']:
+                        nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
+                        nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
+                        distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
+                        if distance_to_photo > 0:  # Exclude the source photo
+                            nearby_photo['distance'] = round(distance_to_photo, 2)
+                            nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
+                            nearby_photos.append(nearby_photo)
+                
+                page_token = nearby_photos_response.get('nextPageToken')
+                if not page_token:
+                    break
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching nearby photos: {e}")
+                break
+        
+        # Sort the nearby photos by distance
+        nearby_photos.sort(key=lambda x: x['distance'])
+        
+        # Assign labels after sorting
+        for index, photo in enumerate(nearby_photos):
+            photo['label'] = str(index + 1)  # Generate labels 1, 2, 3, ...
+
+    # passing the entire response dictionary to the render_template function
+    # Render the 'edit_connections.html' template with the photo details.
+    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_token, page_size=page_size, api_key=api_key)
+
+@app.route('/create_connections', methods=['POST'])
+@token_required
+def create_connections():
+    request_data = request.get_json()
+    credentials = get_credentials()
+
+    if debug:
+        # Debug: Print the request data
+        print("Connections Request Data:")
+        pprint(request_data)
+
+    try:
+        response = requests.post(
+            'https://streetviewpublish.googleapis.com/v1/photos:batchUpdate',
+            headers={
+                'Authorization': f'Bearer {credentials.token}',
+                'Content-Type': 'application/json'
+            },
+            json=request_data
+        )
+        response.raise_for_status()
+
+        if debug:
+            print("Connections Response:")
+            print(response.json())        
+
+        main_message = 'Connections created successfully'
+        details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
+        flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
+
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        print(f"Error creating connections: {e}")
+        flash('Failed to create connections', 'error')
+        return jsonify({'error': 'Failed to create connections'}), 500
 
 @app.route('/update_photo/<photo_id>', methods=['POST'])
 @token_required
@@ -264,19 +363,12 @@ def update_photo(photo_id):
                 "longitude": parse_float(request.form.get('longitude'))
             },
             "heading": parse_float(request.form.get('heading'))
-            # "pitch": parse_float(request.form.get('pitch')),
-            # "roll": parse_float(request.form.get('roll')),
-            # "altitude": parse_float(request.form.get('altitude'))
         }
     }
 
     if not (0 <= photo["pose"]["heading"] < 360 if photo["pose"]["heading"] is not None else True):
         flash("Heading must be between 0 and 360", "error")
         return redirect(url_for('edit_photo', photo_id=photo_id))
-
-    # if not (-90 <= photo["pose"]["pitch"] <= 90 if photo["pose"]["pitch"] is not None else True):
-    #     flash("Pitch must be between -90 and 90", "error")
-    #     return redirect(url_for('edit_photo', photo_id=photo_id))
 
     place_id = request.form.get('placeId')
     if place_id:
@@ -285,9 +377,12 @@ def update_photo(photo_id):
     credentials = get_credentials()
     response = update_photo_api(credentials.token, photo_id, photo)
     if response.status_code == 200:
-        flash('Photo updated successfully', 'success')
-        return render_template('delay_redirect.html', redirect_url=url_for('edit_photo', photo_id=photo_id), page_token=session.get('page_token'), page_size=session.get('page_size'))
-    
+        main_message = 'Photo updated successfully'
+        details = "Please refresh the page after 30 seconds to see the changes."
+        flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
+
+        return redirect(url_for('edit_photo', photo_id=photo_id))  
+      
     try:
         response_json = response.json()
     except json.JSONDecodeError:
@@ -426,7 +521,7 @@ def get_filenames(directory):
                     print(f"Skipping file due to JSONDecodeError: {filename}")
     return mapping
 
-def list_photos(token, page_size=10, page_token=None):
+def list_photos(token, page_size=10, page_token=None, filters=None):
     url = "https://streetviewpublish.googleapis.com/v1/photos"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -437,6 +532,10 @@ def list_photos(token, page_size=10, page_token=None):
     }
     if page_token is not None:
         params["pageToken"] = page_token
+    if filters is not None:
+        params["filter"] = filters
+    if debug:
+        print("list_photos params:", params)
 
     response = requests.get(url, headers=headers, params=params)
     return response.json()
@@ -669,6 +768,40 @@ def get_nearby_places(latitude, longitude, radius, api_key):
         time.sleep(2)
 
     return places_info
+
+def calculate_bounding_box(lat, lng, radius):
+    # Latitude: 1 degree = 111.32 km
+    lat_diff = radius / 111320
+    # Longitude: 1 degree = 111.32 * cos(latitude) km
+    lng_diff = radius / (111320 * cos(radians(lat)))
+
+    min_lat = lat - lat_diff
+    max_lat = lat + lat_diff
+    min_lng = lng - lng_diff
+    max_lng = lng + lng_diff
+
+    return min_lat, max_lat, min_lng, max_lng
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    # Radius of the Earth in meters
+    R = 6371000
+    # Convert coordinates from degrees to radians
+    lat1 = radians(lat1)
+    lon1 = radians(lon1)
+    lat2 = radians(lat2)
+    lon2 = radians(lon2)
+    
+    # Compute differences
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    
+    # Haversine formula
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    
+    # Distance in meters
+    distance = R * c
+    return distance
 
 def load_config():
     with open("config.json") as config_file:

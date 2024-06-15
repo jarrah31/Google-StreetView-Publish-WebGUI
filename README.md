@@ -28,9 +28,14 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a9214aba-229e-4087-a923-60741a624416)
 
-![Capto_Capture 2024-06-14_05-12-50_PM](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/22b35b5e-c390-4e30-8e9a-16803faf268e)
+![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/22b35b5e-c390-4e30-8e9a-16803faf268e)
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/c5e2ecdb-92a4-45a1-87ce-476684b247a1)
+
+## My Done Photosphere Workflow
+I have a DJI Mini Pro 3 and I enjoy creating aerial StreetView photos and publishing them on Google Streetview for other people to find.
+
+I start by ensuring my drone keeps all the panorama photos as separate jpg files (J + J option). I then stitch these together using the fabulous Panorama Stitcher app (https://www.panoramastitcher.com) on my Mac Mini which does an amazing job at creating flawless panoramas with just one click of a button. I then touch up the image using Luminar Neo (https://skylum.com/luminar), specifically the "Accent AI" and "Shadow" enchancements. When I'm happy with the results I then view the pano in Spherical Viewer (https://apps.apple.com/gb/app/spherical-viewer/id1489700765?mt=12), before uploading to Google using my web app.
 
 # Installation Instructions
 The comprehensive installation steps for the Google StreetView Publish WebGUI are required because this is a self-hosted setup. It covers configuring your local environment with Python and Git, cloning the project repository, and setting up a virtual environment to manage dependencies. Additionally, you need to create a Google Cloud Developer Project to access the required APIs for publishing photospheres. This involves creating API keys and OAuth 2.0 credentials, ensuring secure and authenticated interactions with Google StreetView services. The detailed steps ensure your system is correctly configured to run the web app locally.

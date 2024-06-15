@@ -11,18 +11,20 @@
     <div class="container_photos">
         <h1>View Your Photos</h1>
         <a href="{{ url_for('index') }}" class="back-link">Back</a>
-        <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
-          <label for="page_size">Number of photos to display:</label>
-          <input type="number" id="page_size" name="page_size" value="{{ page_size }}" min="1">
-          <button type="submit">Refresh</button>
+
+        <form id="distance-form" method="GET" action="{{ url_for('list_photos_page') }}">
+            <label for="page_size">Number of photos to display:</label>
+            <input type="number" id="page_size" name="page_size" value="{{ page_size }}" min="1">
+            <button class="button-22" type="submit">Refresh</button>
         </form>
+
         <div class="navigation-buttons">     
           {% if session['page_tokens'] %}
               <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
                   <input type="hidden" name="action" value="prev">
                   <input type="hidden" name="page_token" value="{{ next_page_token }}">
                   <input type="hidden" name="page_size" value="{{ page_size }}">
-                  <button type="submit">Previous</button>
+                  <button class="button-22" type="submit">Previous</button>
               </form>
           {% endif %}
           {% if next_page_token %}
@@ -30,7 +32,7 @@
                   <input type="hidden" name="action" value="next">
                   <input type="hidden" name="page_token" value="{{ next_page_token }}">
                   <input type="hidden" name="page_size" value="{{ page_size }}">
-                  <button type="submit">Next</button>
+                  <button class="button-22" type="submit">Next</button>
               </form>
           {% endif %}  
         </div>
@@ -66,10 +68,16 @@
                   {% if photo.filename %}
                   <p>Filename: {{ photo.filename }}</p>
                   {% endif %}
+                  <!-- https://icons8.com/icons/cute-clipart -->
                   <div class="button-container">
                     <form class="edit-form" action="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}" method="GET">
                         <button type="submit" class="edit-btn" title="Edit Photo">
                             <img src="{{ url_for('static', filename='icons8-edit-image-32.png') }}" alt="Edit" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                    <form class="edit_connections-form" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" method="GET">
+                        <button type="submit" class="edit-btn" title="Edit Connections">
+                            <img src="{{ url_for('static', filename='icons8-map-marker-64.png') }}" alt="Edit" style="width: 32px; height: 32px;">
                         </button>
                     </form>
                     <form class="delete-form" action="{{ url_for('delete_photo') }}" method="POST">
@@ -90,7 +98,7 @@
                   <input type="hidden" name="action" value="prev">
                   <input type="hidden" name="page_token" value="{{ next_page_token }}">
                   <input type="hidden" name="page_size" value="{{ page_size }}">
-                  <button type="submit">Previous</button>
+                  <button class="button-22" type="submit">Previous</button>
               </form>
           {% endif %}
           {% if next_page_token %}
@@ -98,7 +106,7 @@
                   <input type="hidden" name="action" value="next">
                   <input type="hidden" name="page_token" value="{{ next_page_token }}">
                   <input type="hidden" name="page_size" value="{{ page_size }}">
-                  <button type="submit">Next</button>
+                  <button class="button-22" type="submit">Next</button>
               </form>
           {% endif %}  
         </div> 
