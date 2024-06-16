@@ -145,7 +145,7 @@ Remember to always activate the virtual environment whenever you're running this
 
 3. Search for "Street View Publish API" and enable it.
 
-4. Go back to the API library and enable "Places API" as well (not the "new" one though).
+4. Go back to the API library and enable "Places API" (not the "new" one though), and "Maps JavaScript API".
 
 5. At this point you may need to go through a 2-step process to verify your account with a credit card and address details. It says that you won't be charged until you manually upgrade to a paid account. Once done, click "Start my free trial".
 
