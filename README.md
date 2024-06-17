@@ -43,7 +43,8 @@ I have a DJI Mini Pro 3 and I enjoy creating aerial StreetView photos and publis
 I start by ensuring my drone keeps all the panorama photos as separate jpg files (J + J option). I then stitch these together using the fabulous Panorama Stitcher app (https://www.panoramastitcher.com) on my Mac Mini which does an amazing job at creating flawless panoramas with just one click of a button. I then touch up the image using Luminar Neo (https://skylum.com/luminar), specifically the "Accent AI" and "Shadow" enchancements. When I'm happy with the results I then view the pano in Spherical Viewer (https://apps.apple.com/gb/app/spherical-viewer/id1489700765?mt=12), before uploading to Google using my web app.
 
 # Installation Instructions
-The comprehensive installation steps for the Google StreetView Publish WebGUI are required because this is a self-hosted setup. It covers configuring your local environment with Python and Git, cloning the project repository, and setting up a virtual environment to manage dependencies. Additionally, you need to create a Google Cloud Developer Project to access the required APIs for publishing photospheres. This involves creating API keys and OAuth 2.0 credentials, ensuring secure and authenticated interactions with Google StreetView services. The detailed steps ensure your system is correctly configured to run the web app locally.
+The comprehensive installation steps for the Google StreetView Publish WebGUI are required because this is a self-hosted setup. Due to the requirement to authenticate a Google user via OAuth you can only set up the web server locally and access it from the same machine via a localhost IP (127.0.0.1). It should be possible to host this on the internet with your own domain name, but that is outside the scope of this guide. 
+It covers configuring your local environment with Python and Git, cloning the project repository, and setting up a virtual environment to manage dependencies. Additionally, you need to create a Google Cloud Developer Project to access the required APIs for publishing photospheres. This involves creating API keys and OAuth 2.0 credentials, ensuring secure and authenticated interactions with Google StreetView services. The detailed steps ensure your system is correctly configured to run the web app locally.
 ## macOS
 ### Install Python and Git
 Before you start, you should have [Homebrew](https://brew.sh/) installed on your macOS. If it's not installed, open a terminal window and paste the following command:
@@ -155,6 +156,7 @@ Remember to always activate the virtual environment whenever you're running this
 
 
 ## Setting Up OAuth 2.0 Client IDs
+The "Authorized redirect URIs" set up below only works with the localhost IP (127.0.0.1) for development purposes. This is because we need to log on as the Google user that publishes the photospheres, and the only alternative is to provide your own domain name instead and host it on the internet somewhere which is outside the scope of the guide.
 
 1. Navigate to the Credentials page by clicking the Navigation (hamburger) menu -> APIs and Services -> Enabled APIs and Services -> Crendentials
 
