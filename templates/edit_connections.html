@@ -91,7 +91,8 @@
         let anchorMarker;
         let nearbyMarkers = [];
         let polylines = [];
-    
+
+
         function initializeMap() {
             console.log('Google Maps API loaded');
             let lat = parseFloat(document.getElementById('latitude').value);
@@ -131,7 +132,7 @@
                     // Add click event listener to the marker
                     marker.addListener('click', function() {
                         // Redirect to the edit_connections.html with the selected photo's photoId
-                        window.location.href = `/edit_connections/${photo.photoId.id}`;
+                        window.location.href = `/edit_connections/${photo.photoId.id}?distance=${document.getElementById('distance').value}`;
                     });
                 });
     
@@ -166,6 +167,18 @@
                     console.log('Checkbox state changed');
                     updatePolylines();
                 });
+            });
+
+            // Load saved distance value
+            const savedDistance = localStorage.getItem('distance');
+            if (savedDistance) {
+                document.getElementById('distance').value = savedDistance;
+            }
+
+            // Save distance value on form submit
+            document.getElementById('distance-form').addEventListener('submit', function() {
+                const distance = document.getElementById('distance').value;
+                localStorage.setItem('distance', distance);
             });
         });
     
