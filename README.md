@@ -36,6 +36,8 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 ![IMG_6ABF6090499C-1](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ab519b4b-2cac-4ac8-8954-1f37625c43fb)
 
+<img width="1316" alt="image" src="https://github.com/user-attachments/assets/a9dd78f4-a0a1-488e-9272-de9b4d135936">
+
 
 ## My Drone Photosphere Workflow
 I have a DJI Mini Pro 3 and I enjoy creating aerial StreetView photos and publishing them on Google Streetview for other people to find.
