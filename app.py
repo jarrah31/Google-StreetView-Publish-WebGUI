@@ -310,6 +310,38 @@ def edit_connections(photo_id):
     # Render the 'edit_connections.html' template with the photo details.
     return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_token, page_size=page_size, api_key=api_key)
 
+@app.route('/get_connections', methods=['POST'])
+def get_connections():
+    data = request.json
+    photo_ids = data.get('photoIds', [])
+
+    # if debug:
+    #     print(f"Received request to fetch connections for photo_ids: {photo_ids}")
+
+    all_connections = []
+    for photo_id in photo_ids:
+        try:
+            # if debug:
+            #     print(f"Fetching connections for photo_id {photo_id}")
+            photo = get_photo_by_id(photo_id)
+            if photo and 'connections' in photo:
+                for conn in photo['connections']:
+                    all_connections.append({
+                        'source': photo_id,
+                        'target': conn['target']['id']
+                    })
+                # if debug:
+                #     print(f"Found connections for photo_id {photo_id}: {photo['connections']}")
+        except Exception as e:
+            print(f"Error fetching connections for photo_id {photo_id}: {e}")
+
+    # if debug:
+    #     print(f"Returning all connections:")
+    #     pprint(all_connections)
+
+    return jsonify(connections=all_connections), 200
+
+
 @app.route('/create_connections', methods=['POST'])
 @token_required
 def create_connections():
@@ -546,6 +578,24 @@ def get_photo(token, photo_id):
     }
     response = requests.get(url, headers=headers)
     return response.json()
+
+def get_photo_by_id(photo_id):
+    try:
+
+        # Obtain credentials using the get_credentials function
+        credentials = get_credentials()
+                
+        # Fetch photo details using the get_photo function
+        photo = get_photo(credentials.token, photo_id)
+        
+        # if debug:
+        #     print(f"Fetched photo details for photo_id {photo_id}:")
+            # pprint(photo)
+        
+        return photo
+    except Exception as e:
+        print(f"Error fetching photo details for photo_id {photo_id}: {e}")
+        return None
 
 def update_photo_api(token, photo_id, photo):
 

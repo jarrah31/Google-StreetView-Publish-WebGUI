@@ -783,3 +783,23 @@ input[type="submit"]:hover {
     flex-grow: 1;  /* Allow the input to grow */
     width: auto;
 }
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #000;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.button-spacing {
+    margin-bottom: 10px; /* Adjust the margin as needed */
+}
