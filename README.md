@@ -210,6 +210,7 @@ Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 
     YOUR_OAUTH_CLIENT_SECRET
     YOUR_API_KEY
     ```
+    config.json
     ```bash
     {
         "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS",
