@@ -33,18 +33,33 @@ if not os.path.exists(uploads_dir):
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-def load_secrets(file_path="client_secrets.json"):
-    with open(file_path) as f:
-        return json.load(f)
+def load_config():
+    with open("config.json") as config_file:
+        config = json.load(config_file)
 
-secrets = load_secrets()["web"]
+    # If the "web" group does not exist in config, load it from client_secrets.json
+    if 'web' not in config:
+        with open("client_secrets.json") as secrets_file:
+            client_secrets = json.load(secrets_file)
+            config['web'] = client_secrets['web']
+
+    # Dynamically construct the redirect_uris
+    port = config.get('PORT', 5000)
+    if 'web' in config and 'redirect_uris' in config['web']:
+        config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
+
+    return config
+    
+config = load_config()
+secrets = config["web"]
+
 client_config = {
     "web": {
         "client_id": secrets["client_id"],
         "client_secret": secrets["client_secret"],
         "redirect_uris": [secrets["redirect_uris"]],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://accounts.google.com/o/oauth2/token",
+        "auth_uri": secrets["auth_uri"],
+        "token_uri": secrets["token_uri"],
     }
 }
 api_key = secrets["api_key"]
@@ -852,17 +867,13 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
-def load_config():
-    with open("config.json") as config_file:
-        config = json.load(config_file)
-    return config
+
 
 if __name__ == '__main__':
-    config = load_config()
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or config.get('SECRET_KEY')
     try:
         port = int(os.getenv('PORT', config.get('PORT', 5000)))
-        app.run(debug=True, port=port)
+        app.run(host='0.0.0.0', debug=True, port=port)
     except OSError as e:
         if e.errno == 98:  # Address already in use
             print(f"Port {port} is already in use. Please specify a different port.")
