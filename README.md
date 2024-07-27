@@ -189,43 +189,39 @@ The "Authorized redirect URIs" set up below only works with the localhost IP (12
 
 Now your Google Cloud Developer Project is set up with an API Key and OAuth 2.0 Client IDs, and you have a billing account for API usage.
 
-# Setting Up client_secrets.json and config.json
+# Setting Up config.json
 
 (for Windows, activate venv as described in the Windows instructions, and use notepad to edit the json files) 
 1. **Navigate to Your Project Directory**: `cd Google-StreetView-Publish-WebGUI`
-2. **Create a new file called "client_secrets.json":** (same place where app.py is located)
+2. **Create a new file called "config.json":** (same place where app.py is located)
    
-   macOS: `nano client_secrets.json`
+   macOS/Linux: `nano config.json`
   
    Windows: Create a new text file using notepad.
    
    **Caution on Windows**
-   If you create a text file on Windows via File Explorer, it may actually be called `client_secrets.json.txt` even if it displays `client_secrets.json`. 
+   If you create a text file on Windows via File Explorer, it may actually be called `config.json.txt` even if it displays `config.json`. 
    To check, find the option to show filename extensions, and correct if necessary.
     
 3. Paste in the json below and replace the following text within the quotes (keeping the quotes)
     ```
+    REPLACE_THIS_WITH_RANDOM_LETTERS
     YOUR_OAUTH_CLIENT ID
     YOUR_OAUTH_CLIENT_SECRET
     YOUR_API_KEY
     ```
     ```bash
     {
+        "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS",
+        "PORT": 5000,
         "web": {
           "client_id": "YOUR_OAUTH_CLIENT ID",
           "client_secret": "YOUR_OAUTH_CLIENT_SECRET",
           "api_key": "YOUR_API_KEY",
-          "redirect_uris": "http://127.0.0.1:5000/oauth2callback",
+          "redirect_uris": "http://127.0.0.1:{port}/oauth2callback",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
           "token_uri": "https://accounts.google.com/o/oauth2/token"
         }
-    }
-    ```
-4. **Create a new file called "config.json"** and paste in the following:
-    ```bash
-    {
-        "SECRET_KEY": "REPLACE_THIS_WITH_RANDOM_LETTERS",
-        "PORT": 5000
     }
     ```
  
