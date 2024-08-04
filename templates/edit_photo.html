@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Photo</title>
+    <!-- <script>
+        // Print the API key to the console for debugging
+        console.log("Google Maps API Key:", "{{ api_key }}");
+    </script> -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
 </head>
@@ -96,8 +100,11 @@
         let polyline;
 
         function initializeMap() {
+            console.log("Initializing map..."); 
             let lat = parseFloat(document.getElementById('latitude').value);
             let lng = parseFloat(document.getElementById('longitude').value);
+
+            console.log("Latitude:", lat, "Longitude:", lng);
 
             const anchorPosition = { lat: lat, lng: lng };
             const headingValue = parseFloat(headingInput.value);
@@ -148,6 +155,9 @@
 
             google.maps.event.addListener(headingMarker, 'drag', updatePolylineAndHeading);
         }
+        window.addEventListener('load', function() {
+            initializeMap();
+        });
 
         function updatePolylineAndHeading() {
             const anchorPosition = anchorMarker.getPosition();
