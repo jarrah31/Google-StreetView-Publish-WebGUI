@@ -259,8 +259,8 @@ def edit_connections(photo_id):
     credentials = get_credentials()
     response = get_photo(credentials.token, photo_id)
 
-    page_token = session.get('page_token', None)
-    page_size = session.get('page_size', None)
+    page_session_token = session.get('page_token', None)
+    page_session_size = session.get('page_size', None)
 
     # Display json result in console
     if debug:
@@ -323,7 +323,7 @@ def edit_connections(photo_id):
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_connections.html' template with the photo details.
-    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_token, page_size=page_size, api_key=api_key)
+    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=api_key)
 
 @app.route('/get_connections', methods=['POST'])
 def get_connections():
