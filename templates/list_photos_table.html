@@ -36,7 +36,7 @@
                 </thead>
                 <tbody>
                     {% for photo in photos_list %}
-                        <tr data-share-link="{{ photo.shareLink }}">
+                        <tr data-photo-id="{{ photo.photoId.id }}">
                             <td data-column="place">
                                 {% if 'places' in photo %}
                                     {% for place in photo.places %}
@@ -72,10 +72,15 @@
             // Check if the click event occurred on a row
             if (clickedElement.parentElement.tagName === 'TR') {
                 // Get the share link from the data-share-link attribute
-                const shareLink = clickedElement.parentElement.getAttribute('data-share-link');
+                const photoId = clickedElement.parentElement.getAttribute('data-photo-id');
 
-                // Open the share link in a new tab
-                window.open(shareLink, '_blank');
+                // // Open the share link in a new tab
+                if (photoId) {
+                    const editUrl = `{{ url_for('edit_photo', photo_id='') }}${photoId}`;
+                    // Set a flag to indicate that the tab was opened programmatically
+                    sessionStorage.setItem('openedByScript', 'true');
+                    window.open(editUrl, '_blank');
+                }
             }
         }
 
