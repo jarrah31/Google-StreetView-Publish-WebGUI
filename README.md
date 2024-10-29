@@ -2,7 +2,7 @@
 
 This project helps you publish and view Google StreetView photosphere/360 photos onto Google Maps using the StreetView API.
 
-Unlike the Google Maps app (RIP StreetView App), publishing photospheres without an associated listing is possible, and if you do choose a listing, it won't snap the blue dot to that location.
+Unlike the Google Maps app (RIP StreetView App), publishing photospheres without an associated listing using this project is possible, and if you do choose a listing, it won't snap the blue dot to that location.
 
 Features include:
 - Local web server presenting a web GUI to interact with the API
