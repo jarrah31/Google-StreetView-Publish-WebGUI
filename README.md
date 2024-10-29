@@ -12,6 +12,7 @@ Features include:
 - View all your photospheres, showing their viewcount, publish and capture dates, and place names
 - Edit existing 360 photos by changing their location and placeID
 - Delete your 360 photos
+- Add and edit connections between photospheres for navigating between images
 
 You will need to (full insructions below):
 - Run this Python script within a venv environment on your local machine
