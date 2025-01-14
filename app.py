@@ -1,4 +1,3 @@
-
 import time
 import requests
 import json
@@ -6,11 +5,13 @@ import os
 import tempfile
 import google_auth_oauthlib.flow
 import re
+import logging
+from google.auth.exceptions import RefreshError
 
 
 from datetime import datetime
 from functools import wraps
-from pprint import pprint
+from pprint import pprint, pformat
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -33,15 +34,27 @@ if not os.path.exists(uploads_dir):
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 def load_config():
-    with open("config.json") as config_file:
-        config = json.load(config_file)
+    try:
+        with open("config.json") as config_file:
+            config = json.load(config_file)
+    except FileNotFoundError:
+        logger.error("config.json not found.")
+        raise
 
     # If the "web" group does not exist in config, load it from client_secrets.json
     if 'web' not in config:
-        with open("client_secrets.json") as secrets_file:
-            client_secrets = json.load(secrets_file)
-            config['web'] = client_secrets['web']
+        try:
+            with open("client_secrets.json") as secrets_file:
+                client_secrets = json.load(secrets_file)
+                config['web'] = client_secrets['web']
+        except FileNotFoundError:
+            logger.error("client_secrets.json not found.")
+            raise
 
     # Dynamically construct the redirect_uris
     port = config.get('PORT', 5000)
@@ -71,7 +84,8 @@ def format_capture_time(capture_time):
 def refresh_credentials(credentials):
     try:
         credentials.refresh(Request())
-    except google.auth.exceptions.RefreshError:
+    except RefreshError:
+        logger.error("Failed to refresh credentials.")
         os.remove('creds.data')
         return None
     save_credentials(credentials)
@@ -231,7 +245,7 @@ def list_photos_table_page():
 @app.route('/edit_photo/<photo_id>', methods=['GET'])
 @token_required
 def edit_photo(photo_id):
-    print(f"Editing photo with ID: {photo_id}")
+    logger.debug(f"Editing photo with ID: {photo_id}")
     # Retrieve the photo details from the Streetview API.
     credentials = get_credentials()
     response = get_photo(credentials.token, photo_id)
@@ -240,9 +254,7 @@ def edit_photo(photo_id):
     page_size = session.get('page_size', None)
 
     # Display json result in console
-    # pretty-print the JSON response using the pprint function from the pprint module in Python.
-    print("Photo details:")
-    pprint(response)
+    logger.debug("Photo details:\n%s", pformat(response))
 
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
@@ -254,7 +266,7 @@ def edit_photo(photo_id):
 @app.route('/edit_connections/<photo_id>', methods=['GET'])
 @token_required
 def edit_connections(photo_id):
-    print(f"Editing connections with ID: {photo_id}")
+    logger.debug(f"Editing connections with ID: {photo_id}")
     # Retrieve the photo details from the Streetview API.
     credentials = get_credentials()
     response = get_photo(credentials.token, photo_id)
@@ -263,9 +275,7 @@ def edit_connections(photo_id):
     page_session_size = session.get('page_size', None)
 
     # Display json result in console
-    if debug:
-        print("Photo details:")
-        pprint(response)
+    logger.debug("Photo details:\n%s", pformat(response))
 
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
@@ -278,8 +288,7 @@ def edit_connections(photo_id):
 
     # Get the distance from the query parameters or use a default value
     distance = request.args.get('distance', 200, type=int)
-    if debug:
-        print(f"Distance: {distance}")
+    logger.debug(f"Distance: {distance}")
 
     nearby_photos = []
     if 'pose' in response and 'latLngPair' in response['pose']:
@@ -311,7 +320,7 @@ def edit_connections(photo_id):
                 if not page_token:
                     break
             except requests.exceptions.RequestException as e:
-                print(f"Error fetching nearby photos: {e}")
+                logger.error(f"Error fetching nearby photos: {e}")
                 break
         
         # Sort the nearby photos by distance
@@ -330,14 +339,12 @@ def get_connections():
     data = request.json
     photo_ids = data.get('photoIds', [])
 
-    # if debug:
-    #     print(f"Received request to fetch connections for photo_ids: {photo_ids}")
+    logger.debug(f"Received request to fetch connections for photo_ids: {photo_ids}")
 
     all_connections = []
     for photo_id in photo_ids:
         try:
-            # if debug:
-            #     print(f"Fetching connections for photo_id {photo_id}")
+            logger.debug(f"Fetching connections for photo_id {photo_id}")
             photo = get_photo_by_id(photo_id)
             if photo and 'connections' in photo:
                 for conn in photo['connections']:
@@ -345,14 +352,11 @@ def get_connections():
                         'source': photo_id,
                         'target': conn['target']['id']
                     })
-                # if debug:
-                #     print(f"Found connections for photo_id {photo_id}: {photo['connections']}")
+                # logger.debug(f"Found connections for photo_id {photo_id}: {photo['connections']}")
         except Exception as e:
-            print(f"Error fetching connections for photo_id {photo_id}: {e}")
+            logger.error(f"Error fetching connections for photo_id {photo_id}: {e}")
 
-    # if debug:
-    #     print(f"Returning all connections:")
-    #     pprint(all_connections)
+    # logger.debug(f"Returning all connections:\n%s", pformat(all_connections))
 
     return jsonify(connections=all_connections), 200
 
@@ -363,10 +367,7 @@ def create_connections():
     request_data = request.get_json()
     credentials = get_credentials()
 
-    if debug:
-        # Debug: Print the request data
-        print("Connections Request Data:")
-        pprint(request_data)
+    logger.debug("Connections Request Data:\n%s", pformat(request_data))
 
     try:
         response = requests.post(
@@ -379,9 +380,7 @@ def create_connections():
         )
         response.raise_for_status()
 
-        if debug:
-            print("Connections Response:")
-            print(response.json())        
+        logger.debug("Connections Response:\n%s", pformat(response.json()))        
 
         main_message = 'Connections created successfully'
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
@@ -389,7 +388,7 @@ def create_connections():
 
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
-        print(f"Error creating connections: {e}")
+        logger.error(f"Error creating connections: {e}")
         flash('Failed to create connections', 'error')
         return jsonify({'error': 'Failed to create connections'}), 500
 
@@ -460,24 +459,21 @@ def nearby_places():
 @token_required
 def upload_photosphere():
     if request.method == 'POST':
-        if debug:
-            print("Received POST request for uploading photosphere.")
-            print("Form data:", request.form)
+        logger.debug("Received POST request for uploading photosphere.")
+        logger.debug(f"Form data:\n%s", pformat(request.form))
 
         credentials = get_credentials()
 
         # Start the upload
         upload_ref = start_upload(credentials.token)
         upload_ref_message = f"Created upload url: {upload_ref}"
-        if debug:
-            print(upload_ref_message)
+        logger.debug(upload_ref_message)
 
         # Save the uploaded file to a temporary location on the server
         file = request.files['file']
         file_path = os.path.join(tempfile.gettempdir(), file.filename)
         file.save(file_path)
-        if debug:
-            print(f"Saved file to {file_path}")
+        logger.debug(f"Saved file to {file_path}")
 
         # Get the heading value from the form
         heading = request.form['heading']
@@ -485,13 +481,11 @@ def upload_photosphere():
         # Upload the photo bytes to the Upload URL
         upload_status = upload_photo(credentials.token, upload_ref, file_path, heading)
         upload_status_message = f"Upload status: {upload_status}"
-        if debug:
-            print(upload_status_message)
+        logger.debug(upload_status_message)
 
         # Remove the temporary file
         os.remove(file_path)
-        if debug:
-            print(f"Removed temporary file {file_path}")
+        logger.debug(f"Removed temporary file {file_path}")
 
         # Upload the metadata of the photo
         latitude = float(request.form['latitude'])
@@ -500,9 +494,8 @@ def upload_photosphere():
 
         create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
         create_photo_response_message = f"Create photo response: {create_photo_response}"
-        if debug:
-            print(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
-            print(create_photo_response_message)
+        logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
+        logger.debug(create_photo_response_message)
 
         # Save the create_photo_response JSON data to a file named after the photo filename
         uploads_directory = "uploads"
@@ -523,7 +516,6 @@ def upload_photosphere():
         with open(json_filepath, 'w') as f:
             json.dump(create_photo_response, f, indent=2)
 
-
         return render_template('upload_result.html', upload_ref_message=upload_ref_message, upload_status_message=upload_status_message, create_photo_response=create_photo_response, create_photo_response_message=create_photo_response_message, photo_filename = file.filename)
 
     return render_template('upload.html')
@@ -539,9 +531,9 @@ def delete_photo():
     headers = {'Authorization': f'Bearer {credentials.token}'}
     response = requests.delete(url, headers=headers)
 
-    # print(f"Response object: {response}")
-    # print(f"Response status code: {response.status_code}")
-    # print(f"Response text: {response.text}")
+    # logger.debug(f"Response object: {response}")
+    # logger.debug(f"Response status code: {response.status_code}")
+    # logger.debug(f"Response text: {response.text}")
 
     if response.status_code != 200:
         flash(f'Failed to delete photo. Error: {response.text}', 'error')
@@ -561,10 +553,10 @@ def get_filenames(directory):
                     if isinstance(content, dict):
                         photoId = content.get('photoId', {}).get('id')
                         if photoId:
-                            # print(f"Processing file: {filename}")  # Print the filename being processed
+                            # logger.debug(f"Processing file: {filename}")  # Print the filename being processed
                             mapping[photoId] = filename
                 except json.JSONDecodeError:
-                    print(f"Skipping file due to JSONDecodeError: {filename}")
+                    logger.debug(f"Skipping file due to JSONDecodeError: {filename}")
     return mapping
 
 def list_photos(token, page_size=10, page_token=None, filters=None):
@@ -580,8 +572,7 @@ def list_photos(token, page_size=10, page_token=None, filters=None):
         params["pageToken"] = page_token
     if filters is not None:
         params["filter"] = filters
-    if debug:
-        print("list_photos params:", params)
+    logger.debug(f"list_photos params: {params}")
 
     response = requests.get(url, headers=headers, params=params)
     return response.json()
@@ -603,13 +594,12 @@ def get_photo_by_id(photo_id):
         # Fetch photo details using the get_photo function
         photo = get_photo(credentials.token, photo_id)
         
-        # if debug:
-        #     print(f"Fetched photo details for photo_id {photo_id}:")
-            # pprint(photo)
+        logger.debug(f"Fetched photo details for photo_id {photo_id}:")
+        pprint(photo)
         
         return photo
     except Exception as e:
-        print(f"Error fetching photo details for photo_id {photo_id}: {e}")
+        logger.error(f"Error fetching photo details for photo_id {photo_id}: {e}")
         return None
 
 def update_photo_api(token, photo_id, photo):
@@ -631,25 +621,24 @@ def update_photo_api(token, photo_id, photo):
             # If 'places' is not empty, add it to the updateMask
             updateMask.append('places')
     updateMask = ','.join(updateMask)
-    if debug:
-        print(updateMask)
+    logger.debug(updateMask)
 
 
     # updateMask = "places"
     # pose.latLngPair.latitude,pose.latLngPair.longitude
 
-    # print(f"update_photo_api update mask: {updateMask}")
-    # print(f"update_photo_api photo_id: {photo_id}")
+    # logger.debug(f"update_photo_api update mask: {updateMask}")
+    # logger.debug(f"update_photo_api photo_id: {photo_id}")
 
     url = f"https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?updateMask={updateMask}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    # print(f"Update_photo_api URL: {url}")
+    # logger.debug(f"Update_photo_api URL: {url}")
     response = requests.put(url, headers=headers, json=photo)
-    # print(f"Update_photo_api Response status code: {response.status_code}")
-    # print(f"Update_photo_api Response: {response}")
+    # logger.debug(f"Update_photo_api Response status code: {response.status_code}")
+    # logger.debug(f"Update_photo_api Response: {response}")
     # return response.json()
     return response
 
@@ -712,8 +701,7 @@ def add_or_update_xmp_metadata(file_path, heading):
 def upload_photo(token, upload_ref, file_path, heading):
     # Add XMP metadata to the photo
     temp_file_path = add_or_update_xmp_metadata(file_path, heading)
-    if debug:
-        print(temp_file_path)
+    logger.debug(temp_file_path)
 
     with open(temp_file_path, "rb") as f:
         raw_data = f.read()
@@ -746,17 +734,15 @@ def create_photo(token, upload_ref, latitude, longitude, placeId):
     if placeId:
         body["places"] = [{"placeId": placeId}]
 
-    if debug:
-        print("Sending create_photo request with body:", json.dumps(body, indent=2))
+    logger.debug("Sending create_photo request with body:", json.dumps(body, indent=2))
 
     response = requests.post(url, headers=headers, json=body)
 
-    if debug:
-        print(f"Response status code: {response.status_code}")
-        print(f"Response text: {response.text}")
+    logger.debug(f"Response status code: {response.status_code}")
+    logger.debug(f"Response text: {response.text}")
 
-    # print(f"Response status code: {response.status_code}")
-    # print(f"Response text: {response.text}")
+    # logger.debug(f"Response status code: {response.status_code}")
+    # logger.debug(f"Response text: {response.text}")
 
     if response.status_code == 200:
         return response.json()
@@ -803,8 +789,8 @@ def get_nearby_places(latitude, longitude, radius, api_key):
         response = requests.get(url, params=params)
         data = response.json()
 
-        # debug - print the number of results
-        # print("Number of results: ", len(data["results"]))
+        # debug - logger.debug the number of results
+        # logger.debug("Number of results: ", len(data["results"]))
 
         for place in data["results"]:
             place_id = place["place_id"]
@@ -876,7 +862,7 @@ if __name__ == '__main__':
         app.run(host='0.0.0.0', debug=True, port=port)
     except OSError as e:
         if e.errno == 98:  # Address already in use
-            print(f"Port {port} is already in use. Please specify a different port.")
+            logger.error(f"Port {port} is already in use. Please specify a different port.")
         else:
             raise
 

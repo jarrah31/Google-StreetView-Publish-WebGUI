@@ -10,3 +10,6 @@ creds.data
 # File types
 *.txt
 *.DS_Store
+
+# Ignnore the streetview folder
+streetview/
