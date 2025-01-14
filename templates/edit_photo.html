@@ -14,7 +14,8 @@
 <body>
     <div class="container_photos">
         <h1>Edit Photo</h1>
-        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
+        <!-- <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a> -->
+        <a href="#" class="back-link">Back to List</a>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -177,7 +178,7 @@
         // Get the modal
         var modal = document.getElementById("myModal");
 
-        document.addEventListener('DOMContentLoaded', (event) => {
+        document.addEventListener('DOMContentLoaded', function(event) {
 
             // Change the submit button to Please Wait when pressed.
             const form = document.querySelector('form');
@@ -188,6 +189,29 @@
                 submitButton.disabled = true;
             });
 
+            // Dynamically update the "Back to List" link
+            const backLink = document.querySelector('.back-link');
+            const referrer = document.referrer;
+
+            if (referrer.includes('list_photos_table')) {
+                backLink.href = '{{ url_for("list_photos_table_page") }}';
+                backLink.textContent = 'Return to Table View';
+
+                // Add click event to close the tab if opened in a new tab
+                backLink.addEventListener('click', function(event) {
+                    // Check if the tab was opened programmatically
+                    if (sessionStorage.getItem('openedByScript') === 'true') {
+                        event.preventDefault();  // Prevent the default link behavior
+                        window.close();  // Close the current tab
+                    }
+                });
+            } else if (referrer.includes('list_photos')) {
+                backLink.href = `{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}`;
+                backLink.textContent = 'Return to Grid View';
+            } else {
+                backLink.href = '{{ url_for("list_photos_page") }}';
+                backLink.textContent = 'Back to List';
+            }
 
             function fetchPlaces() {
                 // Show loading message

@@ -2,7 +2,7 @@
 
 This project helps you publish and view Google StreetView photosphere/360 photos onto Google Maps using the StreetView API.
 
-Unlike the Google Maps app (RIP StreetView App), publishing photospheres without an associated listing is possible, and if you do choose a listing, it won't snap the blue dot to that location.
+Unlike the Google Maps app (RIP StreetView App), publishing photospheres without an associated listing using this project is possible, and if you do choose a listing, it won't snap the blue dot to that location.
 
 Features include:
 - Local web server presenting a web GUI to interact with the API
@@ -12,6 +12,7 @@ Features include:
 - View all your photospheres, showing their viewcount, publish and capture dates, and place names
 - Edit existing 360 photos by changing their location and placeID
 - Delete your 360 photos
+- Add and edit connections between photospheres for navigating between images
 
 You will need to (full insructions below):
 - Run this Python script within a venv environment on your local machine

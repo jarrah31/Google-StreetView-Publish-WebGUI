@@ -7,15 +7,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <!-- <div class="header">
-        {% if session['user_email'] %}
-            <div class="user-info">
-                <img src="https://img.icons8.com/ios-filled/50/000000/google-logo.png"/>
-                <p>Welcome, {{ session['user_name'] }}!</p>
-                <a href="{{ url_for('logout') }}">Logout</a>
-            </div>
-        {% endif %}
-    </div> -->
     <div class="container">
         <h1>Street View Publish</h1>
         {% with messages = get_flashed_messages() %}
@@ -28,17 +19,27 @@
             {% endif %}
         {% endwith %}
         <!-- <a href="{{ url_for('logout') }}">Logout</a> -->
-        <!-- <a target="_blank" href="https://icons8.com/icon/EXuHNntUM7p0/gallery">Gallery</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a> -->
-        <ul>
-            <li><a href="{{ url_for('list_photos_page') }}" class="icon-link">
-                <img src="{{ url_for('static', filename='icons8-panorama-96-favicon.png') }}" alt="List your photos" />
-                <p>View photos</p>
-            </a></li>
-            <li><a href="{{ url_for('upload_photosphere') }}" class="icon-link">
-                <img src="{{ url_for('static', filename='icons8-add-image-96-favicon.png') }}" alt="Upload a new photosphere" />
-                <p>Upload</p>
-            </a></li>
+        <ul style="list-style-type:none; display: flex; gap: 20px;">
+            <li style="text-align: center;">
+                <a href="{{ url_for('list_photos_page') }}" class="icon-link">
+                    <img src="{{ url_for('static', filename='icons8-menu-96-favicon.png') }}" alt="Grid View" style="display: block; margin: 0 auto;" />
+                    <p>Grid View</p>
+                </a>
+            </li>
+            <li style="text-align: center;">
+                <a href="{{ url_for('list_photos_table_page') }}" class="icon-link">
+                    <img src="{{ url_for('static', filename='icons8-menu-96.png') }}" alt="List View" style="display: block; margin: 0 auto;" />
+                    <p>List View</p>
+                </a>
+            </li>
+            <li style="text-align: center;">
+                <a href="{{ url_for('upload_photosphere') }}" class="icon-link">
+                    <img src="{{ url_for('static', filename='icons8-add-image-96-favicon.png') }}" alt="Upload a new photosphere" style="display: block; margin: 0 auto;" />
+                    <p>Upload</p>
+                </a>
+            </li>
         </ul>
+        
     </div>
 </body>
 </html>
