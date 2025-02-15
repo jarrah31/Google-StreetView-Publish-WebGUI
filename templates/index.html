@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Street View Publish</h1>
+    <ul style="list-style-type:none; display: flex; gap: 20px;">
+        <li style="text-align: center;">
+            <a href="{{ url_for('list_photos_page') }}" class="icon-link">
+                <img src="{{ url_for('static', filename='icons8-menu-96-favicon.png') }}" alt="Grid View" style="display: block; margin: 0 auto;" />
+                <p>Grid View</p>
+            </a>
+        </li>
+        <li style="text-align: center;">
+            <a href="{{ url_for('list_photos_table_page') }}" class="icon-link">
+                <img src="{{ url_for('static', filename='icons8-menu-96.png') }}" alt="List View" style="display: block; margin: 0 auto;" />
+                <p>List View</p>
+            </a>
+        </li>
+        <li style="text-align: center;">
+            <a href="{{ url_for('upload_photosphere') }}" class="icon-link">
+                <img src="{{ url_for('static', filename='icons8-add-image-96-favicon.png') }}" alt="Upload a new photosphere" style="display: block; margin: 0 auto;" />
+                <p>Upload</p>
+            </a>
+        </li>
+    </ul>
+</div>
+{% endblock %}

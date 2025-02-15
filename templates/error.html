@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h1>Error</h1>
+    <div class="flash-message error">
+        <h2>{{ error_type }}</h2>
+        <p>{{ message }}</p>
+        {% if status_code %}
+        <p>Status Code: {{ status_code }}</p>
+        {% endif %}
+    </div>
+    <a href="{{ url_for('index') }}" class="back-link">Return to Home</a>
+</div>
+{% endblock %}

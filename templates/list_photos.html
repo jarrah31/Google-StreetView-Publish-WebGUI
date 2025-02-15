@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}List your photos{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container_photos">
+        <h1>View Your Photos</h1>
+        <a href="{{ url_for('index') }}" class="back-link">Back</a>
+
+        <form id="distance-form" method="GET" action="{{ url_for('list_photos_page') }}">
+            <label for="page_size">Number of photos to display:</label>
+            <input type="number" id="page_size" name="page_size" value="{{ page_size }}" min="1">
+            <button class="button-22" type="submit">Refresh</button>
+        </form>
+
+        <div class="navigation-buttons">     
+          {% if session['page_tokens'] %}
+              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
+                  <input type="hidden" name="action" value="prev">
+                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
+                  <input type="hidden" name="page_size" value="{{ page_size }}">
+                  <button class="button-22" type="submit">Previous</button>
+              </form>
+          {% endif %}
+          {% if next_page_token %}
+              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
+                  <input type="hidden" name="action" value="next">
+                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
+                  <input type="hidden" name="page_size" value="{{ page_size }}">
+                  <button class="button-22" type="submit">Next</button>
+              </form>
+          {% endif %}  
+        </div>
+      
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="main-container">
+            {% for photo in photos_list %}
+                <div class="photo-container">
+                  <a href="{{ photo.shareLink }}" target="_blank">
+                      <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
+                  </a>
+                  {% if 'places' in photo %}
+                    {% for place in photo.places %}
+                        <p>Place: {{ place.name }}</p>
+                    {% endfor %}
+                  {% else %}
+                    <p>Place: N/A</p>
+                  {% endif %}
+                  <p>Published Status: {{ photo.mapsPublishStatus }}</p>
+                  <p>View count: {{ photo.viewCount }}</p>
+                  <p>Capture time: {{ photo.captureTime }}</p>
+                  <p>Upload time: {{ photo.uploadTime }}</p>
+                  <p>Heading set?: {% if photo.heading is not none %}Yes{% else %}No{% endif %}</p>
+                  {% if photo.filename %}
+                  <p>Filename: {{ photo.filename }}</p>
+                  {% endif %}
+                  <!-- https://icons8.com/icons/cute-clipart -->
+                  <div class="button-container">
+                    <form class="edit-form" action="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}" method="GET">
+                        <button type="submit" class="edit-btn" title="Edit Photo">
+                            <img src="{{ url_for('static', filename='icons8-edit-image-32.png') }}" alt="Edit" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                    <form class="edit_connections-form" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" method="GET">
+                        <button type="submit" class="edit-btn" title="Edit Connections">
+                            <img src="{{ url_for('static', filename='icons8-map-marker-64.png') }}" alt="Edit" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                    <form class="delete-form" action="{{ url_for('delete_photo') }}" method="POST">
+                        <input type="hidden" name="photo_id" value="{{ photo.photoId }}">
+                        <button type="submit" class="delete-btn" title="Delete Photo" onclick="return confirm('Are you sure you want to delete this photo?');">
+                            <img src="{{ url_for('static', filename='icons8-remove-image-32.png') }}" alt="Delete" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                  </div>
+                  
+
+                </div>
+            {% endfor %}
+        </div>
+        <div class="navigation-buttons">      
+          {% if session['page_tokens'] %}
+              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
+                  <input type="hidden" name="action" value="prev">
+                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
+                  <input type="hidden" name="page_size" value="{{ page_size }}">
+                  <button class="button-22" type="submit">Previous</button>
+              </form>
+          {% endif %}
+          {% if next_page_token %}
+              <form class="form-inline" action="{{ url_for('list_photos_page') }}" method="GET">
+                  <input type="hidden" name="action" value="next">
+                  <input type="hidden" name="page_token" value="{{ next_page_token }}">
+                  <input type="hidden" name="page_size" value="{{ page_size }}">
+                  <button class="button-22" type="submit">Next</button>
+              </form>
+          {% endif %}  
+        </div> 
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        let pageSizeInput = document.getElementById('page_size');
+        let pageSize = "{{ page_size }}";
+        pageSizeInput.value = pageSize;
+
+        pageSizeInput.addEventListener('change', function() {
+            // On change, submit the form
+            this.form.submit();
+        });
+    });
+</script>
+{% endblock %}

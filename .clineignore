@@ -1,0 +1,24 @@
+# Ignore configuration files containing sensitive data
+.env
+*.env
+
+# Ignore credential files
+*creds.data
+*credentials*
+*secret*
+*api_key*
+
+# Ignore sensitive directories that might contain credentials
+.secrets/
+credentials/
+
+# Ignore any backup files that might contain sensitive data
+*.bak
+*backup*
+
+# Ignore local development configuration
+.env.local
+.env.development
+.env.test
+.env.production
+

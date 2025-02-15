@@ -1,0 +1,14 @@
+# Directories
+/uploads/
+/venv/
+/logs/
+
+# Files
+client_secrets.json
+*creds.data
+.env
+
+# File types
+*.txt
+!requirements.txt
+*.DS_Store
