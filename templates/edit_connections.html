@@ -92,8 +92,12 @@
     let nearbyMarkers = [];
     let polylines = [];
     let showAllConnections = false; // State to track whether all connections are being shown
+    let mapInitialized = false; // Flag to prevent double initialization
 
     function initializeMap() {
+        if (mapInitialized) {
+            return;
+        }
         console.log('Google Maps API loaded');
         let lat = parseFloat(document.getElementById('latitude').value);
         let lng = parseFloat(document.getElementById('longitude').value);
@@ -163,6 +167,7 @@
                 console.error('Error initializing map or markers:', error);
                 document.getElementById('map').innerHTML = '<p>Error loading map. Please try again later.</p>';
             }
+            mapInitialized = true;
         } else {
             console.error('Invalid latitude or longitude.');
             document.getElementById('map').innerHTML = '<p>Invalid or missing GPS coordinates.</p>';
@@ -389,49 +394,83 @@
     }
 
     function drawConnections(connections, centerPhotoId) {
-        // Clear existing polylines
+        // Clear existing polylines and markers
         polylines.forEach(polyline => polyline.setMap(null));
         polylines = [];
 
+        // Create a map to track bidirectional connections
+        const connectionPairs = new Map();
+
         connections.forEach(connection => {
-            let source, target;
+            const key = [connection.source, connection.target].sort().join('-');
+            if (!connectionPairs.has(key)) {
+                connectionPairs.set(key, 1);
+            } else {
+                connectionPairs.set(key, connectionPairs.get(key) + 1);
+            }
+        });
 
-            if (connection.source === centerPhotoId) {
-                source = { 
-                    getPosition: () => ({
-                        lat: parseFloat(document.getElementById('latitude').value),
-                        lng: parseFloat(document.getElementById('longitude').value)
-                    })
+        // Draw connections with labels for bidirectional ones
+        connectionPairs.forEach((count, key) => {
+            const [id1, id2] = key.split('-');
+            let point1, point2;
+
+            // Get positions for both points
+            if (id1 === centerPhotoId) {
+                point1 = {
+                    lat: parseFloat(document.getElementById('latitude').value),
+                    lng: parseFloat(document.getElementById('longitude').value)
                 };
             } else {
-                source = nearbyMarkers.find(marker => marker.photoId === connection.source);
+                const marker = nearbyMarkers.find(m => m.photoId === id1);
+                point1 = marker ? marker.getPosition().toJSON() : null;
             }
 
-            if (connection.target === centerPhotoId) {
-                target = { 
-                    getPosition: () => ({
-                        lat: parseFloat(document.getElementById('latitude').value),
-                        lng: parseFloat(document.getElementById('longitude').value)
-                    })
+            if (id2 === centerPhotoId) {
+                point2 = {
+                    lat: parseFloat(document.getElementById('latitude').value),
+                    lng: parseFloat(document.getElementById('longitude').value)
                 };
             } else {
-                target = nearbyMarkers.find(marker => marker.photoId === connection.target);
+                const marker = nearbyMarkers.find(m => m.photoId === id2);
+                point2 = marker ? marker.getPosition().toJSON() : null;
             }
 
-            if (source && target) {
-                const sourcePosition = source.getPosition();
-                const targetPosition = target.getPosition();
-
+            if (point1 && point2) {
                 const polyline = new google.maps.Polyline({
-                    path: [sourcePosition, targetPosition],
+                    path: [point1, point2],
                     geodesic: true,
-                    strokeColor: '#0000FF', // Different color for visibility
+                    strokeColor: '#FF0000',
                     strokeOpacity: 1.0,
                     strokeWeight: 2,
                     map: map
                 });
-
                 polylines.push(polyline);
+
+                // Calculate midpoint for the label
+                const midpoint = {
+                    lat: (point1.lat + point2.lat) / 2,
+                    lng: (point1.lng + point2.lng) / 2
+                };
+
+                // Create a marker for the label (1 for single connection, 2 for bidirectional)
+                const label = new google.maps.Marker({
+                    position: midpoint,
+                    map: map,
+                    label: {
+                        text: count.toString(),
+                        color: 'white',
+                        fontSize: '12px'
+                    },
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: '#FF0000',
+                        fillOpacity: 1,
+                        strokeWeight: 0
+                    }
+                });
+                polylines.push(label); // Add to polylines array for cleanup
             }
         });
     }
