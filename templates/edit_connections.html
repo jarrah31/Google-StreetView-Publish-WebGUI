@@ -8,82 +8,81 @@
 
 {% block content %}
 <div class="container_connections">
-        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        {{ message|safe }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <div class="content-container">
-            <div class="left-column">
-                <div class="photo-details">
-                    <h2>Photo Details:</h2>
-                    <a href="{{ photo.shareLink }}" target="_blank">
-                        <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
-                    </a>  
-                    <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
-                    <p>View Count: {{ photo.viewCount }}</p>
-                    <p>Capture Time: {{ photo.captureTime }}</p>
-                    <p>Upload Time: {{ photo.uploadTime }}</p>
-                    <input type="hidden" id="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
-                    <input type="hidden" id="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
-                    <input type="hidden" id="source-photo-id" value="{{ photo.photoId.id }}">
+    <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    {{ message|safe }}
                 </div>
-                <div class="nearby-photos">
-                    <h2>Nearby Photos within {{ distance }} meters:</h2>
-                    <form id="distance-form" method="GET" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}">
-                        <label for="distance">Distance (meters):</label>
-                        <input type="number" id="distance" name="distance" value="{{ distance }}" min="1">
-                        <button class="button-22" type="submit">Refresh</button>
-                    </form>
-
-                    <div class="custom-table-container">
-                        <table class="custom-photo-table custom-table--shaded">
-                            <thead class="custom-table__head">
-                                <tr class="custom-table__row">
-                                    <td class="custom-table__cell custom-table__cell--checkbox custom-table__cell--no-wrap">
-                                        <input type="checkbox">
-                                    </td>
-                                    <td class="custom-photo-table__label custom-table__cell custom-table__cell--no-wrap">Label</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">Distance (m)</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">Capture Time</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">Heading</td>
-                                    <td class="custom-table__cell custom-table__cell--remainder">View</td>
-                                </tr>
-                            </thead>
-                            <tbody class="custom-table__body">
-                                {% for nearby_photo in nearby_photos %}
-                                <tr class="custom-table__row">
-                                    <td class="custom-table__cell custom-table__cell--checkbox custom-table__cell--no-wrap">
-                                        <input type="checkbox" class="photo-checkbox" data-photo-id="{{ nearby_photo.photoId.id }}" data-lat="{{ nearby_photo.pose.latLngPair.latitude }}" data-lng="{{ nearby_photo.pose.latLngPair.longitude }}">
-                                    </td>
-                                    <td class="custom-photo-table__label custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.label }}</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.distance }}</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.formattedCaptureTime }}</td>
-                                    <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.pose.heading }}</td>
-                                    <td class="custom-table__cell custom-table__cell--remainder"><a href="{{ nearby_photo.shareLink }}" target="_blank">View</a></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div class="content-container">
+        <div class="left-column">
+            <div class="photo-details">
+                <h2>Photo Details:</h2>
+                <a href="{{ photo.shareLink }}" target="_blank">
+                    <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
+                </a>  
+                <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
+                <p>View Count: {{ photo.viewCount }}</p>
+                <p>Capture Time: {{ photo.captureTime }}</p>
+                <p>Upload Time: {{ photo.uploadTime }}</p>
+                <input type="hidden" id="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
+                <input type="hidden" id="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
+                <input type="hidden" id="source-photo-id" value="{{ photo.photoId.id }}">
             </div>
-            <div class="map-container">
-                <h2>Connection Links:</h2>
-                <div id="map" style="height: 600px; width: 100%;"></div>
-                <p class="map-description">Use the tick boxes on the left to select the photos that you wish to establish connections to from the main photo, then press "Create Connections" button to submit your request.</p>
-                <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
-                <button class="button-22 button-spacing" type="button" id="create-connections">Create Connections</button>
-                <button class="button-22" type="button" id="toggle-connections">Toggle All Visible Connections</button>
+            <div class="nearby-photos">
+                <h2>Nearby Photos within {{ distance }} meters:</h2>
+                <form id="distance-form" method="GET" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}">
+                    <label for="distance">Distance (meters):</label>
+                    <input type="number" id="distance" name="distance" value="{{ distance }}" min="1">
+                    <button class="button-22" type="submit">Refresh</button>
+                </form>
+
+                <div class="custom-table-container">
+                    <table class="custom-photo-table custom-table--shaded">
+                        <thead class="custom-table__head">
+                            <tr class="custom-table__row">
+                                <td class="custom-table__cell custom-table__cell--checkbox custom-table__cell--no-wrap">
+                                    <input type="checkbox">
+                                </td>
+                                <td class="custom-photo-table__label custom-table__cell custom-table__cell--no-wrap">Label</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">Distance (m)</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">Capture Time</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">Heading</td>
+                                <td class="custom-table__cell custom-table__cell--remainder">View</td>
+                            </tr>
+                        </thead>
+                        <tbody class="custom-table__body">
+                            {% for nearby_photo in nearby_photos %}
+                            <tr class="custom-table__row">
+                                <td class="custom-table__cell custom-table__cell--checkbox custom-table__cell--no-wrap">
+                                    <input type="checkbox" class="photo-checkbox" data-photo-id="{{ nearby_photo.photoId.id }}" data-lat="{{ nearby_photo.pose.latLngPair.latitude }}" data-lng="{{ nearby_photo.pose.latLngPair.longitude }}">
+                                </td>
+                                <td class="custom-photo-table__label custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.label }}</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.distance }}</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.formattedCaptureTime }}</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.pose.heading }}</td>
+                                <td class="custom-table__cell custom-table__cell--remainder"><a href="{{ nearby_photo.shareLink }}" target="_blank">View</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+        <div class="map-container">
+            <h2>Connection Links:</h2>
+            <div id="map" style="height: 600px; width: 100%;"></div>
+            <p class="map-description">Use the tick boxes on the left to select the photos that you wish to establish connections to from the main photo, then press "Create Connections" button to submit your request.</p>
+            <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
+            <button class="button-22 button-spacing" type="button" id="create-connections">Create Connections</button>
+            <button class="button-22" type="button" id="toggle-connections">Toggle All Visible Connections</button>
+        </div>
     </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -95,373 +94,372 @@
     let showAllConnections = false; // State to track whether all connections are being shown
 
     function initializeMap() {
-            console.log('Google Maps API loaded');
-            let lat = parseFloat(document.getElementById('latitude').value);
-            let lng = parseFloat(document.getElementById('longitude').value);
+        console.log('Google Maps API loaded');
+        let lat = parseFloat(document.getElementById('latitude').value);
+        let lng = parseFloat(document.getElementById('longitude').value);
 
-            console.log('Latitude:', lat, 'Longitude:', lng);
+        console.log('Latitude:', lat, 'Longitude:', lng);
 
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const anchorPosition = { lat: lat, lng: lng };
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const anchorPosition = { lat: lat, lng: lng };
 
-                try {
-                    map = new google.maps.Map(document.getElementById('map'), {
-                        center: anchorPosition,
-                        zoom: 17,
-                        mapTypeId: 'satellite'
-                    });
+            try {
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: anchorPosition,
+                    zoom: 17,
+                    mapTypeId: 'satellite'
+                });
 
-                    if (!map) {
-                        throw new Error('Failed to initialize map.');
-                    }
-
-                    // Marker at the photo's GPS position
-                    anchorMarker = new google.maps.Marker({
-                        position: anchorPosition,
-                        map: map,
-                        draggable: false,
-                        title: "Photo's GPS Position",
-                        icon: {
-                            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                        }
-                    });
-
-                    if (!anchorMarker) {
-                        throw new Error('Failed to create anchor marker.');
-                    }
-
-                    // Add markers for nearby photos
-                    const nearbyPhotos = {{ nearby_photos | tojson }};
-                    nearbyPhotos.forEach(photo => {
-                        let marker = new google.maps.Marker({
-                            position: { lat: photo.pose.latLngPair.latitude, lng: photo.pose.latLngPair.longitude },
-                            map: map,
-                            label: photo.label,
-                            title: `${photo.label}: ${photo.distance} meters`
-                        });
-
-                        if (!marker) {
-                            throw new Error(`Failed to create marker for photo: ${photo.photoId.id}`);
-                        }
-
-                        marker.photoId = photo.photoId.id; // include photoID property
-
-                        nearbyMarkers.push(marker);
-
-                        // Add click event listener to the marker
-                        marker.addListener('click', function() {
-                            // Redirect to the edit_connections.html with the selected photo's photoId
-                            window.location.href = `/edit_connections/${photo.photoId.id}?distance=${document.getElementById('distance').value}`;
-                        });
-                    });
-
-                    // Automatically check the boxes for existing connections
-                    autoSelectExistingConnections();
-
-                    // Fit map bounds to show all markers
-                    fitMapBounds();
-                } catch (error) {
-                    console.error('Error initializing map or markers:', error);
-                    document.getElementById('map').innerHTML = '<p>Error loading map. Please try again later.</p>';
+                if (!map) {
+                    throw new Error('Failed to initialize map.');
                 }
-            } else {
-                console.error('Invalid latitude or longitude.');
-                document.getElementById('map').innerHTML = '<p>Invalid or missing GPS coordinates.</p>';
+
+                // Marker at the photo's GPS position
+                anchorMarker = new google.maps.Marker({
+                    position: anchorPosition,
+                    map: map,
+                    draggable: false,
+                    title: "Photo's GPS Position",
+                    icon: {
+                        url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                    }
+                });
+
+                if (!anchorMarker) {
+                    throw new Error('Failed to create anchor marker.');
+                }
+
+                // Add markers for nearby photos
+                const nearbyPhotos = {{ nearby_photos | tojson }};
+                nearbyPhotos.forEach(photo => {
+                    let marker = new google.maps.Marker({
+                        position: { lat: photo.pose.latLngPair.latitude, lng: photo.pose.latLngPair.longitude },
+                        map: map,
+                        label: photo.label,
+                        title: `${photo.label}: ${photo.distance} meters`
+                    });
+
+                    if (!marker) {
+                        throw new Error(`Failed to create marker for photo: ${photo.photoId.id}`);
+                    }
+
+                    marker.photoId = photo.photoId.id; // include photoID property
+
+                    nearbyMarkers.push(marker);
+
+                    // Add click event listener to the marker
+                    marker.addListener('click', function() {
+                        // Redirect to the edit_connections.html with the selected photo's photoId
+                        window.location.href = `/edit_connections/${photo.photoId.id}?distance=${document.getElementById('distance').value}`;
+                    });
+                });
+
+                // Automatically check the boxes for existing connections
+                autoSelectExistingConnections();
+
+                // Fit map bounds to show all markers
+                fitMapBounds();
+            } catch (error) {
+                console.error('Error initializing map or markers:', error);
+                document.getElementById('map').innerHTML = '<p>Error loading map. Please try again later.</p>';
             }
+        } else {
+            console.error('Invalid latitude or longitude.');
+            document.getElementById('map').innerHTML = '<p>Invalid or missing GPS coordinates.</p>';
         }
+    }
     
-        function retryInitializeMap() {
-            if (typeof google === 'object' && typeof google.maps === 'object') {
-                initializeMap();
-            } else {
-                console.log('Retrying map initialization...');
-                setTimeout(retryInitializeMap, 100);
-            }
+    function retryInitializeMap() {
+        if (typeof google === 'object' && typeof google.maps === 'object') {
+            initializeMap();
+        } else {
+            console.log('Retrying map initialization...');
+            setTimeout(retryInitializeMap, 100);
         }
+    }
 
     function fitMapBounds() {
         const bounds = new google.maps.LatLngBounds();
         nearbyMarkers.forEach(marker => {
-                bounds.extend(marker.getPosition());
-            });
-            bounds.extend(anchorMarker.getPosition()); // Include the anchor marker
-            map.fitBounds(bounds);
-        }
+            bounds.extend(marker.getPosition());
+        });
+        bounds.extend(anchorMarker.getPosition()); // Include the anchor marker
+        map.fitBounds(bounds);
+    }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            retryInitializeMap();
-    
-            // Event listener for create connections button
-            document.getElementById('create-connections').addEventListener('click', function() {
-                createConnections();
-            });
-    
-            // Event listener for checkboxes
-            document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    console.log('Checkbox state changed');
-                    updatePolylines();
-                });
-            });
+    document.addEventListener('DOMContentLoaded', function() {
+        retryInitializeMap();
 
-            // Load saved distance value
-            const savedDistance = localStorage.getItem('distance');
-            if (savedDistance) {
-                document.getElementById('distance').value = savedDistance;
-            }
+        // Event listener for create connections button
+        document.getElementById('create-connections').addEventListener('click', function() {
+            createConnections();
+        });
 
-            // Save distance value on form submit
-            document.getElementById('distance-form').addEventListener('submit', function(event) {
-                event.preventDefault(); // Prevent default form submission
-                const distance = document.getElementById('distance').value;
-                localStorage.setItem('distance', distance);
-                // Reload the page with the new distance value
-                window.location.href = `${window.location.pathname}?distance=${distance}`;
-            });
-
-            // Event listener for toggle connections button
-            document.getElementById('toggle-connections').addEventListener('click', function() {
-                toggleConnections();
+        // Event listener for checkboxes
+        document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                console.log('Checkbox state changed');
+                updatePolylines();
             });
         });
+
+        // Load saved distance value
+        const savedDistance = localStorage.getItem('distance');
+        if (savedDistance) {
+            document.getElementById('distance').value = savedDistance;
+        }
+
+        // Save distance value on form submit
+        document.getElementById('distance-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+            const distance = document.getElementById('distance').value;
+            localStorage.setItem('distance', distance);
+            // Reload the page with the new distance value
+            window.location.href = `${window.location.pathname}?distance=${distance}`;
+        });
+
+        // Event listener for toggle connections button
+        document.getElementById('toggle-connections').addEventListener('click', function() {
+            toggleConnections();
+        });
+    });
     
-        function updatePolylines() {
-            // console.log('Updating polylines');
-            // Clear existing polylines
-            polylines.forEach(polyline => polyline.setMap(null));
-            polylines = [];
+    function updatePolylines() {
+        // console.log('Updating polylines');
+        // Clear existing polylines
+        polylines.forEach(polyline => polyline.setMap(null));
+        polylines = [];
+
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        const anchorPosition = { lat: lat, lng: lng };
+
+        document.querySelectorAll('.photo-checkbox:checked').forEach(checkbox => {
+            const photoLat = parseFloat(checkbox.dataset.lat);
+            const photoLng = parseFloat(checkbox.dataset.lng);
+            const photoPosition = { lat: photoLat, lng: photoLng };
+
+            // console.log(`Drawing polyline from (${lat}, ${lng}) to (${photoLat}, ${photoLng})`);
+
+            // Draw a line between the original photo and the selected photo
+            const polyline = new google.maps.Polyline({
+                path: [anchorPosition, photoPosition],
+                geodesic: true,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                map: map
+            });
+            polylines.push(polyline);
+        });
+    }
     
-            const lat = parseFloat(document.getElementById('latitude').value);
-            const lng = parseFloat(document.getElementById('longitude').value);
-            const anchorPosition = { lat: lat, lng: lng };
+    function autoSelectExistingConnections() {
+        const existingConnections = {{ photo.connections | tojson }};
+        const photoCheckboxes = document.querySelectorAll('.photo-checkbox');
+
+        existingConnections.forEach(connection => {
+            const targetId = connection.target.id;
+            photoCheckboxes.forEach(checkbox => {
+                if (checkbox.dataset.photoId === targetId) {
+                    checkbox.checked = true;
+                    // console.log(`Checkbox for ${targetId} checked`);
+                }
+            });
+        });
+
+        // Update polylines for the initially checked connections
+        updatePolylines();
+    }
     
-            document.querySelectorAll('.photo-checkbox:checked').forEach(checkbox => {
-                const photoLat = parseFloat(checkbox.dataset.lat);
-                const photoLng = parseFloat(checkbox.dataset.lng);
-                const photoPosition = { lat: photoLat, lng: photoLng };
-    
-                // console.log(`Drawing polyline from (${lat}, ${lng}) to (${photoLat}, ${photoLng})`);
-    
-                // Draw a line between the original photo and the selected photo
+    async function createConnections() {
+        const createButton = document.getElementById('create-connections');
+        const originalButtonText = createButton.textContent;
+        createButton.textContent = 'Please Wait...';
+        createButton.disabled = true;
+
+        const sourcePhotoId = document.getElementById('source-photo-id').value;
+        const connections = [];
+
+        document.querySelectorAll('.photo-checkbox:checked').forEach(checkbox => {
+            const targetPhotoId = checkbox.dataset.photoId;
+
+            // Debug: Print each target photo ID
+            console.log('Target Photo ID:', targetPhotoId);
+
+            if (targetPhotoId) {
+                connections.push({
+                    target: {
+                        id: targetPhotoId
+                    }
+                });
+            }
+        });
+
+        // Debug: Print connections array
+        console.log('Connections:', connections);
+
+        const requestBody = {
+            updatePhotoRequests: [
+                {
+                    updateMask: "connections",
+                    photo: {
+                        photoId: {
+                            id: sourcePhotoId
+                        },
+                        connections: connections
+                    }
+                }
+            ]
+        };
+
+        // Debug: Print request body
+        console.log('Request Body:', requestBody);
+
+        try {
+            const response = await fetch('/create_connections', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                window.location.href = window.location.href; // Refresh the page to display flash messages
+            } else {
+                flashMessage(result.error, 'error');
+                createButton.textContent = originalButtonText;
+                createButton.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error creating connections:', error);
+            flashMessage('Error creating connections', 'error');
+            createButton.textContent = originalButtonText;
+            createButton.disabled = false;
+        }
+    }
+
+    async function toggleConnections() {
+        const button = document.getElementById('toggle-connections');
+        if (showAllConnections) {
+            // Revert to autoSelectExistingConnections
+            autoSelectExistingConnections();
+            showAllConnections = false;
+            button.innerHTML = 'Show All Connections';
+            button.disabled = false;
+        } else {
+            // Display all connections
+            button.disabled = true;
+            button.innerHTML = 'Please wait <span class="spinner"></span>';
+            await toggleAllVisibleConnections();
+            showAllConnections = true;
+            button.innerHTML = 'Revert to Existing Connections';
+            button.disabled = false;
+        }
+    }
+
+    async function toggleAllVisibleConnections() {
+        const allPhotoIds = nearbyMarkers.map(marker => marker.photoId);
+
+        // Include the center marker's photoId
+        const centerPhotoId = document.getElementById('source-photo-id').value;
+        allPhotoIds.push(centerPhotoId);
+        
+        try {
+            const response = await fetch(`/get_connections`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ photoIds: allPhotoIds })
+            });
+            
+            const data = await response.json();
+
+            if (response.ok) {
+                drawConnections(data.connections, centerPhotoId);
+            } else {
+                console.error('Failed to fetch connections');
+            }
+        } catch (error) {
+            console.error('Error fetching connections:', error);
+        }
+    }
+
+    function drawConnections(connections, centerPhotoId) {
+        // Clear existing polylines
+        polylines.forEach(polyline => polyline.setMap(null));
+        polylines = [];
+
+        connections.forEach(connection => {
+            let source, target;
+
+            if (connection.source === centerPhotoId) {
+                source = { 
+                    getPosition: () => ({
+                        lat: parseFloat(document.getElementById('latitude').value),
+                        lng: parseFloat(document.getElementById('longitude').value)
+                    })
+                };
+            } else {
+                source = nearbyMarkers.find(marker => marker.photoId === connection.source);
+            }
+
+            if (connection.target === centerPhotoId) {
+                target = { 
+                    getPosition: () => ({
+                        lat: parseFloat(document.getElementById('latitude').value),
+                        lng: parseFloat(document.getElementById('longitude').value)
+                    })
+                };
+            } else {
+                target = nearbyMarkers.find(marker => marker.photoId === connection.target);
+            }
+
+            if (source && target) {
+                const sourcePosition = source.getPosition();
+                const targetPosition = target.getPosition();
+
                 const polyline = new google.maps.Polyline({
-                    path: [anchorPosition, photoPosition],
+                    path: [sourcePosition, targetPosition],
                     geodesic: true,
-                    strokeColor: '#FF0000',
+                    strokeColor: '#0000FF', // Different color for visibility
                     strokeOpacity: 1.0,
                     strokeWeight: 2,
                     map: map
                 });
+
                 polylines.push(polyline);
-            });
-        }
-    
-        function autoSelectExistingConnections() {
-            const existingConnections = {{ photo.connections | tojson }};
-            const photoCheckboxes = document.querySelectorAll('.photo-checkbox');
-    
-            existingConnections.forEach(connection => {
-                const targetId = connection.target.id;
-                photoCheckboxes.forEach(checkbox => {
-                    if (checkbox.dataset.photoId === targetId) {
-                        checkbox.checked = true;
-                        // console.log(`Checkbox for ${targetId} checked`);
-                    }
-                });
-            });
-    
-            // Update polylines for the initially checked connections
-            updatePolylines();
-        }
-    
-        async function createConnections() {
-            const createButton = document.getElementById('create-connections');
-            const originalButtonText = createButton.textContent;
-            createButton.textContent = 'Please Wait...';
-            createButton.disabled = true;
-
-
-            const sourcePhotoId = document.getElementById('source-photo-id').value;
-            const connections = [];
-    
-            document.querySelectorAll('.photo-checkbox:checked').forEach(checkbox => {
-                const targetPhotoId = checkbox.dataset.photoId;
-    
-                // Debug: Print each target photo ID
-                console.log('Target Photo ID:', targetPhotoId);
-    
-                if (targetPhotoId) {
-                    connections.push({
-                        target: {
-                            id: targetPhotoId
-                        }
-                    });
-                }
-            });
-    
-            // Debug: Print connections array
-            console.log('Connections:', connections);
-    
-            const requestBody = {
-                updatePhotoRequests: [
-                    {
-                        updateMask: "connections",
-                        photo: {
-                            photoId: {
-                                id: sourcePhotoId
-                            },
-                            connections: connections
-                        }
-                    }
-                ]
-            };
-    
-            // Debug: Print request body
-            console.log('Request Body:', requestBody);
-    
-            try {
-                const response = await fetch('/create_connections', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-    
-                const result = await response.json();
-                if (response.ok) {
-                    window.location.href = window.location.href; // Refresh the page to display flash messages
-                } else {
-                    flashMessage(result.error, 'error');
-                    createButton.textContent = originalButtonText;
-                    createButton.disabled = false;
-                }
-            } catch (error) {
-                console.error('Error creating connections:', error);
-                flashMessage('Error creating connections', 'error');
-                createButton.textContent = originalButtonText;
-                createButton.disabled = false;
             }
+        });
+    }
+
+    function flashMessage(message, category, details = '') {
+        const flashContainer = document.createElement('div');
+        flashContainer.className = `flash-message ${category}`;
+        
+        // Create the main message element
+        const mainMessage = document.createElement('div');
+        mainMessage.textContent = message;
+        flashContainer.appendChild(mainMessage);
+
+        // If details are provided, create and append the details element
+        if (details) {
+            const detailsMessage = document.createElement('div');
+            detailsMessage.style.fontSize = '14px';
+            detailsMessage.style.marginTop = '5px';
+            detailsMessage.textContent = details;
+            flashContainer.appendChild(detailsMessage);
         }
 
-        async function toggleConnections() {
-            const button = document.getElementById('toggle-connections');
-            if (showAllConnections) {
-                // Revert to autoSelectExistingConnections
-                autoSelectExistingConnections();
-                showAllConnections = false;
-                button.innerHTML = 'Show All Connections';
-                button.disabled = false;
-            } else {
-                // Display all connections
-                button.disabled = true;
-                button.innerHTML = 'Please wait <span class="spinner"></span>';
-                await toggleAllVisibleConnections();
-                showAllConnections = true;
-                button.innerHTML = 'Revert to Existing Connections';
-                button.disabled = false;
-            }
-        }
+        document.body.appendChild(flashContainer);
 
-        async function toggleAllVisibleConnections() {
-            const allPhotoIds = nearbyMarkers.map(marker => marker.photoId);
-
-            // Include the center marker's photoId
-            const centerPhotoId = document.getElementById('source-photo-id').value;
-            allPhotoIds.push(centerPhotoId);
-            
-            try {
-                const response = await fetch(`/get_connections`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ photoIds: allPhotoIds })
-                });
-                
-                const data = await response.json();
-
-                if (response.ok) {
-                    drawConnections(data.connections, centerPhotoId);
-                } else {
-                    console.error('Failed to fetch connections');
-                }
-            } catch (error) {
-                console.error('Error fetching connections:', error);
-            }
-        }
-
-        function drawConnections(connections, centerPhotoId) {
-            // Clear existing polylines
-            polylines.forEach(polyline => polyline.setMap(null));
-            polylines = [];
-
-            connections.forEach(connection => {
-                let source, target;
-
-                if (connection.source === centerPhotoId) {
-                    source = { 
-                        getPosition: () => ({
-                            lat: parseFloat(document.getElementById('latitude').value),
-                            lng: parseFloat(document.getElementById('longitude').value)
-                        })
-                    };
-                } else {
-                    source = nearbyMarkers.find(marker => marker.photoId === connection.source);
-                }
-
-                if (connection.target === centerPhotoId) {
-                    target = { 
-                        getPosition: () => ({
-                            lat: parseFloat(document.getElementById('latitude').value),
-                            lng: parseFloat(document.getElementById('longitude').value)
-                        })
-                    };
-                } else {
-                    target = nearbyMarkers.find(marker => marker.photoId === connection.target);
-                }
-
-                if (source && target) {
-                    const sourcePosition = source.getPosition();
-                    const targetPosition = target.getPosition();
-
-                    const polyline = new google.maps.Polyline({
-                        path: [sourcePosition, targetPosition],
-                        geodesic: true,
-                        strokeColor: '#0000FF', // Different color for visibility
-                        strokeOpacity: 1.0,
-                        strokeWeight: 2,
-                        map: map
-                    });
-
-                    polylines.push(polyline);
-                }
-            });
-        }
-
-        function flashMessage(message, category, details = '') {
-            const flashContainer = document.createElement('div');
-            flashContainer.className = `flash-message ${category}`;
-            
-            // Create the main message element
-            const mainMessage = document.createElement('div');
-            mainMessage.textContent = message;
-            flashContainer.appendChild(mainMessage);
-
-            // If details are provided, create and append the details element
-            if (details) {
-                const detailsMessage = document.createElement('div');
-                detailsMessage.style.fontSize = '14px';
-                detailsMessage.style.marginTop = '5px';
-                detailsMessage.textContent = details;
-                flashContainer.appendChild(detailsMessage);
-            }
-
-            document.body.appendChild(flashContainer);
-
-            // Automatically remove the flash message after a few seconds
-            setTimeout(() => {
-                flashContainer.remove();
-            }, 5000);
-        }
-    </script>
+        // Automatically remove the flash message after a few seconds
+        setTimeout(() => {
+            flashContainer.remove();
+        }, 5000);
+    }
+</script>
 {% endblock %}
