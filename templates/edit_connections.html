@@ -369,7 +369,8 @@
         }
         
         try {
-            const response = await fetch(`/get_connections`, {
+            // Get connections for visible markers
+            const visibleResponse = await fetch(`/get_connections`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -377,12 +378,51 @@
                 body: JSON.stringify({ photoIds: visiblePhotoIds })
             });
             
-            const data = await response.json();
+            const visibleData = await visibleResponse.json();
+            
+            if (!visibleResponse.ok) {
+                console.error('Failed to fetch visible connections');
+                return;
+            }
 
-            if (response.ok) {
-                drawConnections(data.connections, centerPhotoId);
+            // Get the IDs of out-of-bounds markers that visible markers connect to
+            const outOfBoundsIds = visibleData.connections
+                .filter(conn => {
+                    const sourceVisible = visiblePhotoIds.includes(conn.source);
+                    const targetVisible = visiblePhotoIds.includes(conn.target);
+                    return sourceVisible && !targetVisible;
+                })
+                .map(conn => conn.target);
+
+            // If there are any out-of-bounds connected markers, check their reverse connections
+            if (outOfBoundsIds.length > 0) {
+                const connectedResponse = await fetch(`/get_connections`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ photoIds: outOfBoundsIds })
+                });
+                
+                const connectedData = await connectedResponse.json();
+                
+                if (!connectedResponse.ok) {
+                    console.error('Failed to fetch connected marker connections');
+                    return;
+                }
+
+                // Add only the reverse connections that correspond to existing visible->out-of-bounds connections
+                const reverseConnections = connectedData.connections.filter(conn => {
+                    // Check if this is a reverse connection of a visible->out-of-bounds connection
+                    return visibleData.connections.some(visConn => 
+                        visConn.source === conn.target && 
+                        visConn.target === conn.source
+                    );
+                });
+
+                drawConnections([...visibleData.connections, ...reverseConnections], centerPhotoId);
             } else {
-                console.error('Failed to fetch connections');
+                drawConnections(visibleData.connections, centerPhotoId);
             }
         } catch (error) {
             console.error('Error fetching connections:', error);
@@ -397,17 +437,24 @@
         // Create a map to track bidirectional connections
         const connectionPairs = new Map();
 
+        // First pass: record all connections
         connections.forEach(connection => {
             const key = [connection.source, connection.target].sort().join('-');
             if (!connectionPairs.has(key)) {
-                connectionPairs.set(key, 1);
+                connectionPairs.set(key, {
+                    count: 1,
+                    hasForward: true,
+                    hasReverse: false
+                });
             } else {
-                connectionPairs.set(key, connectionPairs.get(key) + 1);
+                const existing = connectionPairs.get(key);
+                existing.hasReverse = true;
+                existing.count = 2;
             }
         });
 
-        // Draw connections with labels for bidirectional ones
-        connectionPairs.forEach((count, key) => {
+        // Draw connections with labels
+        connectionPairs.forEach((data, key) => {
             const [id1, id2] = key.split('-');
             let point1, point2;
 
@@ -454,7 +501,7 @@
                     position: midpoint,
                     map: map,
                     label: {
-                        text: count.toString(),
+                        text: data.count.toString(),
                         color: 'white',
                         fontSize: '12px'
                     },
