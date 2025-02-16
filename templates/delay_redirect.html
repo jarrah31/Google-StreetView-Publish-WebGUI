@@ -1,10 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Redirecting...</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+{% extends "base.html" %}
 
-    <script type="text/javascript">
+{% block title %}Redirecting...{% endblock %}
+
+{% block scripts %}
+<script>
         var count = 20; // Set the initial count
         var countdownElement = null;
 
@@ -19,15 +18,15 @@
         setTimeout(function(){
             window.location.href = "{{ redirect_url }}";
         }, 20000); // Redirect after 20 seconds
-    </script>
-</head>
-<body>
-    <div class="container">
-        <div class="redirecting-message">
-            <h1>Update Successful!</h1>
-            <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link"><b>Click to go back to the photo list</b></a>, or wait to be redirected to the photo.
-            <p>Redirecting you back in <span id="countdown">20</span> seconds... (waiting for values to update on Google's servers)</p>
-        </div>
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="redirecting-message">
+        <h1>Update Successful!</h1>
+        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link"><b>Click to go back to the photo list</b></a>, or wait to be redirected to the photo.
+        <p>Redirecting you back in <span id="countdown">20</span> seconds... (waiting for values to update on Google's servers)</p>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

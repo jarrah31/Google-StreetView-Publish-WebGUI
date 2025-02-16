@@ -1,15 +1,15 @@
 # Directories
 /uploads/
 /venv/
+/logs/
+/streetview/
 
 # Files
 client_secrets.json
-config.json
-creds.data
+*creds.data
+.env
 
 # File types
 *.txt
+!requirements.txt
 *.DS_Store
-
-# Ignnore the streetview folder
-streetview/

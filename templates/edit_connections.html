@@ -1,15 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Connections</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
-</head>
-<body>
-    <div class="container_connections">
-        <h1>Edit Connections</h1>
+{% extends "base.html" %}
+
+{% block title %}Edit Connections{% endblock %}
+
+{% block head %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container_connections">
         <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -86,16 +84,17 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
-    <script>
-        let map;
-        let anchorMarker;
-        let nearbyMarkers = [];
-        let polylines = [];
-        let showAllConnections = false; // State to track whether all connections are being shown
+{% block scripts %}
+<script>
+    let map;
+    let anchorMarker;
+    let nearbyMarkers = [];
+    let polylines = [];
+    let showAllConnections = false; // State to track whether all connections are being shown
 
-
-        function initializeMap() {
+    function initializeMap() {
             console.log('Google Maps API loaded');
             let lat = parseFloat(document.getElementById('latitude').value);
             let lng = parseFloat(document.getElementById('longitude').value);
@@ -180,9 +179,9 @@
             }
         }
 
-        function fitMapBounds() {
-            const bounds = new google.maps.LatLngBounds();
-            nearbyMarkers.forEach(marker => {
+    function fitMapBounds() {
+        const bounds = new google.maps.LatLngBounds();
+        nearbyMarkers.forEach(marker => {
                 bounds.extend(marker.getPosition());
             });
             bounds.extend(anchorMarker.getPosition()); // Include the anchor marker
@@ -465,6 +464,4 @@
             }, 5000);
         }
     </script>
-    
-</body>
-</html>
+{% endblock %}

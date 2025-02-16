@@ -1,13 +1,9 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Upload Result</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  </head>
-  <body>
-    <div class="container">
+{% extends "base.html" %}
+
+{% block title %}Upload Result{% endblock %}
+
+{% block content %}
+<div class="container">
       <h1>Upload Result</h1>
       <a href="{{ url_for('index') }}" class="back-link">Back</a>
       <!-- <p>{{ upload_ref_message }}</p>
@@ -38,6 +34,4 @@
         </a></li>
       </ul>
     </div>
-</body>
-</html>
-
+{% endblock %}

@@ -1,20 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Photo</title>
-    <!-- <script>
-        // Print the API key to the console for debugging
-        console.log("Google Maps API Key:", "{{ api_key }}");
-    </script> -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
-</head>
-<body>
-    <div class="container_photos">
+{% extends "base.html" %}
+
+{% block title %}Edit Photo{% endblock %}
+
+{% block head %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initializeMap" async defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container_photos">
         <h1>Edit Photo</h1>
-        <!-- <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a> -->
         <a href="#" class="back-link">Back to List</a>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -92,15 +86,18 @@
         </div>
     </div>
 
-    <script>
+    </div>
+{% endblock %}
 
-        let map;
-        let anchorMarker;
-        let headingMarker;
-        let headingInput = document.getElementById('heading');
-        let polyline;
+{% block scripts %}
+<script>
+    let map;
+    let anchorMarker;
+    let headingMarker;
+    let headingInput = document.getElementById('heading');
+    let polyline;
 
-        function initializeMap() {
+    function initializeMap() {
             console.log("Initializing map..."); 
             let lat = parseFloat(document.getElementById('latitude').value);
             let lng = parseFloat(document.getElementById('longitude').value);
@@ -323,7 +320,4 @@
             modal.style.display = 'none';
         }
     </script>
-        
-                
-</body>
-</html>
+{% endblock %}

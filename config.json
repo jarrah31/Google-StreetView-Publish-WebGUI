@@ -1,0 +1,37 @@
+{
+  "web": {
+    "redirect_uris": "http://127.0.0.1:{PORT}/oauth2callback",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token"
+  },
+  "app": {
+    "debug": true,
+    "port": 5001,
+    "host": "0.0.0.0"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/streetview.log",
+    "max_bytes": 1048576,
+    "backup_count": 10,
+    "format": "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+  },
+  "uploads": {
+    "directory": "uploads",
+    "allowed_extensions": ["jpg", "jpeg"],
+    "max_file_size": 10485760
+  },
+  "api": {
+    "base_url": "https://streetviewpublish.googleapis.com/v1",
+    "scopes": ["https://www.googleapis.com/auth/streetviewpublish"],
+    "places": {
+      "max_results": 60,
+      "default_radius": 300
+    },
+    "photos": {
+      "default_page_size": 10,
+      "table_page_size": 100,
+      "max_nearby_photos": 50
+    }
+  }
+}

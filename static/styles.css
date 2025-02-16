@@ -1,23 +1,27 @@
-
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 0;
+    padding: 40px;
     background-color: #f3f3f3;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
 }
 
-.container_connections {
-    width: 90%;
-    min-height: 95%;
+.container_connections,
+.container,
+.container_photos,
+.container_upload {
+    width: auto;
+    min-height: 90vh;
     background-color: #fff;
-    padding: 20px;
+    padding: 40px;
     border-radius: 5px;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
     text-align: left;
+}
+
+.container_photos {
+    display: flex;
+    flex-direction: column;
 }
 
 .content-container {
@@ -60,13 +64,11 @@ body {
 #distance-form label,
 #distance-form input,
 #distance-form button {
-    /* display: inline-block; */
     margin-right: 10px;
 }
 
 #distance-form input {
     width: 100px;  /* Ensure the input width adjusts properly */
-    /* flex-grow: 1;  Allow the input to grow */
 }
 
 #distance-form button {
@@ -78,7 +80,6 @@ body {
     position: relative;
     display: inline-block; /* Change to inline-block to maintain left alignment */
     width: 100%;
-    /*max-width: 600px;  Ensure max-width aligns with the image */
 }
 
 .enlarged-photo {
@@ -96,97 +97,68 @@ body {
     transform: translateX(-50%);
 }
 
-
-
-.container {
-    width: 90%;
-    height: 90vh;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
-    text-align: left;
-}
 .redirecting-message {
     text-align: center;
     font-size: 1.5rem;
     color: #3e92cc;
 }
+
 .form-container {
     display: flex;
-    flex-direction: column; /* This stacks your h1 and form vertically */
+    flex-direction: column;
     justify-content: space-between;
 }
-.container_photos {
-    width: 90%;
-    /* height: 90vh; */
-    min-height: 95%;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
-    /* margin-left: 5%; */
-    text-align: left;
-    display: flex;
-    flex-direction: column;
-}
 
-.container_upload {
-    width: 90%;
-    /* height: 90vh; */
-    min-height: 95%;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
-    /* margin-left: 5%; */
-    text-align: left;
-}
 h1 {
     font-size: 2rem;
     font-weight: 700;
     color: #3e92cc;
-    /* text-transform: uppercase; */
     letter-spacing: 2px;
     margin-bottom: 30px;
-    /* text-align: center; */
 }
+
 ul {
-    list-style-type: none; /* remove bullet points */
+    list-style-type: none;
     margin: 0;
     padding: 0;
-    overflow: auto; /* clearfix */
+    overflow: auto;
 }
 
 ul li {
-    float: left; /* make list items sit side by side */
-    margin-right: 10px; /* add some space between the items */
+    float: left;
+    margin-right: 10px;
 }
+
 p {
     margin-bottom: 2px;
-    line-height: 1; /* Adjust this value to control spacing between lines */
+    line-height: 1;
 }
+
 form p:last-of-type {
-    padding-bottom: 20px; /* Adjust this value to your liking */
+    padding-bottom: 20px;
 }
+
 img {
     max-width: 100%;
     height: auto;
     display: block;
     margin-top: 10px;
 }
+
 a {
     color: #3498db;
-    /* color: #3e92cc; */
     text-decoration: none;
 }
+
 a:hover {
     text-decoration: underline;
 }
+
 .back-link {
     display: inline-block;
     margin-bottom: 20px;
-  }
+}
+
 .flashes {
     background-color: #f9f871;
     padding: 1rem;
@@ -197,11 +169,13 @@ a:hover {
 .flashes li {
     margin-bottom: 0;
 }
+
 .main-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     grid-gap: 5px;
 }
+
 .photo-container {
     box-sizing: border-box;
     padding: 5px;
@@ -209,12 +183,14 @@ a:hover {
     border-radius: 5px;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
 }
+
 .photo-container p {
     font-size: 0.9rem;
     line-height: 1;
     margin-bottom: 5px;
     color: #555;
 }
+
 .photo-container p:last-child {
     margin-bottom: 0;
 }
@@ -222,6 +198,7 @@ a:hover {
 .photo-container img {
     width: 100%;
 }
+
 .flash-message {
     font-size: 24px;
     color: #1a73e8;
@@ -229,10 +206,12 @@ a:hover {
     margin-bottom: 10px;
     border-radius: 5px;
 }
+
 .flash-message.error {
     color: white;
     background-color: red;
 }
+
 .flash-message.success {
     color: #ffffff;
     background-color: #4CAF50;
@@ -242,20 +221,24 @@ a:hover {
     border: 1px solid transparent;
     border-radius: 4px;
 }
+
 .flash-details {
     font-size: 16px;
     margin-top: 5px;
-    color: #f1f1f1; /* Adjust color as needed */
+    color: #f1f1f1;
 }
+
 .flash-message-details {
     font-size: 14px;
     margin-top: 5px;
     color: #555;
 }
+
 .flash-message-details.error-details {
     background-color: #fdd;
     color: #900;
 }
+
 .flash-message-details.success-details {
     background-color: #dff0d8;
     color: #3c763d;
@@ -270,27 +253,15 @@ a:hover {
     color: #ff4a4a;
     font-size: 1.2rem;
 }
+
 .delete-btn:hover {
     color: #ff1a1a;
 }
+
 .delete-btn:focus {
     outline: none;
 }
 
-/* New styles for form elements */
-/* form {
-    display: flex;
-    flex-direction: column;
-    max-width: 600px; 
-}
-.form-group {
-    display: flex; 
-    align-items: center; 
-    margin-bottom: 10px; 
-    justify-content: flex-start;
-} */
-
- /* General form styles */
 form {
     max-width: 600px;
 }
@@ -303,17 +274,20 @@ form {
 }
 
 .form-group input {
-    width: 70%; /* Adjust this to your preference */
+    width: 70%;
 }
+
 .form-group label {
     margin-right: 10px;
     width: 20%;
 }
+
 .form-group-wrapper {
     display: flex;
     flex-direction: column;
-    width: 100%; /* Adjust this to your preference */
+    width: 100%;
 }
+
 .input-wrapper {
     display: flex;
     justify-content: space-between;
@@ -326,12 +300,12 @@ form {
     font-size: 1em;
     cursor: pointer;
 }
+
 .form-group-wrapper input {
     width: 100%;
 }
 
 label {
-    /* margin-top: 15px; */
     font-weight: bold;
 }
 
@@ -349,24 +323,9 @@ select {
     box-sizing: border-box;
     display: inline-block;
 }
-/* select {
-    width: 100%;
-    max-width: 100%; 
-    padding: 4px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    flex-grow: 1; 
-    display: inline-block;
-} */
 
-/* list_photos form */
 .form-inline {
     display: flex;
-    /* align-items: center; */
     margin-bottom: 1rem;
 }
   
@@ -383,21 +342,15 @@ select {
     width: 100px;
     margin-right: 0.5rem;
 }
-/* .form-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column; 
-    margin-right: 20px; 
-} 
-*/
 
 .form-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+
 .form-group p {
-    line-height: 1.5; /* Controls the spacing between lines of text */
+    line-height: 1.5;
 }
 
 input[type="submit"] {
@@ -414,29 +367,34 @@ input[type="submit"]:hover {
 .has-value {
     color: green;
 }
+
 .has-value span {
     color: black;
 }
+
 .no-value {
     color: red;
 }
+
 .no-value span {
     color: black;
 }
+
 .icon-link {
     text-align: center;
-    color: #000; /* Set the color of the text */
-    text-decoration: none; /* Remove underline */
+    color: #000;
+    text-decoration: none;
 }
 
 .icon-link img {
-    display: block; /* Display image as block to push text below it */
-    margin: 0 auto; /* Center image horizontally */
+    display: block;
+    margin: 0 auto;
 }
 
 .icon-link p {
-    margin: 10px 0 0; /* Add some top margin to the text */
+    margin: 10px 0 0;
 }
+
 .button-container {
     display: flex;
     justify-content: space-between;
@@ -447,30 +405,27 @@ input[type="submit"]:hover {
     background: transparent;
     cursor: pointer;
 }
-/* The Modal (background) */
+
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 1;
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
 }
   
-  /* Modal Content */
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto; /* 15% from the top and centered */
+    margin: 15% auto;
     padding: 20px;
     border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
+    width: 80%;
 }
   
-  /* The Close Button */
 .close {
     color: #aaa;
     float: right;
@@ -484,11 +439,13 @@ input[type="submit"]:hover {
     text-decoration: none;
     cursor: pointer;
 }
+
 .places-container {
-    max-height: 400px; /* adjust this value according to your needs */
+    max-height: 400px;
     overflow-y: auto;
-    margin-top: 20px; /* optional, to add some space between radius input and places list */
+    margin-top: 20px;
 }
+
 .place {
     display: grid;
     grid-template-columns: 20px 30% 20% auto;
@@ -509,33 +466,35 @@ input[type="submit"]:hover {
     color: blue;
     text-decoration: underline;
 }
+
 .radius-input {
     margin-bottom: 20px;
 }
+
 .place-icon {
-    height: 15px;   /* Adjust as needed */
-    width: 15px;    /* Adjust as needed */
-    /* margin: 5px; */
-    display: flex;  /* Add this line */
-    align-items: center; /* Add this line */
-    justify-content: center; /* Add this line */
+    height: 15px;
+    width: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
 .place-icon img {
-    max-height: 100%; /* Add this line */
-    max-width: 100%; /* Add this line */
-    object-fit: contain; /* Adjust this line */
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
 }
+
 .next-button {
-    margin-top: 20px;   /* Adjust as needed */
+    margin-top: 20px;
 }
+
 .navigation-buttons {
     margin-top: 20px;
     display: flex;
     justify-content: flex-start;
 }
 
-
-/* Apply styles to the photo-table */
 .photo-table {
     width: 800px;
     table-layout: auto;
@@ -545,7 +504,6 @@ input[type="submit"]:hover {
     margin-bottom: 20px;
 }
 
-/* Style table header */
 .photo-table th {
     background-color: #f2f2f2;
     text-align: center;
@@ -554,56 +512,43 @@ input[type="submit"]:hover {
     border: 1px solid #ddd;
     cursor: pointer; 
     text-decoration: underline; 
-
 }
 
-/* Style table rows */
 .photo-table tr {
     background-color: #fff;
     border: 1px solid #ddd;
 }
 
-/* Style alternating rows for better readability */
 .photo-table tr:nth-child(even) {
     background-color: #f2f2f2;
 }
 
-/* Style table cells */
 .photo-table td {
     padding: 8px;
     border: 1px solid #ddd;
-    white-space: nowrap; /* Prevent text from wrapping */
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Add ellipsis for overflowing text */
-    max-width: 600px; /* Adjust as needed */
+    text-overflow: ellipsis;
+    max-width: 600px;
     vertical-align: middle;
 }
 
-/* Style the thumbnail cell */
 .photo-table td:first-child {
-    max-width: 100px; /* Adjust as needed for your thumbnail size */
+    max-width: 100px;
     text-align: center;
 }
 
-/* Add hover effect to rows */
 .photo-table tr:hover {
     background-color: #e6e6e6;
 }
 
-.photo-table td:nth-child(2) {
-    width: 100px; /* Set the desired width for the "Place" column */
-}
-.photo-table td:nth-child(3) {
-    width: 100px; /* Set the desired width for the "Place" column */
-}
-.photo-table td:nth-child(4) {
-    width: 100px; /* Set the desired width for the "Place" column */
-}
+.photo-table td:nth-child(2),
+.photo-table td:nth-child(3),
+.photo-table td:nth-child(4),
 .photo-table td:nth-child(5) {
-    width: 100px; /* Set the desired width for the "Place" column */
+    width: 100px;
 }
 
-/* CSS for the overlay */
 #overlay {
     display: none;
     position: fixed;
@@ -617,7 +562,6 @@ input[type="submit"]:hover {
     vertical-align: middle;
 }
 
-/* CSS for the "Please Wait" message */
 #waitMessage {
     position: absolute;
     top: 50%;
@@ -629,7 +573,6 @@ input[type="submit"]:hover {
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* CSS for the loading animation */
 .loader {
     border: 4px solid #f3f3f3;
     border-top: 4px solid #3498db;
@@ -644,8 +587,6 @@ input[type="submit"]:hover {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-
-
 
 .custom-table-container {
     margin: 24px auto;
@@ -668,41 +609,39 @@ input[type="submit"]:hover {
 .custom-table__head {
     border-bottom: 2px solid #c6d5e3;
     color: #4a4a4a;
-
-    .custom-photo-table--shaded & {
-        background: #f7fafc;
-    }
 }
 
-.custom-table__row {
-    &:not(:last-of-type) {
-        border-bottom: 1px solid #eaeaea;
-    }
+.custom-photo-table--shaded .custom-table__head {
+    background: #f7fafc;
+}
+
+.custom-table__row:not(:last-of-type) {
+    border-bottom: 1px solid #eaeaea;
 }
 
 .custom-table__cell {
     padding: 16px 12px 14px;
+}
 
-    .custom-table__head & {
-        padding: 10px 12px 8px;
-    }
-    
-    .custom-photo-table--bordered &:not(:last-of-type) {
-        border-right: 1px solid #eaeaea;
-    }
-    
-    .custom-table__head & {
-        font-weight: 700;
-    }
+.custom-table__head .custom-table__cell {
+    padding: 10px 12px 8px;
+}
+
+.custom-photo-table--bordered .custom-table__cell:not(:last-of-type) {
+    border-right: 1px solid #eaeaea;
+}
+
+.custom-table__head .custom-table__cell {
+    font-weight: 700;
 }
 
 .custom-table__cell--checkbox {
     max-width: 25px;
     padding: 16px 0 14px 12px;
+}
 
-    .custom-table__head & {
-        padding: 10px 0 8px 12px;
-    }
+.custom-table__head .custom-table__cell--checkbox {
+    padding: 10px 0 8px 12px;
 }
 
 .custom-table__cell--no-wrap {
@@ -719,47 +658,45 @@ input[type="submit"]:hover {
     max-width: 200px;
 }
 
-
-
-/* CSS */
 .button-22 {
-  align-items: center;
-  appearance: button;
-  background-color: #0276FF;
-  border-radius: 8px;
-  border-style: none;
-  box-shadow: rgba(255, 255, 255, 0.26) 0 1px 2px inset;
-  box-sizing: border-box;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  flex-direction: row;
-  flex-shrink: 0;
-  font-family: "RM Neue",sans-serif;
-  font-size: 100%;
-  line-height: 1.15;
-  margin: 0;
-  padding: 10px 21px;
-  text-align: center;
-  text-transform: none;
-  transition: color .13s ease-in-out,background .13s ease-in-out,opacity .13s ease-in-out,box-shadow .13s ease-in-out;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
+    align-items: center;
+    appearance: button;
+    background-color: #0276FF;
+    border-radius: 8px;
+    border-style: none;
+    box-shadow: rgba(255, 255, 255, 0.26) 0 1px 2px inset;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    justify-content: center;
+    font-family: "RM Neue",sans-serif;
+    font-size: 100%;
+    line-height: 1.15;
+    margin: 0;
+    padding: 10px 21px;
+    text-align: center;
+    text-transform: none;
+    transition: color .13s ease-in-out,background .13s ease-in-out,opacity .13s ease-in-out,box-shadow .13s ease-in-out;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
 .button-22:active {
-  background-color: #006AE8;
+    background-color: #006AE8;
 }
 
 .button-22:hover {
-  background-color: #1C84FF;
+    background-color: #1C84FF;
 }
 
 .file-input-container {
     display: flex;
     flex-direction: column;
-    align-items: flex-start; /* Adjusts alignment to the left */
+    align-items: flex-start;
     margin-bottom: 20px;
 }
 
@@ -776,17 +713,12 @@ input[type="submit"]:hover {
 .placeID-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 10px;  /* Adjust gap as needed */
+    gap: 10px;
 }
 
 .placeID-input-wrapper input {
-    flex-grow: 1;  /* Allow the input to grow */
+    flex-grow: 1;
     width: auto;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 .spinner {
@@ -801,5 +733,5 @@ input[type="submit"]:hover {
 }
 
 .button-spacing {
-    margin-bottom: 10px; /* Adjust the margin as needed */
+    margin-bottom: 10px;
 }
