@@ -710,6 +710,20 @@ input[type="submit"]:hover {
     color: #555;
 }
 
+.file-size-note {
+    margin-top: 5px;
+    font-size: 14px;
+    color: #666;
+    font-style: italic;
+    background-color: #f8f8f8;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+}
+
 .placeID-input-wrapper {
     display: flex;
     align-items: center;

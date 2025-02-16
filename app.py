@@ -18,6 +18,63 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
+from dotenv import load_dotenv
+
+
+# Find the placedID by using this page:
+# https://developers.google.com/maps/documentation/places/web-service/place-id
+
+# Load environment variables from .env file
+load_dotenv()
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Function Definitions
+def load_config():
+    """Load configuration from config.json"""
+    try:
+        # Load main configuration
+        with open("config.json") as config_file:
+            config = json.load(config_file)
+
+        # Process configuration
+        port = config['app']['port']
+        if 'web' in config and 'redirect_uris' in config['web']:
+            config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
+
+        # Set logging level
+        config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
+
+        return config
+    except Exception as e:
+        print(f"Error loading configuration: {str(e)}")
+        raise
+
+def get_client_config(config):
+    """Get OAuth client configuration"""
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+    
+    if not client_id or not client_secret:
+        raise AuthenticationError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
+    
+    return {
+        "web": {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "project_id": "streetview-app",  # This is optional but recommended
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",  # Use standard Google OAuth endpoints
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "redirect_uris": [config['web']['redirect_uris']],
+            "javascript_origins": [f"http://{config['app']['host']}:{config['app']['port']}"]
+        },
+        "api_key": api_key
+    }
 
 # Custom Exception Classes
 class StreetViewError(Exception):
@@ -80,72 +137,8 @@ def log_error(error_type, error):
 
 
 
-def load_config():
-    """Load configuration from config.json"""
-    try:
-        # Load main configuration
-        with open("config.json") as config_file:
-            config = json.load(config_file)
 
-        # Process configuration
-        port = config['app']['port']
-        if 'web' in config and 'redirect_uris' in config['web']:
-            config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
 
-        # Set logging level
-        config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
-
-        return config
-    except Exception as e:
-        print(f"Error loading configuration: {str(e)}")
-        raise
-
-def get_client_config(config):
-    """Get OAuth client configuration"""
-    client_id = os.getenv('GOOGLE_CLIENT_ID')
-    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
-    
-    if not client_id or not client_secret:
-        raise AuthenticationError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
-    
-    return {
-        "web": {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "project_id": "streetview-app",  # This is optional but recommended
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",  # Use standard Google OAuth endpoints
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": [config['web']['redirect_uris']],
-            "javascript_origins": [f"http://{config['app']['host']}:{config['app']['port']}"]
-        }
-    }
-
-# Find the placedID by using this page:
-# https://developers.google.com/maps/documentation/places/web-service/place-id
-
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-
-# Load configuration
-config = load_config()
-client_config = get_client_config(config)
-api_key = os.getenv('GOOGLE_MAPS_API_KEY')
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Configure app settings
-app.secret_key = os.getenv('GOOGLE_CLIENT_SECRET')  # Use the Google Client Secret as the Flask secret key
-app.config['MAX_CONTENT_LENGTH'] = config['uploads']['max_file_size']
-app.config['UPLOAD_FOLDER'] = config['uploads']['directory']
-app.config['ALLOWED_EXTENSIONS'] = set(config['uploads']['allowed_extensions'])
-
-# Create upload directory if it doesn't exist
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-
-# Initialize logging
-setup_logging(app, config)
 
 # Error Handlers
 @app.errorhandler(APIError)
@@ -421,7 +414,7 @@ def edit_photo(photo_id):
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_photo.html' template with the photo details.
-    return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size, api_key=api_key)
+    return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size, api_key=client_config['api_key'])
 
 @app.route('/edit_connections/<photo_id>', methods=['GET'])
 @token_required
@@ -495,7 +488,7 @@ def edit_connections(photo_id):
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_connections.html' template with the photo details.
-    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=api_key)
+    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'])
 
 @app.route('/get_connections', methods=['POST'])
 def get_connections():
@@ -593,22 +586,16 @@ def update_photo(photo_id):
         photo["places"] = [{"placeId": place_id, "languageCode": "en"}]
 
     credentials = get_credentials()
-    response = update_photo_api(credentials.token, photo_id, photo)
-    if response.status_code == 200:
+    try:
+        response = update_photo_api(credentials.token, photo_id, photo)
+        # If we get here, the update was successful since update_photo_api would raise an APIError on failure
         main_message = 'Photo updated successfully'
         details = "Please refresh the page after 30 seconds to see the changes."
         flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
-
-        return redirect(url_for('edit_photo', photo_id=photo_id))  
-      
-    try:
-        response_json = response.json()
-    except json.JSONDecodeError:
-        flash('Error: The server response could not be decoded.', 'error')
         return redirect(url_for('edit_photo', photo_id=photo_id))
-
-    flash('Error: The server returned an unexpected response.', 'error')
-    return render_template('update_result.html', response=response_json)
+    except APIError as e:
+        flash(f'Error updating photo: {str(e)}', 'error')
+        return redirect(url_for('edit_photo', photo_id=photo_id))
 
 
 
@@ -625,7 +612,7 @@ def nearby_places():
     except ValueError:
         return jsonify({"error": "Invalid latitude or longitude"}), 400
 
-    places_info = get_nearby_places(latitude, longitude, radius, api_key)
+    places_info = get_nearby_places(latitude, longitude, radius, client_config['api_key'])
     return jsonify(places_info)
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -1134,6 +1121,10 @@ def handle_api_response(response, error_message="API request failed"):
             response=response
         )
 
+# Load configuration and initialize app settings
+config = load_config()
+client_config = get_client_config(config)
+
 if __name__ == '__main__':
     try:
         # Initialize logging first for proper error tracking
@@ -1147,6 +1138,10 @@ if __name__ == '__main__':
             'UPLOAD_FOLDER': config['uploads']['directory'],
             'ALLOWED_EXTENSIONS': set(config['uploads']['allowed_extensions'])
         })
+
+        # Create upload directory if it doesn't exist
+        if not os.path.exists(config['uploads']['directory']):
+            os.makedirs(config['uploads']['directory'])
         
         # Log application startup
         app.logger.info("Starting StreetView application")
