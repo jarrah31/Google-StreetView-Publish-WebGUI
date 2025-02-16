@@ -111,7 +111,7 @@
                 map = new google.maps.Map(document.getElementById('map'), {
                     center: anchorPosition,
                     zoom: 19,
-                    mapTypeId: 'satellite'
+                    mapTypeId: 'satellite',
                 });
 
                 if (!map) {
@@ -125,8 +125,8 @@
                     draggable: false,
                     title: "Photo's GPS Position",
                     icon: {
-                        url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                    }
+                        url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                    },
                 });
 
                 if (!anchorMarker) {
@@ -140,7 +140,7 @@
                         position: { lat: photo.pose.latLngPair.latitude, lng: photo.pose.latLngPair.longitude },
                         map: map,
                         label: photo.label,
-                        title: `${photo.label}: ${photo.distance} meters`
+                        title: `${photo.label}: ${photo.distance} meters`,
                     });
 
                     if (!marker) {
@@ -355,11 +355,18 @@
     }
 
     async function toggleAllVisibleConnections() {
-        const allPhotoIds = nearbyMarkers.map(marker => marker.photoId);
+        const bounds = map.getBounds();
+        const visibleMarkers = nearbyMarkers.filter(marker => bounds.contains(marker.getPosition()));
+        const visiblePhotoIds = visibleMarkers.map(marker => marker.photoId);
 
-        // Include the center marker's photoId
+        // Include the center marker's photoId only if it's in view
         const centerPhotoId = document.getElementById('source-photo-id').value;
-        allPhotoIds.push(centerPhotoId);
+        const centerLat = parseFloat(document.getElementById('latitude').value);
+        const centerLng = parseFloat(document.getElementById('longitude').value);
+        const centerPosition = new google.maps.LatLng(centerLat, centerLng);        
+        if (bounds.contains(centerPosition)) {
+            visiblePhotoIds.push(centerPhotoId);
+        }
         
         try {
             const response = await fetch(`/get_connections`, {
@@ -367,7 +374,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ photoIds: allPhotoIds })
+                body: JSON.stringify({ photoIds: visiblePhotoIds })
             });
             
             const data = await response.json();
@@ -456,8 +463,8 @@
                         scale: 12,
                         fillColor: '#FF0000',
                         fillOpacity: 1,
-                        strokeWeight: 0
-                    }
+                        strokeWeight: 0,
+                    },
                 });
                 polylines.push(label); // Add to polylines array for cleanup
             }
