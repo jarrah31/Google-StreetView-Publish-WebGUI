@@ -25,7 +25,7 @@ You can set up your Google Developer environment with a different Google account
 I wrote this whole project with ChatGPT's assistance! I'm a techie but not a programmer, so chatGPT helped me write all the python, HTML, and javascript code from scratch. This wouldn't have been possible without it!
 
 ## Screenshots
-![image](https://github.com/jarrah31/Google-StreetView-Publish/assets/3072303/a55a3d65-23ef-4222-93cf-18d190f7077c)
+<img width="327" alt="image" src="https://github.com/user-attachments/assets/c1772981-8fbe-491f-9591-01d637b7df6d" />
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/510c0d05-b3dc-4cb2-9cd1-4afb3800f845)
 
@@ -35,10 +35,9 @@ I wrote this whole project with ChatGPT's assistance! I'm a techie but not a pro
 
 ![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/4c2c7245-ac05-4793-a433-333cf3fc0398)
 
+![Capto_Capture 2025-02-16_07-52-05_pm](https://github.com/user-attachments/assets/37399be9-8e68-40dd-9126-97ca210e17c0)
+
 ![IMG_6ABF6090499C-1](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ab519b4b-2cac-4ac8-8954-1f37625c43fb)
-
-<img width="1316" alt="image" src="https://github.com/user-attachments/assets/a9dd78f4-a0a1-488e-9272-de9b4d135936">
-
 
 ## My Drone Photosphere Workflow
 I have a DJI Mini Pro 3 and I enjoy creating aerial StreetView photos and publishing them on Google Streetview for other people to find.
