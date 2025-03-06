@@ -1,12 +1,6 @@
 {
-  "web": {
-    "redirect_uris": "http://127.0.0.1:{PORT}/oauth2callback",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token"
-  },
   "app": {
     "debug": true,
-    "port": 5001,
     "host": "0.0.0.0"
   },
   "logging": {
@@ -22,8 +16,6 @@
     "max_file_size": 67108864
   },
   "api": {
-    "base_url": "https://streetviewpublish.googleapis.com/v1",
-    "scopes": ["https://www.googleapis.com/auth/streetviewpublish"],
     "places": {
       "max_results": 60,
       "default_radius": 300

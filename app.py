@@ -40,10 +40,10 @@ def load_config():
         with open("config.json") as config_file:
             config = json.load(config_file)
 
-        # Process configuration
-        port = config['app']['port']
-        if 'web' in config and 'redirect_uris' in config['web']:
-            config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
+        # # Process configuration
+        # port = config['app']['port']
+        # if 'web' in config and 'redirect_uris' in config['web']:
+        #     config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
 
         # Set logging level
         config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
@@ -58,6 +58,8 @@ def get_client_config(config):
     client_id = os.getenv('GOOGLE_CLIENT_ID')
     client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
     api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+    redirect_uris = os.getenv('REDIRECT_URI')
+    port = os.getenv('PORT')
     
     if not client_id or not client_secret:
         raise AuthenticationError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
@@ -70,8 +72,8 @@ def get_client_config(config):
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",  # Use standard Google OAuth endpoints
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": [config['web']['redirect_uris']],
-            "javascript_origins": [f"http://{config['app']['host']}:{config['app']['port']}"]
+            "redirect_uris": redirect_uris,
+            "javascript_origins": [f"http://{config['app']['host']}:{port}"]
         },
         "api_key": api_key
     }
@@ -316,7 +318,7 @@ def oauth2callback():
 @token_required
 def list_photos_page():
 
-    page_size = request.args.get('page_size', session.get('page_size', '10'))
+    page_size = request.args.get('page_size', session.get('page_size', str(config['api']['photos']['default_page_size'])))
     session['page_size'] = page_size
 
     action = request.args.get('action', None)
@@ -367,7 +369,7 @@ def list_photos_page():
 @app.route('/list_photos_table', methods=['GET'])
 @token_required
 def list_photos_table_page():
-    page_size = request.args.get('page_size', 100)  # Default to 100 items per page
+    page_size = request.args.get('page_size', config['api']['photos']['table_page_size'])  # Use configured table page size
     credentials = get_credentials()
     
     photos_list = []
@@ -603,7 +605,7 @@ def update_photo(photo_id):
 def nearby_places():
     latitude = request.args.get('latitude')
     longitude = request.args.get('longitude')
-    radius = request.args.get('radius', default=300)  # use a default value of 300 if no radius is provided
+    radius = request.args.get('radius', default=config['api']['places']['default_radius'])  # use configured default radius
 
     # convert latitude and longitude to floats
     try:
@@ -664,7 +666,8 @@ def upload_photosphere():
             print(create_photo_response_message)
 
         # Save the create_photo_response JSON data to a file named after the photo filename
-        uploads_directory = "uploads"
+        # uploads_directory = "uploads"
+        uploads_directory = config['uploads']['directory']
         os.makedirs(uploads_directory, exist_ok=True)
 
         # Prepare initial filename
@@ -1036,7 +1039,7 @@ def get_nearby_places(latitude, longitude, radius, api_key):
         next_page_token = data.get('next_page_token')
 
         # if there is no next page token or we've gathered enough places, break
-        if not next_page_token or len(places_info) >= 60:
+        if not next_page_token or len(places_info) >= config['api']['places']['max_results']:
             break
 
         # Important: There is a short delay between when a next_page_token is issued, and when it will become valid.
@@ -1150,7 +1153,7 @@ if __name__ == '__main__':
         app.logger.info(f"Max upload size: {app.config['MAX_CONTENT_LENGTH']} bytes")
         
         # Start server
-        port = int(os.getenv('PORT', config['app']['port']))
+        port = int(os.getenv('PORT'))
         app.logger.info(f"Starting server on {config['app']['host']}:{port}")
         app.run(
             host=config['app']['host'],
