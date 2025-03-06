@@ -269,7 +269,7 @@ def logout():
 
 @app.route('/authorize')
 def authorize():
-    redirect_uri = config['web']['redirect_uris']
+    redirect_uri = os.getenv('REDIRECT_URI')
     try:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
             client_config,
@@ -290,7 +290,7 @@ def authorize():
 
 @app.route('/oauth2callback')
 def oauth2callback():
-    redirect_uri = config['web']['redirect_uris']
+    redirect_uri = os.getenv('REDIRECT_URI')
     state = session.get('oauth_state')  # Get state from session
     if not state:
         flash("OAuth state missing. Please try authenticating again.", "error")
