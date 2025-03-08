@@ -15,14 +15,12 @@ Features include:
 - Add and edit connections between photospheres for navigating between images
 
 You will need to (full insructions below):
-- Run this Python script within a venv environment on your local machine
+- Run the application within a Docker container
 - Create a Google Cloud Developer Project
 - Create an API Key and OAuth 2.0 Client ID
 - Add a credit card within your Google Cloud Developer project for API billing. (I don't think you will be changed because interacting with your own photos doesn't cost anything, and Google lets you spend up to $200 for free a month anyway. Don't hold me to this though!)
 
 You can set up your Google Developer environment with a different Google account to what you use for publishing photospheres. 
-
-I wrote this whole project with ChatGPT's assistance! I'm a techie but not a programmer, so chatGPT helped me write all the python, HTML, and javascript code from scratch. This wouldn't have been possible without it!
 
 ## Screenshots
 <img width="327" alt="image" src="https://github.com/user-attachments/assets/c1772981-8fbe-491f-9591-01d637b7df6d" />
