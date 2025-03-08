@@ -1,0 +1,20 @@
+services:
+  streetview-app:
+    image: jarrah31/streetview-publish-webgui:latest  
+    container_name: streetview-app
+    restart: unless-stopped
+    ports:
+      - "${PORT}:5001"  
+    volumes:
+      - streetview-userdata:/app/userdata
+    environment:
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - REDIRECT_URI=${REDIRECT_URI}
+      - PUID=1000  # Default UID, can be overridden
+      - PGID=1000  # Default GID, can be overridden
+
+volumes:
+  streetview-userdata:
+    driver: local

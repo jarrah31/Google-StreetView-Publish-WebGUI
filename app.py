@@ -9,6 +9,7 @@ import google.auth.exceptions
 import re
 import logging
 import traceback
+import shutil
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from functools import wraps
@@ -32,25 +33,113 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # Initialize Flask app
 app = Flask(__name__)
 
-# Function Definitions
-def load_config():
-    """Load configuration from config.json"""
-    try:
-        # Load main configuration
-        with open("config.json") as config_file:
-            config = json.load(config_file)
+def migrate_to_userdata_structure():
+    """
+    Migrate existing files and directories to the userdata structure.
+    This ensures compatibility with existing installations.
+    """
+    import shutil  # Import once at the top of the function
+    
+    app.logger.info("Checking userdata directory structure...")
+    
+    # Create userdata directory if it doesn't exist
+    if not os.path.exists("userdata"):
+        app.logger.info("Creating userdata directory")
+        os.makedirs("userdata")
+    
+    # Migrate uploads directory
+    if os.path.exists("uploads") and not os.path.exists("userdata/uploads"):
+        app.logger.info("Moving uploads directory to userdata/")
+        shutil.move("uploads", "userdata/uploads")
+    elif not os.path.exists("userdata/uploads"):
+        app.logger.info("Creating userdata/uploads directory")
+        os.makedirs("userdata/uploads")
+    
+    # Migrate logs directory
+    if os.path.exists("logs") and not os.path.exists("userdata/logs"):
+        app.logger.info("Moving logs directory to userdata/")
+        shutil.move("logs", "userdata/logs")
+    elif not os.path.exists("userdata/logs"):
+        app.logger.info("Creating userdata/logs directory")
+        os.makedirs("userdata/logs")
+    
+    # Migrate creds.data file
+    if os.path.exists("creds.data") and not os.path.exists("userdata/creds.data"):
+        app.logger.info("Moving creds.data to userdata/")
+        shutil.move("creds.data", "userdata/creds.data")
+    
+    # Migrate config.json file - with special handling as requested
+    if os.path.exists("config.json"):
+        app.logger.info("Moving/copying config.json to userdata/")
+        # Always use the root config.json, even if one exists in userdata
+        shutil.copy("config.json", "userdata/config.json")
+        # Remove the original after copying
+        os.remove("config.json")
+    # Note: We don't create a default config.json if it doesn't exist
+    # as per your requirement
 
-        # # Process configuration
-        # port = config['app']['port']
-        # if 'web' in config and 'redirect_uris' in config['web']:
-        #     config['web']['redirect_uris'] = config['web']['redirect_uris'].replace("{PORT}", str(port))
+# Function Definitions
+def get_default_config():
+    """Return default configuration values"""
+    return {
+        "app": {
+            "debug": True,
+            "port": 5001,
+            "host": "0.0.0.0"
+        },
+        "logging": {
+            "level": "INFO",
+            "file": "userdata/logs/streetview.log",
+            "max_bytes": 1048576,
+            "backup_count": 10,
+            "format": "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+        },
+        "uploads": {
+            "directory": "userdata/uploads",
+            "allowed_extensions": ["jpg", "jpeg"],
+            "max_file_size": 67108864
+        },
+        "api": {
+            "places": {
+                "max_results": 60,
+                "default_radius": 300
+            },
+            "photos": {
+                "default_page_size": 10,
+                "table_page_size": 100,
+                "max_nearby_photos": 50
+            }
+        }
+    }
+
+def load_config():
+    """Load configuration from userdata/config.json or create with defaults if it doesn't exist"""
+    config_path = "userdata/config.json"
+    
+    try:
+        # Check if config file exists and is not empty
+        if os.path.exists(config_path) and os.path.getsize(config_path) > 0:
+            with open(config_path) as config_file:
+                config = json.load(config_file)
+                app.logger.info("Loaded existing configuration from userdata/config.json")
+        else:
+            # Create default configuration
+            config = get_default_config()
+            
+            # Ensure userdata directory exists
+            os.makedirs("userdata", exist_ok=True)
+            
+            # Write default config to file
+            with open(config_path, 'w') as config_file:
+                json.dump(config, config_file, indent=2)
+            app.logger.info("Created default configuration in userdata/config.json")
 
         # Set logging level
         config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
 
         return config
     except Exception as e:
-        print(f"Error loading configuration: {str(e)}")
+        app.logger.error(f"Error loading configuration: {str(e)}")
         raise
 
 def get_client_config(config):
@@ -59,7 +148,6 @@ def get_client_config(config):
     client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
     api_key = os.getenv('GOOGLE_MAPS_API_KEY')
     redirect_uris = os.getenv('REDIRECT_URI')
-    port = os.getenv('PORT')
     
     if not client_id or not client_secret:
         raise AuthenticationError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
@@ -72,8 +160,7 @@ def get_client_config(config):
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",  # Use standard Google OAuth endpoints
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": redirect_uris,
-            "javascript_origins": [f"http://{config['app']['host']}:{port}"]
+            "redirect_uris": redirect_uris
         },
         "api_key": api_key
     }
@@ -109,19 +196,26 @@ def setup_logging(app, config):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
+    # File handler for logging to a file
     file_handler = RotatingFileHandler(
         config['logging']['file'],
         maxBytes=config['logging']['max_bytes'],
         backupCount=config['logging']['backup_count']
     )
-    
     file_handler.setFormatter(logging.Formatter(config['logging']['format']))
     file_handler.setLevel(config['logging']['level'])
+    
+    # Stream handler for logging to stdout/stderr (captured by Docker)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter(config['logging']['format']))
+    stream_handler.setLevel(config['logging']['level'])
     
     # Remove existing handlers to avoid duplicates
     app.logger.handlers = []
     
+    # Add both handlers
     app.logger.addHandler(file_handler)
+    app.logger.addHandler(stream_handler)
     app.logger.setLevel(config['logging']['level'])
     
     # Log startup information
@@ -197,17 +291,17 @@ def handle_unexpected_error(error):
 @app.before_request
 def log_request_info():
     """Log information about each request"""
-    app.logger.info(f"Request: {request.method} {request.url}")
+    # app.logger.info(f"Request: {request.method} {request.url}")
     app.logger.debug(f"Headers: {dict(request.headers)}")
     if request.method in ['POST', 'PUT']:
         app.logger.debug(f"Form Data: {request.form}")
         app.logger.debug(f"Files: {request.files}")
 
-@app.after_request
-def log_response_info(response):
-    """Log information about each response"""
-    app.logger.info(f"Response: {response.status}")
-    return response
+# @app.after_request
+# def log_response_info(response):
+#     """Log information about each response"""
+#     app.logger.debug(f"Response: {response.status}")
+#     return response
 
 def format_capture_time(capture_time):
     dt = datetime.fromisoformat(capture_time[:-1])
@@ -217,13 +311,13 @@ def refresh_credentials(credentials):
     try:
         credentials.refresh(Request())
     except google.auth.exceptions.RefreshError:
-        os.remove('creds.data')
+        os.remove('userdata/creds.data')
         return None
     save_credentials(credentials)
     return credentials
 
 def get_credentials():
-    creds_file = 'creds.data'
+    creds_file = 'userdata/creds.data'
     if os.path.exists(creds_file):
         credentials = Credentials.from_authorized_user_file(creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
         if credentials is None or not credentials.valid:
@@ -236,7 +330,7 @@ def get_credentials():
 
 
 def save_credentials(credentials):
-    with open('creds.data', 'w') as f:
+    with open('userdata/creds.data', 'w') as f:
         f.write(credentials.to_json())
 
 def token_required(f):
@@ -342,7 +436,7 @@ def list_photos_page():
     response = list_photos(credentials.token, page_size=int(page_size), page_token=page_token)
     photos_list = response.get("photos", [])
 
-    photoId_to_filename = get_filenames('uploads')
+    photoId_to_filename = get_filenames(config['uploads']['directory'])
 
     for photo in photos_list:
         photo['captureTime'] = format_capture_time(photo['captureTime'])
@@ -385,7 +479,7 @@ def list_photos_table_page():
         else:
             break
 
-    photoId_to_filename = get_filenames('uploads')
+    photoId_to_filename = get_filenames(config['uploads']['directory'])
 
     for photo in photos_list:
         photo['captureTime'] = format_capture_time(photo['captureTime'])
@@ -1124,6 +1218,15 @@ def handle_api_response(response, error_message="API request failed"):
             response=response
         )
 
+# Set up basic console logging before migration
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(console_handler)
+app.logger.setLevel(logging.INFO)
+
+# Userdata migration
+migrate_to_userdata_structure()
+
 # Load configuration and initialize app settings
 config = load_config()
 client_config = get_client_config(config)
@@ -1153,7 +1256,7 @@ if __name__ == '__main__':
         app.logger.info(f"Max upload size: {app.config['MAX_CONTENT_LENGTH']} bytes")
         
         # Start server
-        port = int(os.getenv('PORT'))
+        port = config['app'].get('port', 5001)
         app.logger.info(f"Starting server on {config['app']['host']}:{port}")
         app.run(
             host=config['app']['host'],
