@@ -9,7 +9,10 @@
 {% block content %}
 <div class="container_photos">
         <h1>Edit Photo</h1>
-        <a href="#" class="back-link">Back to List</a>
+        <div class="navigation-buttons">
+            <a href="#" class="button-22 back-link">Return to Grid View</a>
+            <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" class="button-22">Edit Connections</a>
+        </div>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}

@@ -8,7 +8,9 @@
 
 {% block content %}
 <div class="container_connections">
-    <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link">Back to List</a>
+    <div class="navigation-buttons">
+        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="button-22 back-link">Return to Grid View</a>
+    </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -106,12 +108,23 @@
 
         if (!isNaN(lat) && !isNaN(lng)) {
             const anchorPosition = { lat: lat, lng: lng };
+            // Get saved zoom level from localStorage, default to 18 if not found
+            const savedZoom = parseInt(localStorage.getItem('mapZoom')) || 18;
 
             try {
                 map = new google.maps.Map(document.getElementById('map'), {
                     center: anchorPosition,
-                    zoom: 19,
+                    zoom: savedZoom,
                     mapTypeId: 'satellite',
+                    zoomControl: true,
+                    zoomControlOptions: {
+                        position: google.maps.ControlPosition.RIGHT_BOTTOM
+                    }
+                });
+
+                // Save zoom level whenever it changes
+                map.addListener('zoom_changed', function() {
+                    localStorage.setItem('mapZoom', map.getZoom());
                 });
 
                 if (!map) {
