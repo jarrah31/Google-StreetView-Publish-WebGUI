@@ -3,3 +3,4 @@ requests
 google-auth-oauthlib
 google-auth
 python-dotenv
+gunicorn

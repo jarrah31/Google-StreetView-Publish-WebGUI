@@ -36,12 +36,12 @@ RUN rm -f /app/userdata/*
 # Switch to non-root user
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+# Health check with increased timeouts for Gunicorn startup
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-5001}/ || exit 1
 
 # Expose the port the app runs on
 EXPOSE ${PORT:-5001}
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Command to run the application with Gunicorn
+CMD ["sh", "-c", "gunicorn --config gunicorn_config.py --bind 0.0.0.0:${PORT:-5001} app:app"]

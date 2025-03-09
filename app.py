@@ -1218,24 +1218,26 @@ def handle_api_response(response, error_message="API request failed"):
             response=response
         )
 
-# Set up basic console logging before migration
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-app.logger.addHandler(console_handler)
-app.logger.setLevel(logging.INFO)
+def init_app():
+    """Initialize the application - called only once by Gunicorn master process"""
+    # Set up basic console logging before migration
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        app.logger.addHandler(console_handler)
+        app.logger.setLevel(logging.INFO)
 
-# Userdata migration
-migrate_to_userdata_structure()
+        # Userdata migration
+        migrate_to_userdata_structure()
 
-# Load configuration and initialize app settings
-config = load_config()
-client_config = get_client_config(config)
+        # Load configuration and initialize app settings
+        global config, client_config
+        config = load_config()
+        client_config = get_client_config(config)
 
-if __name__ == '__main__':
-    try:
-        # Initialize logging first for proper error tracking
+        # Initialize logging and configure application
         setup_logging(app, config)
-        
+
         # Configure Flask application
         app.config.update({
             'SECRET_KEY': os.getenv('GOOGLE_CLIENT_SECRET'),  # Use the Google Client Secret as the Flask secret key
@@ -1248,29 +1250,12 @@ if __name__ == '__main__':
         # Create upload directory if it doesn't exist
         if not os.path.exists(config['uploads']['directory']):
             os.makedirs(config['uploads']['directory'])
-        
-        # Log application startup
-        app.logger.info("Starting StreetView application")
+
+        # Log application configuration
+        app.logger.info("StreetView application configured")
         app.logger.info(f"Environment: debug={app.config['DEBUG']}")
         app.logger.info(f"Uploads directory: {app.config['UPLOAD_FOLDER']}")
         app.logger.info(f"Max upload size: {app.config['MAX_CONTENT_LENGTH']} bytes")
-        
-        # Start server
-        port = config['app'].get('port', 5001)
-        app.logger.info(f"Starting server on {config['app']['host']}:{port}")
-        app.run(
-            host=config['app']['host'],
-            port=port,
-            debug=config['app']['debug']
-        )
-    except OSError as e:
-        if e.errno == 98:  # Address already in use
-            error_msg = f"Port {port} is already in use. Please specify a different port."
-            app.logger.error(error_msg)
-            print(error_msg)
-        else:
-            app.logger.error(f"Error starting server: {str(e)}")
-            raise
-    except Exception as e:
-        app.logger.error(f"Failed to start application: {str(e)}")
-        raise
+
+# Initialize the application
+init_app()
