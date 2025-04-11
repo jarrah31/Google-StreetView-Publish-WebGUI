@@ -36,7 +36,7 @@ RUN rm -f /app/userdata/*
 # Switch to non-root user
 USER appuser
 
-# Health check with increased timeouts for Gunicorn startup
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-5001}/ || exit 1
 

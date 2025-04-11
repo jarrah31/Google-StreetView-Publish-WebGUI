@@ -1197,7 +1197,7 @@ def handle_api_response(response, error_message="API request failed"):
         )
 
 def init_app():
-    """Initialize the application - called only once by Gunicorn master process"""
+    """Initialize the application"""
     # Set up basic console logging before migration
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         console_handler = logging.StreamHandler()
