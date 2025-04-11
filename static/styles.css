@@ -158,13 +158,14 @@ ul li {
 }
 
 p {
-    margin-bottom: 2px;
-    line-height: 1;
+    margin-bottom: 5px; /* Increased spacing */
+    line-height: 1.4; /* Increased line height */
 }
 
-form p:last-of-type {
-    padding-bottom: 20px;
-}
+/* Remove bottom padding from last p in form if it exists */
+/* form p:last-of-type {
+    padding-bottom: 20px; 
+} */
 
 img {
     max-width: 100%;
@@ -290,30 +291,74 @@ a:hover {
     outline: none;
 }
 
-form {
+/* Remove max-width from form if it's inside the grid */
+/* form {
     max-width: 600px;
-}
+} */
 
-.form-group {
+/* Remove old form-group flex styles */
+/* .form-group {
     display: flex;
     align-items: center;
     margin-bottom: 10px;
     justify-content: flex-start;
-}
+} */
 
-.form-group input {
+/* Remove old width styles */
+/* .form-group input {
     width: 70%;
-}
+} */
 
-.form-group label {
+/* Remove old label width */
+/* .form-group label {
     margin-right: 10px;
     width: 20%;
-}
+} */
 
+/* Keep form-group-wrapper for Place ID structure, but ensure full width */
 .form-group-wrapper {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 100%; /* Ensure it takes full width of grid cell */
+}
+
+/* New Grid Styles */
+.details-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr; /* Label column sized to content, value column takes rest */
+    gap: 8px 15px; /* Row gap and Column gap */
+    align-items: baseline; /* Align items based on their text baseline */
+    margin-top: 15px; /* Add some space above the grid */
+}
+
+.grid-label {
+    font-weight: bold;
+    text-align: right;
+    padding-right: 5px; /* Add slight padding */
+}
+
+.grid-value {
+    /* Values/inputs will align left by default */
+    width: 100%; /* Ensure container takes full width */
+}
+
+.grid-value input[type="text"],
+.grid-value input[type="number"],
+.grid-value .form-group-wrapper { /* Target inputs and the placeID wrapper */
+    width: 100%; /* Make inputs fill the grid cell */
+    box-sizing: border-box; /* Include padding/border in width */
+}
+
+/* Make the form element itself part of the grid flow */
+.grid-form {
+    display: contents; /* Form elements become direct grid items */
+}
+
+/* Style for the submit button container */
+.grid-submit {
+    grid-column: 1 / -1; /* Span across both columns */
+    justify-self: start; /* Align button to the start */
+    margin-top: 15px; /* Add space above the button */
 }
 
 .input-wrapper {
@@ -329,13 +374,15 @@ form {
     cursor: pointer;
 }
 
+/* Ensure input within wrapper is also 100% */
 .form-group-wrapper input {
     width: 100%;
 }
 
-label {
+/* Label styling is now handled by .grid-label */
+/* label {
     font-weight: bold;
-}
+} */
 
 input[type="text"],
 input[type="number"],

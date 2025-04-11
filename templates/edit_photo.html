@@ -28,41 +28,57 @@
                 <a href="{{ photo.shareLink }}" target="_blank" class="enlarged-photo-container">
                     <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail" class="enlarged-photo">
                     <div class="dashed-line"></div>
-                </a>  
-                <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
-                <p>View Count: {{ photo.viewCount }}</p>
-                <p>Capture Time: {{ photo.captureTime }}</p>
-                <p>Upload Time: {{ photo.uploadTime }}</p>
-                <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST">
-                    <div class="form-group">
-                        <label for="latitude">Latitude:*</label>
-                        <input type="text" id="latitude" name="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
-                    </div>
-                    <div class="form-group">
-                        <label for="longitude">Longitude:*</label>
-                        <input type="text" id="longitude" name="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
-                    </div>
-                    <div class="form-group">
-                        <label for="placeId">Place ID:</label>
-                        <div class="form-group-wrapper">
+                </a>
+                <div class="details-grid"> <!-- Start of the new grid container -->
+                    <!-- Metadata -->
+                    <span class="grid-label">Share Link:</span>
+                    <span class="grid-value"><a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></span>
+
+                    <span class="grid-label">View Count:</span>
+                    <span class="grid-value">{{ photo.viewCount }}</span>
+
+                    <span class="grid-label">Capture Time:</span>
+                    <span class="grid-value">{{ photo.captureTime }}</span>
+
+                    <span class="grid-label">Upload Time:</span>
+                    <span class="grid-value">{{ photo.uploadTime }}</span>
+
+                    <!-- Form starts here, integrated into the grid -->
+                    <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST" class="grid-form">
+                        <!-- Latitude -->
+                        <label for="latitude" class="grid-label">Latitude:*</label>
+                        <div class="grid-value">
+                            <input type="text" id="latitude" name="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
+                        </div>
+
+                        <!-- Longitude -->
+                        <label for="longitude" class="grid-label">Longitude:*</label>
+                        <div class="grid-value">
+                            <input type="text" id="longitude" name="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
+                        </div>
+
+                        <!-- Place ID -->
+                        <label for="placeId" class="grid-label">Place ID:</label>
+                        <div class="grid-value form-group-wrapper"> <!-- Keep form-group-wrapper for structure -->
                             <div class="input-wrapper">
                                 <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
                                 <button type="submit" class="search-button">&#128269;</button> <!-- magnifying glass icon -->
                             </div>
                             <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="heading">Heading:</label>
-                        <input type="number" id="heading" name="heading" min="0" max="360" step="1" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
-                    </div>
-                    <div class="form-group">
-                        <!-- Change the submit button to Please Wait when pressed. See JS code below. -->
-                        <!-- <input type="submit" id="submit-button" value="Submit"> -->
-                        <button class="button-22" type="submit" id="submit-button">Submit Changes</button>
-                    </div>
-                    
-                </form>
+
+                        <!-- Heading -->
+                        <label for="heading" class="grid-label">Heading:</label>
+                        <div class="grid-value">
+                            <input type="number" id="heading" name="heading" min="0" max="360" step="1" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
+                        </div>
+
+                        <!-- Submit Button - Spans both columns -->
+                        <div class="grid-submit">
+                            <button class="button-22" type="submit" id="submit-button">Submit Changes</button>
+                        </div>
+                    </form>
+                </div> <!-- End of details-grid -->
             </div>
             <div class="map-container">
                 <h2>Photo Heading:</h2>                
