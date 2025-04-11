@@ -15,3 +15,48 @@ client_secrets.json
 *.txt
 !requirements.txt
 *.DS_Store
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.env
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Credential files
+*creds.data
+userdata/creds.data
+*credentials*
+*secret*
+*api_key*
+
+# Logs
+userdata/logs/
+*.log
+
+# User-specific files
+userdata/*
+!userdata/.gitkeep
+
+# Cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/

@@ -1,4 +1,3 @@
-
 import time
 import requests
 import json
@@ -854,7 +853,7 @@ def get_photo(token, photo_id):
             "Authorization": f"Bearer {token}",
         }
         app.logger.info(f"Fetching photo with ID: {photo_id}")
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers)        
         return handle_api_response(response, f"Failed to get photo {photo_id}")
     except Exception as e:
         app.logger.error(f"Error in get_photo: {str(e)}")
@@ -1154,28 +1153,7 @@ def calculate_bounding_box(lat, lng, radius):
 
     return min_lat, max_lat, min_lng, max_lng
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    # Radius of the Earth in meters
-    R = 6371000
-    # Convert coordinates from degrees to radians
-    lat1 = radians(lat1)
-    lon1 = radians(lon1)
-    lat2 = radians(lat2)
-    lon2 = radians(lon2)
-    
-    # Compute differences
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    
-    # Haversine formula
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    
-    # Distance in meters
-    distance = R * c
-    return distance
-
-
+# Second calculate_distance function removed as it duplicates functionality
 
 def validate_coordinates(latitude, longitude):
     """Validate latitude and longitude values"""
@@ -1231,7 +1209,8 @@ def init_app():
         migrate_to_userdata_structure()
 
         # Load configuration and initialize app settings
-        global config, client_config
+        # Explicitly declare these as global to modify the module-level variables
+        global config, client_config 
         config = load_config()
         client_config = get_client_config(config)
 
@@ -1259,3 +1238,8 @@ def init_app():
 
 # Initialize the application
 init_app()
+
+if __name__ == '__main__':
+    # Run the Flask development server
+    # Use configuration values loaded by init_app()
+    app.run(host=config['app']['host'], port=config['app']['port'], debug=config['app']['debug'])

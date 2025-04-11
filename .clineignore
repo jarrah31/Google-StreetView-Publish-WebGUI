@@ -22,3 +22,9 @@ credentials/
 .env.test
 .env.production
 
+# VS Code specific exclusions to prevent Copilot from accessing sensitive files
+**/.vscode/.env
+**/.vscode/.env.*
+**/settings.json
+**/.history/
+

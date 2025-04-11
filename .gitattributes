@@ -1,0 +1,15 @@
+# Treat all .env files as binary to prevent Git from showing their contents in diffs
+*.env binary
+.env binary
+
+# Treat credential files as binary
+*creds.data binary
+*credentials* binary
+*secret* binary
+*api_key* binary
+
+# Treat configuration files that might contain secrets as binary
+config.json binary
+
+# Exclude .log files from diff
+*.log binary
