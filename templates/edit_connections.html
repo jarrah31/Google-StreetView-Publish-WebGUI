@@ -8,8 +8,9 @@
 
 {% block content %}
 <div class="container_connections">
+    <h1>Edit Connections</h1>
     <div class="navigation-buttons">
-        <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="button-22 back-link">Return to Grid View</a>
+        <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}" class="view-btn">Edit Photo</a>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -21,26 +22,39 @@
         {% endif %}
     {% endwith %}
     <div class="content-container">
-        <div class="left-column">
-            <div class="photo-details">
-                <h2>Photo Details:</h2>
-                <a href="{{ photo.shareLink }}" target="_blank">
-                    <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
-                </a>  
-                <p>Share Link: <a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></p>
-                <p>View Count: {{ photo.viewCount }}</p>
-                <p>Capture Time: {{ photo.captureTime }}</p>
-                <p>Upload Time: {{ photo.uploadTime }}</p>
+        <div class="photo-details">
+            <h2>Photo Details:</h2>
+            <a href="{{ photo.shareLink }}" target="_blank" class="enlarged-photo-container">
+                <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail" class="enlarged-photo">
+                <div class="dashed-line"></div>
+            </a>
+            <div class="details-grid">
+                <!-- Metadata -->
+                <span class="grid-label">Share Link:</span>
+                <span class="grid-value"><a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></span>
+
+                <span class="grid-label">View Count:</span>
+                <span class="grid-value">{{ photo.viewCount }}</span>
+
+                <span class="grid-label">Capture Time:</span>
+                <span class="grid-value">{{ photo.captureTime }}</span>
+
+                <span class="grid-label">Upload Time:</span>
+                <span class="grid-value">{{ photo.uploadTime }}</span>
+                
+                <!-- Hidden inputs for JavaScript functionality -->
                 <input type="hidden" id="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
                 <input type="hidden" id="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
                 <input type="hidden" id="source-photo-id" value="{{ photo.photoId.id }}">
             </div>
+            
+            <!-- Nearby Photos section - keep the original format -->
             <div class="nearby-photos">
                 <h2>Nearby Photos within {{ distance }} meters:</h2>
                 <form id="distance-form" method="GET" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}">
                     <label for="distance">Distance (meters):</label>
                     <input type="number" id="distance" name="distance" value="{{ distance }}" min="1">
-                    <button class="button-22" type="submit">Refresh</button>
+                    <button class="view-btn" type="submit">Refresh</button>
                 </form>
 
                 <div class="custom-table-container">
@@ -80,8 +94,8 @@
             <div id="map" style="height: 600px; width: 100%;"></div>
             <p class="map-description">Use the tick boxes on the left to select the photos that you wish to establish connections to from the main photo, then press "Create Connections" button to submit your request.</p>
             <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
-            <button class="button-22 button-spacing" type="button" id="create-connections">Create Connections</button>
-            <button class="button-22" type="button" id="toggle-connections">Toggle All Visible Connections</button>
+            <button class="view-btn button-spacing" type="button" id="create-connections">Create Connections</button>
+            <button class="view-btn" type="button" id="toggle-connections">Toggle All Visible Connections</button>
         </div>
     </div>
 </div>
