@@ -1,165 +1,411 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}List your photos{% endblock %}
-
-{% block head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-{% endblock %}
+{% block title %}List View{% endblock %}
 
 {% block content %}
-<div id="overlay">
-    <div id="waitMessage">
-        <div class="loader"></div>
-        <p>Please wait...</p>
-    </div>
-</div>
 <div class="container_photos">
-        <h1>View Your Photos</h1>
-        <a href="{{ url_for('index') }}" class="back-link">Back</a>
-        
-        <!-- Display the number of available photos -->
-        <p>Total Photos: {{ photos_list|length }}</p>
+    <h1>List View</h1>
 
-
-        <!-- Display photos in a table -->
-        <div class="main-container">
-            <table id="photoTable" class="photo-table">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0, false)">Place</th>
-                        <th onclick="sortTable(1, false)">Published Status</th>
-                        <th onclick="sortTable(2, true)">View Count</th>
-                        <th onclick="sortTable(3, false)">Capture Time</th>
-                        <th onclick="sortTable(4, false)">Upload Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for photo in photos_list %}
-                        <tr data-photo-id="{{ photo.photoId.id }}">
-                            <td data-column="place">
-                                {% if 'places' in photo %}
-                                    {% for place in photo.places %}
-                                        {{ place.name }}
-                                    {% endfor %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td data-column="publishedStatus">{{ photo.mapsPublishStatus }}</td>
-                            <td data-column="viewCount">{{ photo.viewCount }}</td>
-                            <td data-column="captureTime">{{ photo.captureTime }}</td>
-                            <td data-column="uploadTime">{{ photo.uploadTime }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="photo-container">
+        <!-- Database Statistics -->
+        <div class="details-grid">
+            <div class="grid-label">Total Photos:</div>
+            <div class="grid-value">{{ total_photos }}</div>
+            
+            <div class="grid-label">Places:</div>
+            <div class="grid-value">{{ total_places }}</div>
+            
+            <div class="grid-label">Connections:</div>
+            <div class="grid-value">{{ total_connections }}</div>
+            
+            <div class="grid-label">Last Updated:</div>
+            <div class="grid-value">{{ last_updated }}</div>
         </div>
-
     </div>
+    
+    <!-- Pagination Controls -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            {% if per_page != 'all' %}
+                Showing {{ ((page - 1) * per_page|int) + 1 }} to {{ [page * per_page|int, total_records]|min }} of {{ total_records }} records
+            {% else %}
+                Showing all {{ total_records }} records
+            {% endif %}
+        </div>
+        <div class="pagination-controls">
+            <div class="rows-per-page">
+                <label for="per-page">Rows per page:</label>
+                <select id="per-page" onchange="changeRowsPerPage(this.value)">
+                    <option value="25" {% if per_page == '25' %}selected{% endif %}>25</option>
+                    <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+                    <option value="all" {% if per_page == 'all' %}selected{% endif %}>All</option>
+                </select>
+            </div>
+            
+            {% if per_page != 'all' and total_pages > 1 %}
+            <div class="page-nav">
+                <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page == 1 %}disabled{% endif %}">First</a>
+                
+                <a href="{{ url_for('list_photos_table_page', page=page-1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page == 1 %}disabled{% endif %}">Prev</a>
+                
+                <span class="page-indicator">Page {{ page }} of {{ total_pages }}</span>
+                
+                <a href="{{ url_for('list_photos_table_page', page=page+1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page >= total_pages %}disabled{% endif %}">Next</a>
+                
+                <a href="{{ url_for('list_photos_table_page', page=total_pages, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page >= total_pages %}disabled{% endif %}">Last</a>
+            </div>
+            {% endif %}
+            
+            {% if status_filter or places_filter or capture_date_from or capture_date_to or upload_date_from or upload_date_to %}
+            <div class="clear-filters-container">
+                <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order) }}" class="clear-filters-btn">Clear All Filters</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Photos Table -->
+    <div class="custom-table-container">
+        <table class="photo-table">
+            <thead>
+                <tr>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='photo_id', sort_order='asc' if sort_by == 'photo_id' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Photo</a>
+                    </th>
+                    <th class="filterable-header">
+                        <div class="header-content">
+                            <a href="{{ url_for('list_photos_table_page', sort_by='maps_publish_status', sort_order='asc' if sort_by == 'maps_publish_status' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Status</a>
+                            <button class="filter-toggle" onclick="toggleFilter('status-filter')"><i class="filter-icon">▼</i></button>
+                        </div>
+                        <form id="status-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
+                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                            <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="places_filter" value="{{ places_filter }}">
+                            <input type="hidden" name="capture_date_from" value="{{ capture_date_from }}">
+                            <input type="hidden" name="capture_date_to" value="{{ capture_date_to }}">
+                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
+                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
+                            
+                            <div id="status-filter" class="filter-dropdown">
+                                <div class="filter-dropdown-content">
+                                    <div class="filter-option">
+                                        <label><input type="checkbox" name="status_filter" value="all" {% if not status_filter %}checked{% endif %}> All</label>
+                                    </div>
+                                    
+                                    {% for status in status_values %}
+                                    <div class="filter-option">
+                                        <label><input type="checkbox" name="status_filter" value="{{ status }}" {% if status in status_filter %}checked{% endif %}> {{ status }}</label>
+                                    </div>
+                                    {% endfor %}
+                                    <div class="filter-actions">
+                                        <button type="submit">Apply</button>
+                                        <button type="button" onclick="clearStatusFilter()">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='view_count', sort_order='asc' if sort_by == 'view_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Views</a>
+                    </th>
+                    <th class="filterable-header">
+                        <div class="header-content">
+                            <a href="{{ url_for('list_photos_table_page', sort_by='capture_time', sort_order='asc' if sort_by == 'capture_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Capture Date</a>
+                            <button class="filter-toggle" onclick="toggleFilter('capture-date-filter')"><i class="filter-icon">▼</i></button>
+                        </div>
+                        <form id="capture-date-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
+                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                            <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+                            <input type="hidden" name="places_filter" value="{{ places_filter }}">
+                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
+                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
+                            
+                            <div id="capture-date-filter" class="filter-dropdown">
+                                <div class="filter-dropdown-content date-filter">
+                                    <div class="date-range">
+                                        <label>From:
+                                            <input type="month" name="capture_date_from" value="{{ capture_date_from }}">
+                                        </label>
+                                        <label>To:
+                                            <input type="month" name="capture_date_to" value="{{ capture_date_to }}">
+                                        </label>
+                                    </div>
+                                    <div class="filter-actions">
+                                        <button type="submit">Apply</button>
+                                        <button type="button" onclick="clearCaptureDateFilter()">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </th>
+                    <th class="filterable-header">
+                        <div class="header-content">
+                            <a href="{{ url_for('list_photos_table_page', sort_by='upload_time', sort_order='asc' if sort_by == 'upload_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Upload Date</a>
+                            <button class="filter-toggle" onclick="toggleFilter('upload-date-filter')"><i class="filter-icon">▼</i></button>
+                        </div>
+                        <form id="upload-date-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
+                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                            <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+                            <input type="hidden" name="places_filter" value="{{ places_filter }}">
+                            <input type="hidden" name="capture_date_from" value="{{ capture_date_from }}">
+                            <input type="hidden" name="capture_date_to" value="{{ capture_date_to }}">
+                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
+                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
+                            
+                            <div id="upload-date-filter" class="filter-dropdown">
+                                <div class="filter-dropdown-content date-filter">
+                                    <div class="date-range">
+                                        <label>From:
+                                            <input type="month" name="upload_date_from" value="{{ upload_date_from }}">
+                                        </label>
+                                        <label>To:
+                                            <input type="month" name="upload_date_to" value="{{ upload_date_to }}">
+                                        </label>
+                                    </div>
+                                    <div class="filter-actions">
+                                        <button type="submit">Apply</button>
+                                        <button type="button" onclick="clearUploadDateFilter()">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </th>
+                    <th class="filterable-header">
+                        <div class="header-content">
+                            <a href="{{ url_for('list_photos_table_page', sort_by='place_names', sort_order='asc' if sort_by == 'place_names' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Places</a>
+                            <button class="filter-toggle" onclick="toggleFilter('places-filter')"><i class="filter-icon search-icon">🔍</i></button>
+                        </div>
+                        <form id="places-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
+                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                            <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+                            <input type="hidden" name="capture_date_from" value="{{ capture_date_from }}">
+                            <input type="hidden" name="capture_date_to" value="{{ capture_date_to }}">
+                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
+                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
+                            
+                            <div id="places-filter" class="filter-dropdown">
+                                <div class="filter-dropdown-content">
+                                    <div class="search-filter">
+                                        <input type="text" name="places_filter" id="places-search" placeholder="Search places..." value="{{ places_filter }}">
+                                    </div>
+                                    <div class="filter-actions">
+                                        <button type="submit">Apply</button>
+                                        <button type="button" onclick="clearPlacesFilter()">Clear</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </th>
+                    <th>Connections</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="photo-table-body">
+                {% for photo in photos %}
+                <tr class="photo-row">
+                    <td>
+                        <a href="{{ photo.share_link }}" target="_blank" title="View on Google Maps">
+                            View
+                        </a>
+                    </td>
+                    <td>
+                        {% if photo.maps_publish_status %}
+                            {{ photo.maps_publish_status }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ photo.view_count|default('0') }}</td>
+                    <td>
+                        {% if photo.capture_time %}
+                            {{ photo.capture_time|replace("T00:00:00Z", "")|replace("T", " ")|replace("Z", "") }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if photo.upload_time %}
+                            {{ photo.upload_time.split("T")[0] }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if photo.place_names %}
+                            {{ photo.place_names }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ photo.connection_count }}</td>
+                    <td>
+                        <select class="action-select" onchange="if(this.value) window.location.href=this.value;">
+                            <option value="">Select</option>
+                            <option value="{{ url_for('edit_photo', photo_id=photo.photo_id) }}">Edit Photo</option>
+                            <option value="{{ url_for('edit_connections', photo_id=photo.photo_id) }}">Edit Connections</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Bottom Pagination Controls -->
+    {% if per_page != 'all' and total_pages > 1 %}
+    <div class="pagination-container bottom">
+        <div class="pagination-controls">
+            <div class="page-nav">
+                <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page == 1 %}disabled{% endif %}">First</a>
+                
+                <a href="{{ url_for('list_photos_table_page', page=page-1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page == 1 %}disabled{% endif %}">Prev</a>
+                
+                <span class="page-indicator">Page {{ page }} of {{ total_pages }}</span>
+                
+                <a href="{{ url_for('list_photos_table_page', page=page+1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page >= total_pages %}disabled{% endif %}">Next</a>
+                
+                <a href="{{ url_for('list_photos_table_page', page=total_pages, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page >= total_pages %}disabled{% endif %}">Last</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Function to open the share link in a new tab when a row is clicked
-    function openShareLink(event) {
-        // Get the clicked element
-        const clickedElement = event.target;
-
-        // Check if the clicked element is a table header
-        if (clickedElement.tagName === 'TH') {
-            // Do nothing if it's a table header
-            return;
-        }
-
-        // Check if the click event occurred on a row
-        if (clickedElement.parentElement.tagName === 'TR') {
-            // Get the share link from the data-share-link attribute
-            const photoId = clickedElement.parentElement.getAttribute('data-photo-id');
-
-            // Open the share link in a new tab
-            if (photoId) {
-                const editUrl = `{{ url_for('edit_photo', photo_id='') }}${photoId}`;
-                // Set a flag to indicate that the tab was opened programmatically
-                sessionStorage.setItem('openedByScript', 'true');
-                window.open(editUrl, '_blank');
-            }
-        }
+    // Reset dropdowns to "Select" after page load (in case of browser back button)
+    document.addEventListener('DOMContentLoaded', function() {
+        const selects = document.querySelectorAll('.action-select');
+        selects.forEach(select => {
+            select.value = '';
+        });
+        
+        // Initialize filters
+        initializeFilters();
+    });
+    
+    // Function to change the number of rows per page
+    function changeRowsPerPage(perPage) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('per_page', perPage);
+        currentUrl.searchParams.set('page', '1'); // Reset to first page when changing rows per page
+        window.location.href = currentUrl.toString();
     }
-
-    // Attach the click event handler to the table rows
-    document.getElementById('photoTable').addEventListener('click', openShareLink);
-
-    // Function to show the "Please Wait" message
-    function showPleaseWait() {
-        document.getElementById("overlay").style.display = "block";
-    }
-
-    // Function to hide the "Please Wait" message
-    function hidePleaseWait() {
-        document.getElementById("overlay").style.display = "none";
-    }
-
-    function sortTable(n, isNumeric) {
-        showPleaseWait(); // Show the "Please Wait" message before sorting
-
-        setTimeout(function() {
-            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-            table = document.getElementById("photoTable");
-            switching = true;
-            dir = "asc"; // Set the sorting direction to ascending by default
-
-            while (switching) {
-                switching = false;
-                rows = table.rows;
-
-                for (i = 1; i < (rows.length - 1); i++) {
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i + 1].getElementsByTagName("TD")[n];
-
-                    if (isNumeric) {
-                        // Convert the inner HTML content to numeric values for comparison
-                        x = parseFloat(x.innerHTML.replace(/,/g, ""));
-                        y = parseFloat(y.innerHTML.replace(/,/g, ""));
-                    } else {
-                        // For non-numeric columns, including date columns
-                        x = x.innerHTML.toLowerCase();
-                        y = y.innerHTML.toLowerCase();
-                    }
-
-                    if (n === 3 || n === 4) {
-                        // Check if the column is "Capture Time" or "Upload Time"
-                        x = new Date(x);
-                        y = new Date(y);
-                    }
-
-                    if (dir === "asc") {
-                        if (x > y) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    } else if (dir === "desc") {
-                        if (x < y) {
-                            shouldSwitch = true;
-                            break;
-                        }
-                    }
+    
+    // Filtering functionality
+    function initializeFilters() {
+        // Close all filter dropdowns initially
+        document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
+            dropdown.style.display = 'none';
+        });
+        
+        // Handle special case for "all" checkbox in status filter
+        const allStatusCheckbox = document.querySelector('input[name="status_filter"][value="all"]');
+        const otherStatusCheckboxes = document.querySelectorAll('input[name="status_filter"]:not([value="all"])');
+        
+        if (allStatusCheckbox) {
+            allStatusCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    otherStatusCheckboxes.forEach(cb => {
+                        cb.checked = false;
+                    });
                 }
-
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount++;
-                } else {
-                    if (switchcount === 0 && dir === "asc") {
-                        dir = "desc";
-                        switching = true;
+            });
+            
+            otherStatusCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        allStatusCheckbox.checked = false;
+                    } else if (!document.querySelector('input[name="status_filter"]:not([value="all"]):checked')) {
+                        // If no other checkboxes are checked, check the "all" checkbox
+                        allStatusCheckbox.checked = true;
                     }
-                }
+                });
+            });
+        }
+    }
+    
+    function toggleFilter(filterId) {
+        const filterElement = document.getElementById(filterId);
+        document.querySelectorAll('.filter-dropdown').forEach(dropdown => {
+            if (dropdown.id !== filterId) {
+                dropdown.style.display = 'none';
             }
-
-            hidePleaseWait(); // Hide the "Please Wait" message after sorting
-        }, 0); // Using setTimeout to allow the "Please Wait" message to render
+        });
+        
+        if (filterElement.style.display === 'block') {
+            filterElement.style.display = 'none';
+        } else {
+            filterElement.style.display = 'block';
+        }
+        
+        // Close filter dropdown when clicking outside
+        document.addEventListener('click', function closeDropdown(e) {
+            if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-toggle')) {
+                filterElement.style.display = 'none';
+                document.removeEventListener('click', closeDropdown);
+            }
+        });
+    }
+    
+    function clearStatusFilter() {
+        // Check the "all" checkbox and uncheck others
+        const allCheckbox = document.querySelector('input[name="status_filter"][value="all"]');
+        if (allCheckbox) {
+            allCheckbox.checked = true;
+        }
+        
+        const otherCheckboxes = document.querySelectorAll('input[name="status_filter"]:not([value="all"])');
+        otherCheckboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        
+        // Submit the form
+        document.getElementById('status-filter-form').submit();
+    }
+    
+    function clearCaptureDateFilter() {
+        const form = document.getElementById('capture-date-filter-form');
+        const captureFromInput = form.querySelector('input[name="capture_date_from"]');
+        const captureToInput = form.querySelector('input[name="capture_date_to"]');
+        
+        captureFromInput.value = '';
+        captureToInput.value = '';
+        
+        form.submit();
+    }
+    
+    function clearUploadDateFilter() {
+        const form = document.getElementById('upload-date-filter-form');
+        const uploadFromInput = form.querySelector('input[name="upload_date_from"]');
+        const uploadToInput = form.querySelector('input[name="upload_date_to"]');
+        
+        uploadFromInput.value = '';
+        uploadToInput.value = '';
+        
+        form.submit();
+    }
+    
+    function clearPlacesFilter() {
+        const form = document.getElementById('places-filter-form');
+        const placesInput = form.querySelector('input[name="places_filter"]');
+        
+        placesInput.value = '';
+        
+        form.submit();
     }
 </script>
 {% endblock %}

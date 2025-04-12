@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Photo Database{% endblock %}
+
+{% block content %}
+<div class="container_photos">
+    <h1>Photo Database</h1>
+    
+    <div class="content-container">
+        <div class="left-column">
+            <!-- Database Management Section -->
+            <div class="photo-container">
+                <h2>Database Management</h2>
+                <p>Create or update the local SQLite database with all your Street View photos.</p>
+                <form action="{{ url_for('create_database') }}" method="post" class="form-container button-spacing">
+                    <button type="submit" class="button-22">Create Database</button>
+                </form>
+            </div>
+
+            <!-- Statistics Section -->
+            {% if stats %}
+            <div class="photo-container">
+                <h2>Database Statistics</h2>
+                <div class="details-grid">
+                    <div class="grid-label">Photos:</div>
+                    <div class="grid-value">{{ stats.photo_count }}</div>
+                    
+                    <div class="grid-label">Places:</div>
+                    <div class="grid-value">{{ stats.place_count }}</div>
+                    
+                    <div class="grid-label">Connections:</div>
+                    <div class="grid-value">{{ stats.connection_count }}</div>
+                    
+                    <div class="grid-label">Last Updated:</div>
+                    <div class="grid-value">{{ stats.last_updated }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- JSON Exports Section -->
+        {% if json_files %}
+        <div class="map-container">
+            <div class="photo-container">
+                <h2>JSON Export History</h2>
+                <div class="custom-table-container">
+                    <table class="photo-table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Date</th>
+                                <th>Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in json_files %}
+                            <tr>
+                                <td class="custom-table__cell--no-wrap">{{ file.name }}</td>
+                                <td>{{ file.date }}</td>
+                                <td>{{ file.size }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -9,6 +9,7 @@ import re
 import logging
 import traceback
 import shutil
+import sqlite3  # Add sqlite3 import
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from functools import wraps
@@ -272,7 +273,7 @@ def handle_file_error(error):
 
 @app.errorhandler(ValidationError)
 def handle_validation_error(error):
-    """Handle validation errors"""
+    """Handle input validation errors"""
     log_error("Validation Error", error)
     flash(f"Validation Error: {str(error)}", "error")
     return redirect(request.referrer or url_for('index'))
@@ -454,7 +455,7 @@ def list_photos_page():
         else:
             photo['heading'] = None
 
-
+    
     next_page_token = response.get('nextPageToken')
 
     return render_template('list_photos.html', photos_list=photos_list, page_size=page_size, next_page_token=next_page_token)
@@ -462,31 +463,290 @@ def list_photos_page():
 @app.route('/list_photos_table', methods=['GET'])
 @token_required
 def list_photos_table_page():
-    page_size = request.args.get('page_size', config['api']['photos']['table_page_size'])  # Use configured table page size
-    credentials = get_credentials()
-    
-    photos_list = []
-    page_token = None
-    
-    while True:
-        response = list_photos(credentials.token, page_size=int(page_size), page_token=page_token)
-        photos_list.extend(response.get("photos", []))
+    """Display all photos from the database in a table format with pagination"""
+    try:
+        import database
         
-        # Check if there's a next page
-        if 'nextPageToken' in response:
-            page_token = response['nextPageToken']
+        # Check if database exists
+        if not os.path.exists(database.DATABASE_PATH):
+            flash("Database not yet created. Please use the 'Create Database' button on the Photo Database page first.", "error")
+            # Instead of redirecting, still render the list_photos_table template but with empty data
+            return render_template(
+                'list_photos_table.html',
+                photos=[],
+                total_photos=0,
+                total_places=0,
+                total_connections=0,
+                last_updated="N/A",
+                sort_by='upload_time',
+                sort_order='desc',
+                db_exists=False,
+                page=1,
+                per_page=25,
+                total_pages=1,
+                total_records=0,
+                status_values=[]
+            )
+        
+        # Get sorting parameters
+        sort_by = request.args.get('sort_by', 'upload_time')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        # Get pagination parameters
+        per_page = request.args.get('per_page', '25')
+        page = request.args.get('page', '1')
+        
+        # Get filter parameters
+        status_filter = request.args.getlist('status_filter')
+        places_filter = request.args.get('places_filter', '')
+        capture_date_from = request.args.get('capture_date_from', '')
+        capture_date_to = request.args.get('capture_date_to', '')
+        upload_date_from = request.args.get('upload_date_from', '')
+        upload_date_to = request.args.get('upload_date_to', '')
+        
+        # Store pagination settings in session
+        session['per_page'] = per_page
+        session['page'] = page
+        
+        # Convert to integers with fallbacks
+        try:
+            page = int(page)
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
+            page = 1
+            
+        try:
+            per_page_int = int(per_page)
+            if per_page_int < 1:
+                per_page_int = 25
+        except (ValueError, TypeError):
+            per_page_int = 25
+            
+        # Get database connection
+        conn = sqlite3.connect(database.DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get valid columns for sorting
+        valid_columns = ['photo_id', 'latitude', 'longitude', 'capture_time', 
+                         'upload_time', 'view_count', 'maps_publish_status', 'updated_at',
+                         'place_names']
+        
+        if sort_by not in valid_columns:
+            sort_by = 'upload_time'
+        
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'desc'
+        
+        # Fetch all unique maps_publish_status values for filtering
+        cursor.execute("SELECT DISTINCT maps_publish_status FROM photos WHERE maps_publish_status IS NOT NULL")
+        status_values = [row[0] for row in cursor.fetchall()]
+        
+        # Build base query
+        base_query = """
+        SELECT p.*, 
+               GROUP_CONCAT(DISTINCT pl.name) as place_names,
+               COUNT(DISTINCT c.target_photo_id) as connection_count
+        FROM photos p
+        LEFT JOIN places pl ON p.photo_id = pl.photo_id
+        LEFT JOIN connections c ON p.photo_id = c.source_photo_id
+        """
+        
+        # Add filter conditions
+        where_clauses = []
+        query_params = []
+        
+        # Status filter
+        if status_filter and 'all' not in status_filter:
+            placeholders = ','.join(['?' for _ in status_filter])
+            where_clauses.append(f"p.maps_publish_status IN ({placeholders})")
+            query_params.extend(status_filter)
+        
+        # Places filter
+        if places_filter:
+            app.logger.info(f"Places filter applied with value: '{places_filter}'")
+            
+            # Execute a completely separate query when places filter is used
+            place_query = """
+            SELECT p.*, 
+                   GROUP_CONCAT(DISTINCT places.name) as place_names,
+                   COUNT(DISTINCT c.target_photo_id) as connection_count
+            FROM photos p
+            JOIN places ON p.photo_id = places.photo_id
+            LEFT JOIN connections c ON p.photo_id = c.source_photo_id
+            WHERE places.name LIKE ? COLLATE NOCASE
+            GROUP BY p.photo_id
+            ORDER BY {} {}
+            """.format(sort_by, sort_order)
+            
+            search_param = f"%{places_filter}%"
+            app.logger.info(f"Place search query: {place_query}")
+            app.logger.info(f"Place search parameter: {search_param}")
+            
+            # Execute the query to get filtered photos
+            cursor.execute(place_query, [search_param])
+            photos = [dict(row) for row in cursor.fetchall()]
+            
+            # Count total filtered records
+            count_query = """
+            SELECT COUNT(DISTINCT p.photo_id)
+            FROM photos p
+            JOIN places ON p.photo_id = places.photo_id
+            WHERE places.name LIKE ? COLLATE NOCASE
+            """
+            cursor.execute(count_query, [search_param])
+            total_records = cursor.fetchone()[0]
+            
+            app.logger.info(f"Found {total_records} photos matching places filter")
+            
+            # Calculate pagination
+            if per_page != 'all' and total_records > 0:
+                total_pages = (total_records + per_page_int - 1) // per_page_int
+                if page > total_pages:
+                    page = total_pages
+                
+                # Apply pagination to the results if needed
+                start_idx = (page - 1) * per_page_int
+                end_idx = start_idx + per_page_int
+                photos = photos[start_idx:end_idx]
+            else:
+                total_pages = 1
+                
+            # Skip the rest of the query processing since we've handled everything here
+            query_executed = True
         else:
-            break
-
-    photoId_to_filename = get_filenames(config['uploads']['directory'])
-
-    for photo in photos_list:
-        photo['captureTime'] = format_capture_time(photo['captureTime'])
-        photo['uploadTime'] = format_capture_time(photo['uploadTime'])
-        photo['filename'] = photoId_to_filename.get(photo['photoId']['id'])
-
-    return render_template('list_photos_table.html', photos_list=photos_list, page_size=page_size)
-
+            # Initialize for normal query flow
+            query_executed = False
+        
+        # Capture date filter
+        if capture_date_from:
+            where_clauses.append("p.capture_time >= ?")
+            query_params.append(f"{capture_date_from}-01T00:00:00Z")
+            
+        if capture_date_to:
+            # Get the last day of the month for the end date
+            year, month = map(int, capture_date_to.split('-'))
+            last_day = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day
+            where_clauses.append("p.capture_time <= ?")
+            query_params.append(f"{capture_date_to}-{last_day}T23:59:59Z")
+        
+        # Upload date filter
+        if upload_date_from:
+            where_clauses.append("p.upload_time >= ?")
+            query_params.append(f"{upload_date_from}-01T00:00:00Z")
+            
+        if upload_date_to:
+            # Get the last day of the month for the end date
+            year, month = map(int, upload_date_to.split('-'))
+            last_day = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day
+            where_clauses.append("p.upload_time <= ?")
+            query_params.append(f"{upload_date_to}-{last_day}T23:59:59Z")
+        
+        # Complete the query
+        if where_clauses:
+            base_query += " WHERE " + " AND ".join(where_clauses)
+        
+        # Add grouping
+        base_query += " GROUP BY p.photo_id"
+        
+        # Count total filtered records
+        count_query = f"SELECT COUNT(*) FROM ({base_query})"
+        cursor.execute(count_query, query_params)
+        total_records = cursor.fetchone()[0]
+        
+        # Add sorting
+        base_query += f" ORDER BY {sort_by} {sort_order}"
+        
+        # Add pagination
+        if per_page != 'all':
+            offset = (page - 1) * per_page_int
+            base_query += f" LIMIT {per_page_int} OFFSET {offset}"
+        
+        # Execute final query
+        if not query_executed:
+            cursor.execute(base_query, query_params)
+            photos = [dict(row) for row in cursor.fetchall()]
+        
+        # Calculate pagination
+        total_pages = 1
+        if per_page != 'all' and total_records > 0:
+            total_pages = (total_records + per_page_int - 1) // per_page_int
+            if page > total_pages:
+                page = total_pages
+        
+        # Get total counts for statistics (unfiltered)
+        cursor.execute("SELECT COUNT(*) FROM photos")
+        total_photos = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM places")
+        total_places = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM connections")
+        total_connections = cursor.fetchone()[0]
+        
+        # Get the last update time from the database
+        cursor.execute("SELECT MAX(updated_at) FROM photos")
+        last_updated_row = cursor.fetchone()
+        last_updated = last_updated_row[0] if last_updated_row[0] else "N/A"
+        
+        # Format the last_updated timestamp if it exists
+        if last_updated != "N/A":
+            try:
+                # Convert ISO format string to datetime object
+                dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                # Format as a user-friendly string
+                last_updated = dt.strftime('%d %b %Y %H:%M')
+            except (ValueError, AttributeError):
+                # If there's any error in parsing, just use the raw value
+                pass
+        
+        conn.close()
+        
+        return render_template(
+            'list_photos_table.html', 
+            photos=photos, 
+            total_photos=total_photos,
+            total_places=total_places,
+            total_connections=total_connections,
+            last_updated=last_updated,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            db_exists=True,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            total_records=total_records,
+            status_values=status_values,
+            status_filter=status_filter,
+            places_filter=places_filter,
+            capture_date_from=capture_date_from,
+            capture_date_to=capture_date_to,
+            upload_date_from=upload_date_from,
+            upload_date_to=upload_date_to
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error displaying database content: {str(e)}")
+        flash(f"Error retrieving data from database: {str(e)}", "error")
+        # Instead of redirecting, render the list_photos_table template with error information
+        return render_template(
+            'list_photos_table.html',
+            photos=[],
+            total_photos=0,
+            total_places=0,
+            total_connections=0,
+            last_updated="N/A",
+            sort_by='upload_time',
+            sort_order='desc',
+            db_exists=False,
+            db_error=str(e),
+            page=1,
+            per_page=25,
+            total_pages=1,
+            total_records=0,
+            status_values=[]
+        )
 
 @app.route('/edit_photo/<photo_id>', methods=['GET'])
 @token_required
@@ -957,7 +1217,7 @@ def add_or_update_xmp_metadata(file_path, heading):
         xmp_start = img_data.find(start_marker)
         xmp_end = img_data.find(end_marker)
 
-        if xmp_start != -1 and xmp_end != -1:
+        if (xmp_start != -1) and (xmp_end != -1):
             xmp_data = img_data[xmp_start:xmp_end + len(end_marker)].decode("utf-8")
         else:
             xmp_data = """
@@ -1194,6 +1454,230 @@ def handle_api_response(response, error_message="API request failed"):
             f"{error_message}: {error_detail}",
             status_code=response.status_code if hasattr(response, 'status_code') else None,
             response=response
+        )
+
+def fetch_all_photos(credentials, page_size=100):
+    """
+    Fetch all photos from the Street View API and return them as a list.
+    This function handles pagination and fetches all available photos.
+    Also stores the photos in a SQLite database for local access.
+    
+    Args:
+        credentials: The OAuth2 credentials object
+        page_size: Number of photos to fetch per page
+        
+    Returns:
+        List of photo objects from the API
+    """
+    app.logger.info("Fetching all photos from Street View API")
+    photos_list = []
+    page_token = None
+    
+    while True:
+        response = list_photos(credentials.token, page_size=int(page_size), page_token=page_token)
+        batch = response.get("photos", [])
+        photos_list.extend(batch)
+        
+        app.logger.info(f"Fetched {len(batch)} photos, total so far: {len(photos_list)}")
+        
+        # Check if there's a next page
+        if 'nextPageToken' in response:
+            page_token = response['nextPageToken']
+        else:
+            break
+
+    # Output to a JSON file in userdata
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = os.path.join("userdata", "data")
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, f"all_photos_{timestamp}.json")
+    
+    with open(output_file, 'w') as f:
+        json.dump(photos_list, f, indent=2)
+    
+    app.logger.info(f"Saved {len(photos_list)} photos to {output_file}")
+    
+    # Store in SQLite database
+    try:
+        import database
+        # Initialize database if needed
+        database.init_db()
+        
+        # Store each photo in the database
+        success_count = 0
+        for photo in photos_list:
+            if database.insert_or_update_photo(photo):
+                success_count += 1
+        
+        app.logger.info(f"Stored {success_count}/{len(photos_list)} photos in SQLite database")
+        
+        # Get database statistics
+        stats = database.get_db_stats()
+        app.logger.info(f"Database stats: {stats}")
+    except Exception as e:
+        app.logger.error(f"Error storing photos in database: {str(e)}")
+    
+    return photos_list
+
+@app.route('/photo_database')
+@token_required
+def photo_database():
+    """Display the photo database page with statistics"""
+    stats = {}
+    json_files = []
+    
+    # Get database statistics if database exists
+    try:
+        import database
+        if os.path.exists(database.DATABASE_PATH):
+            stats = database.get_db_stats()
+    except Exception as e:
+        app.logger.error(f"Error getting database stats: {str(e)}")
+        flash(f"Error retrieving database statistics: {str(e)}", "error")
+    
+    # List JSON files in the data directory
+    try:
+        data_dir = os.path.join("userdata", "data")
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                if filename.endswith('.json') and filename.startswith('all_photos_'):
+                    file_path = os.path.join(data_dir, filename)
+                    file_stats = os.stat(file_path)
+                    # Format date as DD MMM YYYY HH:MM
+                    file_date = datetime.fromtimestamp(file_stats.st_mtime).strftime('%d %b %Y %H:%M')
+                    # Format file size as KB or MB
+                    file_size = file_stats.st_size
+                    if file_size < 1024 * 1024:
+                        size_str = f"{file_size / 1024:.1f} KB"
+                    else:
+                        size_str = f"{file_size / (1024 * 1024):.1f} MB"
+                    
+                    json_files.append({
+                        'name': filename,
+                        'date': file_date,
+                        'size': size_str
+                    })
+            # Sort by date (newest first)
+            json_files.sort(key=lambda x: x['name'], reverse=True)
+    except Exception as e:
+        app.logger.error(f"Error listing JSON files: {str(e)}")
+        flash(f"Error listing JSON export files: {str(e)}", "error")
+    
+    return render_template('photo_database.html', stats=stats, json_files=json_files)
+
+@app.route('/create_database', methods=['POST'])
+@token_required
+def create_database():
+    """Create/update the database with all photos from the API"""
+    try:
+        credentials = get_credentials()
+        
+        # Fetch all photos from the API
+        photos_list = fetch_all_photos(credentials, page_size=100)
+        
+        # Get database statistics
+        import database
+        stats = database.get_db_stats()
+        
+        flash(f"Successfully created database with {stats['photo_count']} photos", "success")
+    except Exception as e:
+        app.logger.error(f"Error creating database: {str(e)}")
+        flash(f"Error creating database: {str(e)}", "error")
+    
+    return redirect(url_for('photo_database'))
+
+@app.route('/database_viewer', methods=['GET'])
+@token_required
+def database_viewer():
+    """Display all photos from the database in a table format"""
+    try:
+        import database
+        
+        # Check if database exists
+        if not os.path.exists(database.DATABASE_PATH):
+            flash("Database not yet created. Please use the 'Create Database' button on the Photo Database page first.", "error")
+            # Instead of redirecting, still render the database_viewer template but with empty data
+            return render_template(
+                'database_viewer.html',
+                photos=[],
+                total_photos=0,
+                total_places=0,
+                total_connections=0,
+                sort_by='upload_time',
+                sort_order='desc',
+                db_exists=False
+            )
+        
+        # Get sorting parameters
+        sort_by = request.args.get('sort_by', 'upload_time')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        # Get database connection
+        conn = sqlite3.connect(database.DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get photos with sorting
+        valid_columns = ['photo_id', 'latitude', 'longitude', 'capture_time', 
+                         'upload_time', 'view_count', 'maps_publish_status', 'updated_at']
+        
+        if sort_by not in valid_columns:
+            sort_by = 'upload_time'
+        
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'desc'
+        
+        query = f"""
+        SELECT p.*, 
+               GROUP_CONCAT(DISTINCT pl.name) as place_names,
+               COUNT(DISTINCT c.target_photo_id) as connection_count
+        FROM photos p
+        LEFT JOIN places pl ON p.photo_id = pl.photo_id
+        LEFT JOIN connections c ON p.photo_id = c.source_photo_id
+        GROUP BY p.photo_id
+        ORDER BY {sort_by} {sort_order}
+        """
+        
+        cursor.execute(query)
+        photos = [dict(row) for row in cursor.fetchall()]
+        
+        # Get total counts for statistics
+        cursor.execute("SELECT COUNT(*) FROM photos")
+        total_photos = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM places")
+        total_places = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM connections")
+        total_connections = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return render_template(
+            'database_viewer.html', 
+            photos=photos, 
+            total_photos=total_photos,
+            total_places=total_places,
+            total_connections=total_connections,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            db_exists=True
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error displaying database content: {str(e)}")
+        flash(f"Error retrieving data from database: {str(e)}", "error")
+        # Instead of redirecting, render the database_viewer template with error information
+        return render_template(
+            'database_viewer.html',
+            photos=[],
+            total_photos=0,
+            total_places=0,
+            total_connections=0,
+            sort_by='upload_time',
+            sort_order='desc',
+            db_exists=False,
+            db_error=str(e)
         )
 
 def init_app():
