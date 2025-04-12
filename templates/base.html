@@ -12,9 +12,8 @@
     <nav class="nav-banner">
         <a href="{{ url_for('index') }}" class="nav-link">Home</a>
         <a href="{{ url_for('upload_photosphere') }}" class="nav-link">Upload</a>
-        <a href="{{ url_for('list_photos_page') }}" class="nav-link">Grid View</a>
-        <a href="{{ url_for('list_photos_table_page') }}" class="nav-link">List View</a>
-        <a href="{{ url_for('photo_database') }}" class="nav-link">Photo Database</a>
+        <a href="{{ url_for('photos_page') }}" class="nav-link">Photos</a>
+        <a href="{{ url_for('photo_database') }}" class="nav-link">Database</a>
     </nav>
     <main>
         {% block content %}{% endblock %}

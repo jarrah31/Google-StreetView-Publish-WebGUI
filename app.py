@@ -460,6 +460,12 @@ def list_photos_page():
 
     return render_template('list_photos.html', photos_list=photos_list, page_size=page_size, next_page_token=next_page_token)
 
+@app.route('/photos', methods=['GET'])
+@token_required
+def photos_page():
+    return list_photos_table_page()
+
+# Keep the original route for backward compatibility
 @app.route('/list_photos_table', methods=['GET'])
 @token_required
 def list_photos_table_page():
@@ -470,9 +476,9 @@ def list_photos_table_page():
         # Check if database exists
         if not os.path.exists(database.DATABASE_PATH):
             flash("Database not yet created. Please use the 'Create Database' button on the Photo Database page first.", "error")
-            # Instead of redirecting, still render the list_photos_table template but with empty data
+            # Instead of redirecting, still render the photos template but with empty data
             return render_template(
-                'list_photos_table.html',
+                'photos.html',
                 photos=[],
                 total_photos=0,
                 total_places=0,
@@ -704,7 +710,7 @@ def list_photos_table_page():
         conn.close()
         
         return render_template(
-            'list_photos_table.html', 
+            'photos.html', 
             photos=photos, 
             total_photos=total_photos,
             total_places=total_places,
@@ -731,7 +737,7 @@ def list_photos_table_page():
         flash(f"Error retrieving data from database: {str(e)}", "error")
         # Instead of redirecting, render the list_photos_table template with error information
         return render_template(
-            'list_photos_table.html',
+            'photos.html',
             photos=[],
             total_photos=0,
             total_places=0,

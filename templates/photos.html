@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
-{% block title %}List View{% endblock %}
+{% block title %}Photos{% endblock %}
 
 {% block content %}
 <div class="container_photos">
-    <h1>List View</h1>
+    <h1>Photos</h1>
 
     <div class="photo-container">
         <!-- Database Statistics -->
@@ -21,6 +21,27 @@
             <div class="grid-label">Last Updated:</div>
             <div class="grid-value">{{ last_updated }}</div>
         </div>
+    </div>
+    
+    <!-- View Toggle Buttons -->
+    <div class="view-toggle-container">
+        <button id="list-view-btn" class="view-btn active" onclick="switchView('list')">List View</button>
+        <button id="grid-view-btn" class="view-btn" onclick="switchView('grid')">Grid View</button>
+    </div>
+
+    <!-- Sort Controls -->
+    <div class="sort-controls" style="display: none; justify-content: flex-start;">
+        <select id="sort-select" onchange="updateSort(this.value)">
+            <option value="">Sort-by</option>
+            <option value="maps_publish_status" {% if sort_by == 'maps_publish_status' %}selected{% endif %}>Status</option>
+            <option value="view_count" {% if sort_by == 'view_count' %}selected{% endif %}>Views</option>
+            <option value="capture_time" {% if sort_by == 'capture_time' %}selected{% endif %}>Capture Date</option>
+            <option value="upload_time" {% if sort_by == 'upload_time' %}selected{% endif %}>Upload Date</option>
+            <option value="place_names" {% if sort_by == 'place_names' %}selected{% endif %}>Places</option>
+        </select>
+        <a href="#" id="sort-direction-btn" onclick="toggleSortDirection(); return false;" class="page-link" data-sort-order="{{ sort_order }}">
+            {% if sort_order == 'desc' %}Descending{% else %}Ascending{% endif %}
+        </a>
     </div>
     
     <!-- Pagination Controls -->
@@ -65,8 +86,8 @@
         </div>
     </div>
     
-    <!-- Photos Table -->
-    <div class="custom-table-container">
+    <!-- Photos Table View -->
+    <div id="list-view" class="custom-table-container">
         <table class="photo-table">
             <thead>
                 <tr>
@@ -263,6 +284,45 @@
         </table>
     </div>
     
+    <!-- Photos Grid View -->
+    <div id="grid-view" class="main-container" style="display: none;">
+        {% for photo in photos %}
+            <div class="photo-container grid-item">
+                <a href="{{ photo.share_link }}" target="_blank">
+                    {% if photo.thumbnail_url %}
+                        <img src="{{ photo.thumbnail_url }}" alt="Photo thumbnail" class="grid-thumbnail-image">
+                    {% elif photo.photo_id %}
+                        <img src="https://streetviewpublish.googleapis.com/v1/photos/{{ photo.photo_id }}:getDownloadUrl?key={{ api_key }}" alt="Photo thumbnail" class="grid-thumbnail-image">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='icons8-panorama-96-favicon.png') }}" alt="No image available" class="grid-thumbnail-image">
+                    {% endif %}
+                </a>
+                {% if photo.place_names %}
+                    <p>Place: {{ photo.place_names }}</p>
+                {% else %}
+                    <p>Place: N/A</p>
+                {% endif %}
+                <p>Published Status: {{ photo.maps_publish_status|default('N/A') }}</p>
+                <p>View count: {{ photo.view_count|default('0') }}</p>
+                <p>Capture time: {{ photo.capture_time|replace("T00:00:00Z", "")|replace("T", " ")|replace("Z", "")|default('N/A') }}</p>
+                <p>Upload time: {{ photo.upload_time.split("T")[0]|default('N/A') }}</p>
+                <p>Connections: {{ photo.connection_count }}</p>
+                <div class="button-container">
+                    <form class="edit-form" action="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" method="GET">
+                        <button type="submit" class="edit-btn" title="Edit Photo">
+                            <img src="{{ url_for('static', filename='icons8-edit-image-32.png') }}" alt="Edit" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                    <form class="edit_connections-form" action="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" method="GET">
+                        <button type="submit" class="edit-btn" title="Edit Connections">
+                            <img src="{{ url_for('static', filename='icons8-map-marker-64.png') }}" alt="Edit" style="width: 32px; height: 32px;">
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
     <!-- Bottom Pagination Controls -->
     {% if per_page != 'all' and total_pages > 1 %}
     <div class="pagination-container bottom">
@@ -286,7 +346,7 @@
 
 {% block scripts %}
 <script>
-    // Reset dropdowns to "Select" after page load (in case of browser back button)
+    // Initialize the view based on local storage or default to list view
     document.addEventListener('DOMContentLoaded', function() {
         const selects = document.querySelectorAll('.action-select');
         selects.forEach(select => {
@@ -295,7 +355,37 @@
         
         // Initialize filters
         initializeFilters();
+        
+        // Initialize view from localStorage or default to list view
+        const currentView = localStorage.getItem('photoViewPreference') || 'list';
+        switchView(currentView);
     });
+    
+    // Function to switch between list and grid views
+    function switchView(viewType) {
+        const listView = document.getElementById('list-view');
+        const gridView = document.getElementById('grid-view');
+        const listBtn = document.getElementById('list-view-btn');
+        const gridBtn = document.getElementById('grid-view-btn');
+        const sortControls = document.querySelector('.sort-controls');
+        
+        if (viewType === 'grid') {
+            listView.style.display = 'none';
+            gridView.style.display = 'flex';
+            listBtn.classList.remove('active');
+            gridBtn.classList.add('active');
+            sortControls.style.display = 'flex';
+        } else {
+            listView.style.display = 'block';
+            gridView.style.display = 'none';
+            listBtn.classList.add('active');
+            gridBtn.classList.remove('active');
+            sortControls.style.display = 'none';
+        }
+        
+        // Save preference
+        localStorage.setItem('photoViewPreference', viewType);
+    }
     
     // Function to change the number of rows per page
     function changeRowsPerPage(perPage) {
@@ -406,6 +496,25 @@
         placesInput.value = '';
         
         form.submit();
+    }
+
+    // Function to update sort
+    function updateSort(sortBy) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort_by', sortBy);
+        currentUrl.searchParams.set('page', '1'); // Reset to first page when changing sort
+        window.location.href = currentUrl.toString();
+    }
+
+    // Function to toggle sort direction
+    function toggleSortDirection() {
+        const sortDirectionBtn = document.getElementById('sort-direction-btn');
+        const currentSortOrder = sortDirectionBtn.getAttribute('data-sort-order');
+        const newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort_order', newSortOrder);
+        currentUrl.searchParams.set('page', '1'); // Reset to first page when changing sort direction
+        window.location.href = currentUrl.toString();
     }
 </script>
 {% endblock %}
