@@ -308,16 +308,8 @@
                 <p>Upload time: {{ photo.upload_time.split("T")[0]|default('N/A') }}</p>
                 <p>Connections: {{ photo.connection_count }}</p>
                 <div class="button-container">
-                    <form class="edit-form" action="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" method="GET">
-                        <button type="submit" class="edit-btn" title="Edit Photo">
-                            <img src="{{ url_for('static', filename='icons8-edit-image-32.png') }}" alt="Edit" style="width: 32px; height: 32px;">
-                        </button>
-                    </form>
-                    <form class="edit_connections-form" action="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" method="GET">
-                        <button type="submit" class="edit-btn" title="Edit Connections">
-                            <img src="{{ url_for('static', filename='icons8-map-marker-64.png') }}" alt="Edit" style="width: 32px; height: 32px;">
-                        </button>
-                    </form>
+                    <a href="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" class="grid-button">Edit Photo</a>
+                    <a href="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" class="grid-button">Edit Connections</a>
                 </div>
             </div>
         {% endfor %}

@@ -1248,7 +1248,8 @@ select option {
 #grid-view .button-container {
     margin-top: 10px;
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
+    gap: 10px;
 }
 
 .sort-controls {
@@ -1277,4 +1278,23 @@ select option {
 
 .sort-controls button:hover {
     background-color: #e9ecef;
+}
+
+/* Grid view small button style */
+.grid-button {
+    padding: 3px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f8f8;
+    color: #3498db;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 12px;
+    text-align: center;
+}
+
+.grid-button:hover {
+    background-color: #3498db;
+    color: #fff;
+    border-color: #3498db;
 }

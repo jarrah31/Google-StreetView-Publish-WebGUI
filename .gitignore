@@ -28,9 +28,6 @@ venv.bak/
 
 # VS Code
 .vscode/*
-!.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/tasks.json
 
 # Credential files
 *creds.data
