@@ -341,3 +341,55 @@ def get_db_stats():
     
     finally:
         conn.close()
+
+def clean_deleted_photos(existing_photo_ids):
+    """
+    Remove photos from the database that are no longer in the API.
+    
+    Args:
+        existing_photo_ids: A list of photo IDs that currently exist in the API
+        
+    Returns:
+        Number of photos removed from the database
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # First, get all photo IDs currently in the database
+        cursor.execute("SELECT photo_id FROM photos")
+        db_photo_ids = set(row[0] for row in cursor.fetchall())
+        
+        # Find photo IDs that are in the database but not in the API response
+        deleted_ids = db_photo_ids - set(existing_photo_ids)
+        
+        if not deleted_ids:
+            logger.info("No deleted photos found to clean up")
+            return 0
+            
+        # Log the IDs to be deleted
+        logger.info(f"Found {len(deleted_ids)} photos to remove from database: {deleted_ids}")
+        
+        # Delete all related records for the deleted photos
+        for deleted_id in deleted_ids:
+            # Delete from places table
+            cursor.execute("DELETE FROM places WHERE photo_id = ?", (deleted_id,))
+            
+            # Delete from connections table (both source and target)
+            cursor.execute("DELETE FROM connections WHERE source_photo_id = ? OR target_photo_id = ?", 
+                           (deleted_id, deleted_id))
+            
+            # Delete from photos table
+            cursor.execute("DELETE FROM photos WHERE photo_id = ?", (deleted_id,))
+        
+        conn.commit()
+        logger.info(f"Successfully removed {len(deleted_ids)} deleted photos from database")
+        return len(deleted_ids)
+        
+    except Exception as e:
+        logger.error(f"Error cleaning deleted photos: {str(e)}")
+        conn.rollback()
+        return 0
+        
+    finally:
+        conn.close()

@@ -12,15 +12,6 @@
         <div class="navigation-buttons">
             <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" class="view-btn">Edit Connections</a>
         </div>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        {{ message|safe }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         <div class="content-container">
             <div class="photo-details">
                 <h2>Photo Details:</h2>

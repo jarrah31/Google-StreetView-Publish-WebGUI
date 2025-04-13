@@ -811,9 +811,8 @@ def edit_connections(photo_id):
     page_session_size = session.get('page_size', None)
 
     # Display json result in console
-    if app.debug:
-        print("Photo details:")
-        pprint(response)
+    app.logger.debug("Photo details:")
+    app.logger.debug(response)
 
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
@@ -826,8 +825,7 @@ def edit_connections(photo_id):
 
     # Get the distance from the query parameters or use a default value
     distance = request.args.get('distance', 200, type=int)
-    if app.debug:
-        print(f"Distance: {distance}")
+    app.logger.debug(f"Distance: {distance}")
 
     nearby_photos = []
     if 'pose' in response and 'latLngPair' in response['pose']:
@@ -884,8 +882,7 @@ def get_connections():
     all_connections = []
     for photo_id in photo_ids:
         try:
-            # if debug:
-            #     print(f"Fetching connections for photo_id {photo_id}")
+            app.logger.debug(f"Fetching connections for photo_id {photo_id}")
             photo = get_photo_by_id(photo_id)
             if photo and 'connections' in photo:
                 for conn in photo['connections']:
@@ -893,14 +890,12 @@ def get_connections():
                         'source': photo_id,
                         'target': conn['target']['id']
                     })
-                # if debug:
-                #     print(f"Found connections for photo_id {photo_id}: {photo['connections']}")
+                app.logger.debug(f"Found connections for photo_id {photo_id}: {photo['connections']}")
         except Exception as e:
             print(f"Error fetching connections for photo_id {photo_id}: {e}")
 
-    # if debug:
-    #     print(f"Returning all connections:")
-    #     pprint(all_connections)
+    # app.logger.debug(f"Returning all connections:")
+    # app.logger.debug(all_connections)
 
     return jsonify(connections=all_connections), 200
 
@@ -911,10 +906,8 @@ def create_connections():
     request_data = request.get_json()
     credentials = get_credentials()
 
-    if app.debug:
-        # Debug: Print the request data
-        print("Connections Request Data:")
-        pprint(request_data)
+    app.logger.debug("Connections Request Data:")
+    app.logger.debug(request_data)
 
     try:
         response = requests.post(
@@ -927,9 +920,8 @@ def create_connections():
         )
         response.raise_for_status()
 
-        if app.debug:
-            print("Connections Response:")
-            print(response.json())        
+        app.logger.debug("Connections Response:")
+        app.logger.debug(response.json())
 
         main_message = 'Connections created successfully'
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
@@ -1002,24 +994,21 @@ def nearby_places():
 @token_required
 def upload_photosphere():
     if request.method == 'POST':
-        if app.debug:
-            print("Received POST request for uploading photosphere.")
-            print("Form data:", request.form)
+        app.logger.debug("Received POST request for uploading photosphere.")
+        app.logger.debug(f"Form data: {request.form}")
 
         credentials = get_credentials()
 
         # Start the upload
         upload_ref = start_upload(credentials.token)
         upload_ref_message = f"Created upload url: {upload_ref}"
-        if app.debug:
-            print(upload_ref_message)
+        app.logger.debug(upload_ref_message)
 
         # Save the uploaded file to a temporary location on the server
         file = request.files['file']
         file_path = os.path.join(tempfile.gettempdir(), file.filename)
         file.save(file_path)
-        if app.debug:
-            print(f"Saved file to {file_path}")
+        app.logger.debug(f"Saved file to {file_path}")
 
         # Get the heading value from the form
         heading = request.form['heading']
@@ -1027,13 +1016,11 @@ def upload_photosphere():
         # Upload the photo bytes to the Upload URL
         upload_status = upload_photo(credentials.token, upload_ref, file_path, heading)
         upload_status_message = f"Upload status: {upload_status}"
-        if app.debug:
-            print(upload_status_message)
+        app.logger.debug(upload_status_message)
 
         # Remove the temporary file
         os.remove(file_path)
-        if app.debug:
-            print(f"Removed temporary file {file_path}")
+        app.logger.debug(f"Removed temporary file {file_path}")
 
         # Upload the metadata of the photo
         latitude = float(request.form['latitude'])
@@ -1042,9 +1029,8 @@ def upload_photosphere():
 
         create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
         create_photo_response_message = f"Create photo response: {create_photo_response}"
-        if app.debug:
-            print(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
-            print(create_photo_response_message)
+        app.logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
+        app.logger.debug(create_photo_response_message)
 
         # Save the create_photo_response JSON data to a file named after the photo filename
         uploads_directory = config['uploads']['directory']
@@ -1089,11 +1075,14 @@ def delete_photo():
     url = f'https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?photoId={photo_id}'
     headers = {'Authorization': f'Bearer {credentials.token}'}
     response = requests.delete(url, headers=headers)
+    
+    app.logger.debug("Delete photo response:")
+    app.logger.debug(response)
 
     if response.status_code != 200:
         flash(f'Failed to delete photo. Error: {response.text}', 'error')
     else:
-        flash('Photo deleted successfully.', 'success')
+        flash('Photo deleted successfully. Remember to update the database.', 'success')
 
     return redirect(url_for('photos_page'))
 
@@ -1513,6 +1502,13 @@ def fetch_all_photos(credentials, page_size=100):
         # Initialize database if needed
         database.init_db()
         
+        # Extract all photo IDs from the API response
+        api_photo_ids = [photo['photoId']['id'] for photo in photos_list if 'photoId' in photo and 'id' in photo['photoId']]
+        app.logger.info(f"Found {len(api_photo_ids)} valid photo IDs in API response")
+        
+        # Clean up deleted photos (those in DB but not in API)
+        deleted_count = database.clean_deleted_photos(api_photo_ids)
+        
         # Store each photo in the database
         success_count = 0
         for photo in photos_list:
@@ -1520,6 +1516,8 @@ def fetch_all_photos(credentials, page_size=100):
                 success_count += 1
         
         app.logger.info(f"Stored {success_count}/{len(photos_list)} photos in SQLite database")
+        if deleted_count > 0:
+            app.logger.info(f"Removed {deleted_count} deleted photos from database")
         
         # Get database statistics
         stats = database.get_db_stats()
