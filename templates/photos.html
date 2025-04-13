@@ -4,7 +4,13 @@
 
 {% block content %}
 <div class="container_photos">
-    <h1>Photos</h1>
+    <div class="title-container">
+        <h1>Photos</h1>
+        <div class="view-toggle-container">
+            <button id="list-view-btn" class="view-btn active" onclick="switchView('list')">List View</button>
+            <button id="grid-view-btn" class="view-btn" onclick="switchView('grid')">Grid View</button>
+        </div>
+    </div>
 
     <div class="photo-container">
         <!-- Database Statistics -->
@@ -23,12 +29,6 @@
         </div>
     </div>
     
-    <!-- View Toggle Buttons -->
-    <div class="view-toggle-container">
-        <button id="list-view-btn" class="view-btn active" onclick="switchView('list')">List View</button>
-        <button id="grid-view-btn" class="view-btn" onclick="switchView('grid')">Grid View</button>
-    </div>
-
     <!-- Sort Controls -->
     <div class="sort-controls" style="display: none; justify-content: flex-start;">
         <select id="sort-select" onchange="updateSort(this.value)">

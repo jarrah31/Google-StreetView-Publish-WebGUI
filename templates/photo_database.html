@@ -4,68 +4,103 @@
 
 {% block content %}
 <div class="container_photos">
-    <h1>Photo Database</h1>
-    
-    <div class="content-container">
-        <div class="left-column">
-            <!-- Database Management Section -->
-            <div class="photo-container">
-                <h2>Database Management</h2>
-                <p>Create or update the local SQLite database with all your Street View photos.</p>
-                <form action="{{ url_for('create_database') }}" method="post" class="form-container button-spacing">
-                    <button type="submit" class="button-22">Create Database</button>
-                </form>
-            </div>
-
-            <!-- Statistics Section -->
+    <div class="title-container">
+        <h1>Photo Database</h1>
+        <div class="database-status">
             {% if stats %}
-            <div class="photo-container">
-                <h2>Database Statistics</h2>
-                <div class="details-grid">
-                    <div class="grid-label">Photos:</div>
-                    <div class="grid-value">{{ stats.photo_count }}</div>
-                    
-                    <div class="grid-label">Places:</div>
-                    <div class="grid-value">{{ stats.place_count }}</div>
-                    
-                    <div class="grid-label">Connections:</div>
-                    <div class="grid-value">{{ stats.connection_count }}</div>
-                    
-                    <div class="grid-label">Last Updated:</div>
-                    <div class="grid-value">{{ stats.last_updated }}</div>
-                </div>
-            </div>
+                <span class="status-indicator active">
+                    <span class="status-dot"></span>
+                    Database Active
+                </span>
+            {% else %}
+                <span class="status-indicator inactive">
+                    <span class="status-dot"></span>
+                    Database Not Created
+                </span>
             {% endif %}
         </div>
+    </div>
 
-        <!-- JSON Exports Section -->
-        {% if json_files %}
-        <div class="map-container">
-            <div class="photo-container">
-                <h2>JSON Export History</h2>
-                <div class="custom-table-container">
-                    <table class="photo-table">
-                        <thead>
-                            <tr>
-                                <th>Filename</th>
-                                <th>Date</th>
-                                <th>Size</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for file in json_files %}
-                            <tr>
-                                <td class="custom-table__cell--no-wrap">{{ file.name }}</td>
-                                <td>{{ file.date }}</td>
-                                <td>{{ file.size }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="db-content-wrapper">
+        {% if stats %}
+        <div class="db-stats-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Database Statistics</h2>
+                    <div class="card-icon">
+                        <i class="stats-icon"></i>
+                    </div>
                 </div>
+                <div class="card-content">
+                    <p class="db-description">Manage your local SQLite database with all your Street View photos. The database tracks photos, places, and connections.</p>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.photo_count }}</div>
+                            <div class="stat-label">Photos</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.place_count }}</div>
+                            <div class="stat-label">Places</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.connection_count }}</div>
+                            <div class="stat-label">Connections</div>
+                        </div>
+                        
+                        <div class="stat-item last-updated">
+                            <div class="stat-value">{{ stats.last_updated }}</div>
+                            <div class="stat-label">Last Updated</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="button-container">
+                        <form id="databaseForm" action="{{ url_for('create_database') }}" method="post">
+                            <button id="databaseButton" type="submit" class="page-link view-photos-link">
+                                <span id="buttonText">Update Database</span>
+                            </button>
+                        </form>
+                        <a href="{{ url_for('list_photos_table_page') }}" class="page-link view-photos-link">
+                            View Photos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="db-empty-state">
+            <div class="db-empty-message">
+                <i class="empty-icon"></i>
+                <h3>No Database Found</h3>
+                <p>Create a database to start managing your Street View photos.</p>
+                <form id="databaseForm" action="{{ url_for('create_database') }}" method="post" class="form-container button-spacing">
+                    <button id="databaseButton" type="submit" class="page-link view-photos-link">
+                        <span id="buttonText">Create Database</span>
+                    </button>
+                </form>
             </div>
         </div>
         {% endif %}
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('databaseForm');
+        const button = document.getElementById('databaseButton');
+        const buttonText = document.getElementById('buttonText');
+        
+        form.addEventListener('submit', function() {
+            // Change button text and disable it
+            buttonText.textContent = "Please wait...";
+            button.disabled = true;
+            button.classList.add('loading');
+            
+            // Allow the form submission to proceed
+            return true;
+        });
+    });
+</script>
 {% endblock %}

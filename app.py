@@ -1463,45 +1463,24 @@ def handle_api_response(response, error_message="API request failed"):
         )
 
 def fetch_all_photos(credentials, page_size=100):
-    """
-    Fetch all photos from the Street View API and return them as a list.
-    This function handles pagination and fetches all available photos.
-    Also stores the photos in a SQLite database for local access.
-    
-    Args:
-        credentials: The OAuth2 credentials object
-        page_size: Number of photos to fetch per page
-        
-    Returns:
-        List of photo objects from the API
-    """
-    app.logger.info("Fetching all photos from Street View API")
+    """Fetch all photos from the Street View Publish API"""
     photos_list = []
     page_token = None
     
     while True:
-        response = list_photos(credentials.token, page_size=int(page_size), page_token=page_token)
-        batch = response.get("photos", [])
-        photos_list.extend(batch)
-        
-        app.logger.info(f"Fetched {len(batch)} photos, total so far: {len(photos_list)}")
-        
-        # Check if there's a next page
-        if 'nextPageToken' in response:
-            page_token = response['nextPageToken']
-        else:
+        try:
+            response = list_photos(credentials.token, page_size=page_size, page_token=page_token)
+            photos = response.get('photos', [])
+            photos_list.extend(photos)
+            
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+        except Exception as e:
+            app.logger.error(f"Error fetching photos: {str(e)}")
             break
-
-    # Output to a JSON file in userdata
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join("userdata", "data")
-    os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, f"all_photos_{timestamp}.json")
     
-    with open(output_file, 'w') as f:
-        json.dump(photos_list, f, indent=2)
-    
-    app.logger.info(f"Saved {len(photos_list)} photos to {output_file}")
+    app.logger.info(f"Fetched {len(photos_list)} photos total")
     
     # Store in SQLite database
     try:

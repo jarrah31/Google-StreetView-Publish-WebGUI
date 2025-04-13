@@ -313,7 +313,20 @@ def get_db_stats():
         
         # Get last updated
         cursor.execute("SELECT MAX(updated_at) FROM photos")
-        stats['last_updated'] = cursor.fetchone()[0]
+        last_updated = cursor.fetchone()[0]
+        
+        # Format the timestamp in YYYY-MM-DD HH:MM format
+        if last_updated:
+            try:
+                # Convert ISO format string to datetime object
+                dt = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                # Format in YYYY-MM-DD HH:MM format
+                stats['last_updated'] = dt.strftime('%Y-%m-%d %H:%M')
+            except (ValueError, AttributeError):
+                # In case of any error in parsing, use the raw value
+                stats['last_updated'] = last_updated
+        else:
+            stats['last_updated'] = "N/A"
         
         return stats
     
