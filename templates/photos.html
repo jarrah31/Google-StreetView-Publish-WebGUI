@@ -2,6 +2,9 @@
 
 {% block title %}Photos{% endblock %}
 
+{% block head %}
+{% endblock %}
+
 {% block content %}
 <div class="container_photos">
     <div class="title-container">
@@ -12,25 +15,16 @@
         </div>
     </div>
 
-    <div class="photo-container">
-        <!-- Database Statistics -->
-        <div class="details-grid">
-            <div class="grid-label">Total Photos:</div>
-            <div class="grid-value">{{ total_photos }}</div>
-            
-            <div class="grid-label">Places:</div>
-            <div class="grid-value">{{ total_places }}</div>
-            
-            <div class="grid-label">Connections:</div>
-            <div class="grid-value">{{ total_connections }}</div>
-            
-            <div class="grid-label">Last Updated:</div>
-            <div class="grid-value">{{ last_updated }}</div>
+    <div class="upload-section">
+        <div class="photo-container db-card">
+            <div class="card-header last-updated-header">
+                <h2>Last Updated: {{ last_updated }}</h2>
+            </div>
         </div>
     </div>
     
     <!-- Sort Controls -->
-    <div class="sort-controls" style="display: none; justify-content: flex-start;">
+    <div class="sort-controls sort-controls-left">
         <select id="sort-select" onchange="updateSort(this.value)">
             <option value="">Sort-by</option>
             <option value="maps_publish_status" {% if sort_by == 'maps_publish_status' %}selected{% endif %}>Status</option>
@@ -272,10 +266,11 @@
                     </td>
                     <td>{{ photo.connection_count }}</td>
                     <td>
-                        <select class="action-select" onchange="if(this.value) window.location.href=this.value;">
+                        <select class="action-select" onchange="if(this.value) { if(this.value === 'delete:{{ photo.photo_id }}') { confirmDelete('{{ photo.photo_id }}'); this.value = ''; } else { window.location.href=this.value; } }">
                             <option value="">Select</option>
                             <option value="{{ url_for('edit_photo', photo_id=photo.photo_id) }}">Edit Photo</option>
                             <option value="{{ url_for('edit_connections', photo_id=photo.photo_id) }}">Edit Connections</option>
+                            <option value="delete:{{ photo.photo_id }}" class="delete-option">Delete Photo</option>
                         </select>
                     </td>
                 </tr>
@@ -310,6 +305,7 @@
                 <div class="button-container">
                     <a href="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" class="grid-button">Edit Photo</a>
                     <a href="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" class="grid-button">Edit Connections</a>
+                    <a href="#" class="grid-button delete-button" onclick="confirmDelete('{{ photo.photo_id }}'); return false;">Delete</a>
                 </div>
             </div>
         {% endfor %}
@@ -333,6 +329,26 @@
         </div>
     </div>
     {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="delete-modal">
+    <div class="delete-modal-content">
+        <div class="delete-modal-header">
+            <h3>Delete Photo</h3>
+            <span class="delete-modal-close">&times;</span>
+        </div>
+        <div class="delete-modal-body">
+            <p>Are you sure you want to delete this photo? This action cannot be undone.</p>
+        </div>
+        <div class="delete-modal-actions">
+            <button class="delete-cancel-btn">Cancel</button>
+            <form id="delete-form" action="{{ url_for('delete_photo') }}" method="POST">
+                <input type="hidden" name="photo_id" id="delete-photo-id" value="">
+                <button type="submit" class="delete-confirm-btn">Delete</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -507,6 +523,35 @@
         currentUrl.searchParams.set('sort_order', newSortOrder);
         currentUrl.searchParams.set('page', '1'); // Reset to first page when changing sort direction
         window.location.href = currentUrl.toString();
+    }
+    
+    // Delete photo confirmation functions
+    function confirmDelete(photoId) {
+        // Set the photo ID in the hidden input field
+        document.getElementById('delete-photo-id').value = photoId;
+        
+        // Show the delete confirmation modal
+        const modal = document.getElementById('delete-modal');
+        modal.style.display = 'block';
+        
+        // Add event listeners for the close button and cancel button
+        const closeBtn = document.querySelector('.delete-modal-close');
+        const cancelBtn = document.querySelector('.delete-cancel-btn');
+        
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+        
+        cancelBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+        
+        // Close the modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
     }
 </script>
 {% endblock %}

@@ -49,6 +49,11 @@
                             <div class="stat-label">Connections</div>
                         </div>
                         
+                        <div class="stat-item">
+                            <div class="stat-value">{{ stats.total_views | default(0) | thousands_separator }}</div>
+                            <div class="stat-label">Total Views</div>
+                        </div>
+                        
                         <div class="stat-item last-updated">
                             <div class="stat-value">{{ stats.last_updated }}</div>
                             <div class="stat-label">Last Updated</div>
@@ -62,9 +67,6 @@
                                 <span id="buttonText">Update Database</span>
                             </button>
                         </form>
-                        <a href="{{ url_for('list_photos_table_page') }}" class="page-link view-photos-link">
-                            View Photos
-                        </a>
                     </div>
                 </div>
             </div>

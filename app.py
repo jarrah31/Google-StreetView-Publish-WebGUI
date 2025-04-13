@@ -11,7 +11,7 @@ import traceback
 import shutil
 import sqlite3  # Add sqlite3 import
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
@@ -247,6 +247,23 @@ def handle_api_error(error):
                          message=str(error),
                          status_code=error.status_code), error.status_code or 500
 
+@app.errorhandler(404)
+def handle_not_found_error(error):
+    """Handle 404 Not Found errors"""
+    log_error("Not Found Error", error)
+    
+    # Check if this is a browser request (not an API call or static resource)
+    if request.path.startswith('/static/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # For static resources or AJAX requests, return regular 404 response
+        flash("The requested page was not found.", "error")
+        return render_template('error.html',
+                         error_type="Not Found Error",
+                         message="The requested URL was not found on the server."), 404
+    
+    # For regular browser requests, redirect to the home page
+    app.logger.info(f"Redirecting 404 for path: {request.path} to home page")
+    return redirect(url_for('index'))
+
 @app.errorhandler(AuthenticationError)
 def handle_auth_error(error):
     """Handle authentication errors"""
@@ -291,8 +308,7 @@ def handle_unexpected_error(error):
 @app.before_request
 def log_request_info():
     """Log information about each request"""
-    # app.logger.info(f"Request: {request.method} {request.url}")
-    app.logger.debug(f"Headers: {dict(request.headers)}")
+    # app.logger.debug(f"Headers: {dict(request.headers)}")
     if request.method in ['POST', 'PUT']:
         app.logger.debug(f"Form Data: {request.form}")
         app.logger.debug(f"Files: {request.files}")
@@ -352,6 +368,12 @@ def index():
 
 @app.route('/favicon.ico')
 def favicon():
+    return app.send_static_file('icons8-menu-96-favicon.png')
+
+@app.route('/apple-touch-icon.png')
+@app.route('/apple-touch-icon-precomposed.png')
+def apple_touch_icon():
+    """Handle requests for Apple touch icons (used by Safari/iOS)"""
     return app.send_static_file('icons8-menu-96-favicon.png')
 
 @app.route('/logout')
@@ -1025,7 +1047,6 @@ def upload_photosphere():
             print(create_photo_response_message)
 
         # Save the create_photo_response JSON data to a file named after the photo filename
-        # uploads_directory = "uploads"
         uploads_directory = config['uploads']['directory']
         os.makedirs(uploads_directory, exist_ok=True)
 
@@ -1044,8 +1065,17 @@ def upload_photosphere():
         with open(json_filepath, 'w') as f:
             json.dump(create_photo_response, f, indent=2)
 
-
-        return render_template('upload_result.html', upload_ref_message=upload_ref_message, upload_status_message=upload_status_message, create_photo_response=create_photo_response, create_photo_response_message=create_photo_response_message, photo_filename = file.filename)
+        # If this is an AJAX request, return JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+            return jsonify(create_photo_response), 200
+        else:
+            # Otherwise, render the template as before
+            return render_template('upload_result.html', 
+                                upload_ref_message=upload_ref_message, 
+                                upload_status_message=upload_status_message, 
+                                create_photo_response=create_photo_response, 
+                                create_photo_response_message=create_photo_response_message, 
+                                photo_filename=file.filename)
 
     return render_template('upload.html')
 
@@ -1060,17 +1090,12 @@ def delete_photo():
     headers = {'Authorization': f'Bearer {credentials.token}'}
     response = requests.delete(url, headers=headers)
 
-    # print(f"Response object: {response}")
-    # print(f"Response status code: {response.status_code}")
-    # print(f"Response text: {response.text}")
-
     if response.status_code != 200:
         flash(f'Failed to delete photo. Error: {response.text}', 'error')
     else:
         flash('Photo deleted successfully.', 'success')
 
-
-    return redirect(url_for('list_photos_page'))
+    return redirect(url_for('photos_page'))
 
 def get_filenames(directory):
     mapping = {}
@@ -1694,6 +1719,14 @@ def init_app():
             'UPLOAD_FOLDER': config['uploads']['directory'],
             'ALLOWED_EXTENSIONS': set(config['uploads']['allowed_extensions'])
         })
+        
+        # Register custom template filters
+        @app.template_filter('thousands_separator')
+        def thousands_separator(value):
+            try:
+                return "{:,}".format(int(value))
+            except (ValueError, TypeError):
+                return value
 
         # Create upload directory if it doesn't exist
         if not os.path.exists(config['uploads']['directory']):

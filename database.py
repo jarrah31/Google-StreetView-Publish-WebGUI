@@ -311,6 +311,11 @@ def get_db_stats():
         cursor.execute("SELECT COUNT(*) FROM connections")
         stats['connection_count'] = cursor.fetchone()[0]
         
+        # Sum total view count
+        cursor.execute("SELECT SUM(view_count) FROM photos WHERE view_count IS NOT NULL")
+        total_views = cursor.fetchone()[0]
+        stats['total_views'] = total_views if total_views is not None else 0
+        
         # Get last updated
         cursor.execute("SELECT MAX(updated_at) FROM photos")
         last_updated = cursor.fetchone()[0]

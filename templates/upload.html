@@ -9,67 +9,223 @@
 
 {% block content %}
 <div class="container_upload">
-      <h1>Upload Photosphere</h1>
-      <a href="{{ url_for('index') }}" class="back-link">Back</a>
-      <form id="upload-form" action="{{ url_for('upload_photosphere') }}" method="post" enctype="multipart/form-data">
-        <div class="file-input-container">
-            <label for="file-input" class="button-22">Select a File</label>
-            <input type="file" id="file-input" name="file" accept="image/*" style="display:none;">
-            <p id="file-name">No file selected</p>
-            <p class="file-size-note">Maximum file size: 64MB</p>
+    <div class="title-container">
+        <h1>Upload Photosphere</h1>
+        <div class="upload-status">
+            <span id="upload-status-indicator" class="status-indicator inactive">
+                <span class="status-dot"></span>
+                <span id="upload-status-text">Ready to Upload</span>
+            </span>
         </div>
-        <!-- <label for="file">Select a file:</label>
-        <input type="file" id="file" name="file" accept="image/*" onchange="extractMetadata()" required> -->
-        <img id="preview" style="display:none;max-width:100%;">
-       
-        <p id="latitude-label"><span class="metadata-label">Latitude:</span> <span id="latitude-display"></span></p>
-        <input type="hidden" step="0.0000001" id="latitude-input" name="latitude" required>
-        
-        <p id="longitude-label"><span class="metadata-label">Longitude:</span> <span id="longitude-display"></span></p>
-        <input type="hidden" step="0.0000001" id="longitude-input" name="longitude" required>
-
-        <p id="ProjectionType-label"><span class="metadata-label">ProjectionType:</span> <span id="ProjectionType-display"></span></p>
-        <p id="UsePanoramaViewer-label"><span class="metadata-label">UsePanoramaViewer:</span> <span id="UsePanoramaViewer-display"></span></p>
-        <p id="CroppedAreaTopPixels-label"><span class="metadata-label">CroppedAreaTopPixels:</span> <span id="CroppedAreaTopPixels-display"></span></p>
-        <p id="CroppedAreaLeftPixels-label"><span class="metadata-label">CroppedAreaLeftPixels:</span> <span id="CroppedAreaLeftPixels-display"></span></p>
-        <p id="CroppedAreaImageHeightPixels-label"><span class="metadata-label">CroppedAreaImageHeightPixels:</span> <span id="CroppedAreaImageHeightPixels-display"></span></p>
-        <p id="CroppedAreaImageWidthPixels-label"><span class="metadata-label">CroppedAreaImageWidthPixels:</span> <span id="CroppedAreaImageWidthPixels-display"></span></p>
-        <p id="FullPanoHeightPixels-label"><span class="metadata-label">FullPanoHeightPixels:</span> <span id="FullPanoHeightPixels-display"></span></p>
-        <p id="FullPanoWidthPixels-label"><span class="metadata-label">FullPanoWidthPixels:</span> <span id="FullPanoWidthPixels-display"></span></p>
-        <p id="FlightYawDegree-label"><span class="metadata-label">FlightYawDegree:</span> <span id="FlightYawDegree-display"></span></p>
-        <input type="hidden" id="heading-input" name="heading" required> 
-
-        <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional):</span> <span id="placeID-display"></span> <button type="submit" class="search-button">&#128269;</button></p> -->
-        <!-- <p id="PlaceID-label"><span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span> <div class="input-wrapper"><input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}"> <button type="submit" class="search-button">&#128269;</button></div></p> -->
-        <p id="PlaceID-label">
-            <span class="metadata-label">Place ID (optional; manually search for IDs <a href="https://developers.google.com/maps/documentation/places/web-service/place-id">here</a>):</span>
-            <div class="placeID-input-wrapper">
-                <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
-                <button type="button" class="button-22" id="placeID-search-button">Search for nearby Place IDs</button>
-            </div>
-        </p>
-        <!-- <input type="hidden" id="placeID-input" name="placeId"> -->
-        <button type="submit" class="button-22" id="upload-button" disabled>Upload</button>
-        <div id="message"></div>
-
-      </form>
     </div>
+
+    <div id="upload-section" class="upload-content-wrapper">
+        <div class="upload-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Upload New Photosphere</h2>
+                    <div class="card-icon">
+                        <i class="upload-icon"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <form id="upload-form" action="{{ url_for('upload_photosphere') }}" method="post" enctype="multipart/form-data">
+                        <div class="upload-grid">
+                            <!-- File Upload Section -->
+                            <div class="upload-area">
+                                <div class="file-input-container">
+                                    <label for="file-input" class="page-link view-photos-link">
+                                        <i class="file-icon"></i> Select a File
+                                    </label>
+                                    <input type="file" id="file-input" name="file" accept="image/*" style="display:none;">
+                                    <p id="file-name">No file selected</p>
+                                    <p class="file-size-note">Maximum file size: 64MB</p>
+                                </div>
+                                <div class="preview-container">
+                                    <img id="preview" style="display:none;" alt="Image preview">
+                                </div>
+                            </div>
+
+                            <!-- Metadata Display Section -->
+                            <div class="metadata-section">
+                                <h3>Photo Metadata</h3>
+                                <div class="metadata-grid">
+                                    <div class="metadata-item" id="latitude-label">
+                                        <span class="metadata-label">Latitude:</span>
+                                        <span id="latitude-display" class="metadata-value"></span>
+                                        <input type="hidden" step="0.0000001" id="latitude-input" name="latitude" required>
+                                    </div>
+                                    
+                                    <div class="metadata-item" id="longitude-label">
+                                        <span class="metadata-label">Longitude:</span>
+                                        <span id="longitude-display" class="metadata-value"></span>
+                                        <input type="hidden" step="0.0000001" id="longitude-input" name="longitude" required>
+                                    </div>
+                                    
+                                    <div class="metadata-item" id="FlightYawDegree-label">
+                                        <span class="metadata-label">Heading:</span>
+                                        <span id="FlightYawDegree-display" class="metadata-value"></span>
+                                        <input type="hidden" id="heading-input" name="heading" required>
+                                    </div>
+
+                                    <div class="metadata-item" id="ProjectionType-label">
+                                        <span class="metadata-label">Projection Type:</span>
+                                        <span id="ProjectionType-display" class="metadata-value"></span>
+                                    </div>
+
+                                    <div class="metadata-item" id="UsePanoramaViewer-label">
+                                        <span class="metadata-label">Panorama Viewer:</span>
+                                        <span id="UsePanoramaViewer-display" class="metadata-value"></span>
+                                    </div>
+
+                                    <div class="metadata-item full-width" id="PlaceID-label">
+                                        <span class="metadata-label">Place ID:</span>
+                                        <div class="placeID-input-wrapper">
+                                            <input type="text" id="placeId" name="placeId" placeholder="Optional Place ID" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
+                                            <button type="button" class="page-link view-photos-link" id="placeID-search-button">Search Nearby</button>
+                                        </div>
+                                        <p class="help-text">Optional; <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank">search manually</a></p>
+                                    </div>
+
+                                    <!-- Technical metadata details in collapsible section -->
+                                    <div class="metadata-item full-width">
+                                        <details class="technical-details">
+                                            <summary>Technical Details</summary>
+                                            <div class="details-grid">
+                                                <div class="detail-item" id="CroppedAreaTopPixels-label">
+                                                    <span class="metadata-label">CroppedAreaTopPixels:</span>
+                                                    <span id="CroppedAreaTopPixels-display" class="metadata-value"></span>
+                                                </div>
+                                                <div class="detail-item" id="CroppedAreaLeftPixels-label">
+                                                    <span class="metadata-label">CroppedAreaLeftPixels:</span>
+                                                    <span id="CroppedAreaLeftPixels-display" class="metadata-value"></span>
+                                                </div>
+                                                <div class="detail-item" id="CroppedAreaImageHeightPixels-label">
+                                                    <span class="metadata-label">CroppedAreaImageHeightPixels:</span>
+                                                    <span id="CroppedAreaImageHeightPixels-display" class="metadata-value"></span>
+                                                </div>
+                                                <div class="detail-item" id="CroppedAreaImageWidthPixels-label">
+                                                    <span class="metadata-label">CroppedAreaImageWidthPixels:</span>
+                                                    <span id="CroppedAreaImageWidthPixels-display" class="metadata-value"></span>
+                                                </div>
+                                                <div class="detail-item" id="FullPanoHeightPixels-label">
+                                                    <span class="metadata-label">FullPanoHeightPixels:</span>
+                                                    <span id="FullPanoHeightPixels-display" class="metadata-value"></span>
+                                                </div>
+                                                <div class="detail-item" id="FullPanoWidthPixels-label">
+                                                    <span class="metadata-label">FullPanoWidthPixels:</span>
+                                                    <span id="FullPanoWidthPixels-display" class="metadata-value"></span>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="message" class="upload-message"></div>
+                        
+                        <div class="card-footer">
+                            <div class="button-container">
+                                <a href="{{ url_for('index') }}" class="page-link view-photos-link">Cancel</a>
+                                <button type="submit" id="upload-button" class="page-link view-photos-link primary-button" disabled>
+                                    <span id="upload-button-text">Upload</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upload Result Section (initially hidden) -->
+    <div id="result-section" class="upload-content-wrapper" style="display: none;">
+        <div class="upload-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Upload Successful</h2>
+                    <div class="card-icon">
+                        <i class="success-icon"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="result-grid">
+                        <div class="result-info">
+                            <div class="result-item">
+                                <span class="result-label">Publish Status:</span>
+                                <span id="result-status" class="result-value"></span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Photo ID:</span>
+                                <span id="result-photo-id" class="result-value"></span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Share Link:</span>
+                                <a id="result-share-link" href="#" target="_blank" class="result-value link-value"></a>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Capture Time:</span>
+                                <span id="result-capture-time" class="result-value"></span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Upload Time:</span>
+                                <span id="result-upload-time" class="result-value"></span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Filename:</span>
+                                <span id="result-filename" class="result-value"></span>
+                            </div>
+                        </div>
+                        <div class="result-thumbnail">
+                            <img id="result-thumbnail-img" src="" alt="Thumbnail">
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="button-container">
+                            <a href="{{ url_for('list_photos_page') }}" class="page-link view-photos-link">
+                                View All Photos
+                            </a>
+                            <button id="upload-another-btn" class="page-link view-photos-link primary-button">
+                                Upload Another
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- The Modal -->
     <div id="myModal" class="modal">
-      <!-- Modal content -->
-      <div class="modal-content">
-          <span class="close">&times;</span>
-          <div class="radius-input">
-              <label for="radius">Radius (up to 1000):</label>
-              <input type="number" id="radius" value="300" min="1" max="1000">
-              <button class="refresh-button">Refresh</button>
-          </div>
-          <!-- Scrollable container for places -->
-          <div class="places-container">
-              <p id="modal-text">Some text in the Modal..</p>
-          </div>
-      </div>
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nearby Places</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="radius-input">
+                    <label for="radius">Search Radius (meters):</label>
+                    <div class="radius-control">
+                        <input type="number" id="radius" value="300" min="1" max="1000">
+                        <button class="page-link view-photos-link refresh-button">Refresh</button>
+                    </div>
+                </div>
+                <!-- Scrollable container for places -->
+                <div class="places-container">
+                    <p id="modal-text">Searching for nearby places...</p>
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Uploading your photosphere...</p>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -78,6 +234,9 @@
         const fileInput = this;
         const fileName = fileInput.files.length > 0 ? fileInput.files[0].name : 'No file selected';
         document.getElementById('file-name').textContent = fileName;
+        
+        // Update the status indicator
+        updateUploadStatus('processing', 'Processing metadata...');
 
         const preview = document.getElementById('preview');
         const file = fileInput.files[0];
@@ -94,14 +253,206 @@
         } else {
             preview.style.display = 'none';
             document.getElementById('upload-button').disabled = true;  // Disable upload button if no file is selected
+            updateUploadStatus('inactive', 'Ready to Upload');
         }
     });
 
-    document.getElementById('upload-form').addEventListener('submit', function() {
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent form submission
+        
         const submitButton = document.getElementById('upload-button');
+        const buttonText = document.getElementById('upload-button-text');
         submitButton.disabled = true;
-        submitButton.textContent = 'Uploading, please wait...';
+        submitButton.classList.add('loading');
+        buttonText.textContent = 'Uploading...';
+        
+        updateUploadStatus('active', 'Uploading photo...');
+        
+        // Show loading overlay
+        document.getElementById('loading-overlay').style.display = 'flex';
+        
+        // Submit the form via AJAX
+        const formData = new FormData(this);
+        
+        fetch('{{ url_for("upload_photosphere") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Parse the HTML to extract the JSON data
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const responseJsonText = doc.querySelector('pre')?.textContent;
+            
+            if (responseJsonText) {
+                try {
+                    const responseData = JSON.parse(responseJsonText);
+                    displayUploadResult(responseData, document.getElementById('file-input').files[0].name);
+                } catch (e) {
+                    console.error('Error parsing JSON response', e);
+                    handleUploadError('Error processing server response');
+                }
+            } else {
+                // Try to extract data from the template directly
+                const status = doc.querySelector('p strong:contains("Publish Status:")').nextSibling.textContent.trim();
+                const photoId = doc.querySelector('p strong:contains("Photo Id:")').nextSibling.textContent.trim();
+                const shareLink = doc.querySelector('p strong:contains("Share Link:")').nextElementSibling.href;
+                const thumbnailUrl = doc.querySelector('p strong:contains("Thumbnail Url:")').nextElementSibling.href;
+                const captureTime = doc.querySelector('p strong:contains("Capture Time:")').nextSibling.textContent.trim();
+                const uploadTime = doc.querySelector('p strong:contains("Upload Time:")').nextSibling.textContent.trim();
+                const filename = doc.querySelector('p strong:contains("Filename:")').nextSibling.textContent.trim();
+                
+                const extractedData = {
+                    mapsPublishStatus: status,
+                    photoId: { id: photoId },
+                    shareLink: shareLink,
+                    thumbnailUrl: thumbnailUrl,
+                    captureTime: captureTime,
+                    uploadTime: uploadTime
+                };
+                
+                displayUploadResult(extractedData, filename);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            handleUploadError('Upload failed. Please try again.');
+        })
+        .finally(() => {
+            // Hide loading overlay
+            document.getElementById('loading-overlay').style.display = 'none';
+            
+            // Reset button state
+            submitButton.disabled = false;
+            submitButton.classList.remove('loading');
+            buttonText.textContent = 'Upload';
+        });
     });
+    
+    function displayUploadResult(data, filename) {
+        // Hide the upload section and show the result section
+        document.getElementById('upload-section').style.display = 'none';
+        document.getElementById('result-section').style.display = 'block';
+        
+        // Fill in the result data
+        document.getElementById('result-status').textContent = data.mapsPublishStatus || 'Processing';
+        document.getElementById('result-photo-id').textContent = data.photoId?.id || 'N/A';
+        
+        const shareLink = document.getElementById('result-share-link');
+        if (data.shareLink) {
+            shareLink.href = data.shareLink;
+            shareLink.textContent = 'View on Google Maps';
+        } else {
+            shareLink.textContent = 'Not yet available';
+        }
+        
+        // Format the dates if they exist
+        let captureTime = 'N/A';
+        if (data.captureTime) {
+            try {
+                const captureDate = data.captureTime.substring(0, 10);
+                const captureHour = data.captureTime.substring(11, 19);
+                captureTime = `${captureDate}, ${captureHour}`;
+            } catch (e) {
+                captureTime = data.captureTime;
+            }
+        }
+        
+        let uploadTime = 'N/A';
+        if (data.uploadTime) {
+            try {
+                const uploadDate = data.uploadTime.substring(0, 10);
+                const uploadHour = data.uploadTime.substring(11, 19);
+                uploadTime = `${uploadDate}, ${uploadHour}`;
+            } catch (e) {
+                uploadTime = data.uploadTime;
+            }
+        }
+        
+        document.getElementById('result-capture-time').textContent = captureTime;
+        document.getElementById('result-upload-time').textContent = uploadTime;
+        document.getElementById('result-filename').textContent = filename;
+        
+        // Set the thumbnail image if available
+        const thumbnailImg = document.getElementById('result-thumbnail-img');
+        if (data.thumbnailUrl) {
+            thumbnailImg.src = data.thumbnailUrl;
+            thumbnailImg.style.display = 'block';
+        } else {
+            thumbnailImg.style.display = 'none';
+        }
+    }
+    
+    function handleUploadError(errorMessage) {
+        document.getElementById('message').innerHTML = `<div class="error-message">${errorMessage}</div>`;
+        updateUploadStatus('inactive', 'Upload Failed');
+    }
+    
+    // Button to upload another photo
+    document.getElementById('upload-another-btn').addEventListener('click', function() {
+        // Reset the form
+        document.getElementById('upload-form').reset();
+        document.getElementById('preview').style.display = 'none';
+        document.getElementById('file-name').textContent = 'No file selected';
+        document.getElementById('upload-button').disabled = true;
+        
+        // Clear all metadata display fields
+        const metadataIds = [
+            'latitude', 'longitude', 'FlightYawDegree', 'ProjectionType', 'UsePanoramaViewer',
+            'CroppedAreaTopPixels', 'CroppedAreaLeftPixels', 'CroppedAreaImageHeightPixels',
+            'CroppedAreaImageWidthPixels', 'FullPanoHeightPixels', 'FullPanoWidthPixels'
+        ];
+        
+        metadataIds.forEach(id => {
+            const displayEl = document.getElementById(`${id}-display`);
+            if (displayEl) displayEl.textContent = '';
+            
+            const labelEl = document.getElementById(`${id}-label`);
+            if (labelEl) {
+                const labelSpan = labelEl.querySelector('.metadata-label');
+                if (labelSpan) {
+                    labelSpan.classList.remove('has-value');
+                    labelSpan.classList.add('no-value');
+                }
+            }
+            
+            const inputEl = document.getElementById(`${id}-input`);
+            if (inputEl) inputEl.value = '';
+        });
+        
+        // Reset Place ID
+        document.getElementById('placeId').value = '';
+        
+        // Clear any error messages
+        document.getElementById('message').textContent = '';
+        
+        // Show the upload section and hide the result section
+        document.getElementById('upload-section').style.display = 'block';
+        document.getElementById('result-section').style.display = 'none';
+        
+        // Reset status indicator
+        updateUploadStatus('inactive', 'Ready to Upload');
+    });
+    
+    function updateUploadStatus(status, message) {
+        const indicator = document.getElementById('upload-status-indicator');
+        const statusText = document.getElementById('upload-status-text');
+        
+        // Remove all status classes
+        indicator.classList.remove('active', 'inactive', 'processing');
+        
+        // Add the appropriate class
+        indicator.classList.add(status);
+        
+        // Update the text
+        statusText.textContent = message;
+    }
 
     async function extractMetadata(file) {
         const preview = document.getElementById('preview');
@@ -212,12 +563,12 @@
         // Enable or disable submit button based on whether necessary data is present
         if (!hasGpsData || !hasXmpData) {
             submitButton.disabled = true;
-            submitButton.textContent = 'Upload';
-            messageDiv.innerHTML = 'Required photo metadata is missing, please fix and try again... <br>See this webpage for details: <a href="https://developers.google.com/streetview/spherical-metadata">Photo Sphere XMP Metadata</a>';
+            messageDiv.innerHTML = '<div class="error-message">Required photo metadata is missing. Please use a photo with panorama metadata or see <a href="https://developers.google.com/streetview/spherical-metadata" target="_blank">Photo Sphere XMP Metadata</a> for details.</div>';
+            updateUploadStatus('inactive', 'Missing Metadata');
         } else {
             submitButton.disabled = false;
-            submitButton.textContent = 'Upload';
             messageDiv.textContent = '';
+            updateUploadStatus('active', 'Ready to Upload');
         }
     }
 
@@ -229,6 +580,9 @@
             let latitude = document.querySelector("#latitude-input").value;
             let longitude = document.querySelector("#longitude-input").value;
             let radius = document.querySelector("#radius").value;
+            
+            // Update modal content to show loading state
+            document.getElementById("modal-text").innerHTML = '<div class="loading-indicator"><span class="loader"></span> Searching for places...</div>';
     
             let xhr = new XMLHttpRequest();
             xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
@@ -246,7 +600,6 @@
                     let text = "";
                     for (let i = 0; i < places_info.length; i++) {
                         let place = places_info[i];
-                        // console.log("Icon:", place.icon);
                         let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
                         // create a clickable div for each place
                         text += `<div class="place">
@@ -265,19 +618,16 @@
 
                     if (countText) {
                         // If it exists, just update the text
-                        countText.textContent = `Found ${places_info.length} places (max is 60)... Please select a place, or close to cancel`;
+                        countText.textContent = `Found ${places_info.length} places (max is 60)`;
                     } else {
                         // If it doesn't exist, create a new paragraph
                         countText = document.createElement("p");
                         countText.className = "count-text";
-                        countText.textContent = `Found ${places_info.length} places... Please select a place or close to cancel`;
+                        countText.textContent = `Found ${places_info.length} places (max is 60)`;
                         
                         // Append the new paragraph just after the radius input and refresh button
                         document.querySelector(".radius-input").appendChild(countText);
                     }
-
-                    // Show the modal
-                    modal.style.display = "block";
                 }
             };
             xhr.send();
@@ -286,17 +636,34 @@
         document.getElementById('placeID-search-button').addEventListener('click', async function(event) {
             event.preventDefault(); // prevent the form from being submitted
             const searchButton = this;
+            const originalText = searchButton.textContent;
             searchButton.textContent = 'Searching...';
-            await fetchPlaces().then(() => {
-                searchButton.textContent = 'Search for nearby Place IDs';
-            }).catch(() => {
-                searchButton.textContent = 'Search for nearby Place IDs';
-            });
+            searchButton.classList.add('loading');
+            
+            // Show the modal before starting the search
+            modal.style.display = "block";
+            
+            try {
+                await fetchPlaces();
+            } finally {
+                searchButton.textContent = originalText;
+                searchButton.classList.remove('loading');
+            }
         });
 
         document.querySelector(".refresh-button").addEventListener('click', function(event) {
             event.preventDefault(); // prevent the form from being submitted
+            const button = this;
+            const originalText = button.textContent;
+            button.textContent = "Refreshing...";
+            button.classList.add('loading');
+            
             fetchPlaces();
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('loading');
+            }, 1000);
         });
 
         // Get the <span> element that closes the modal
@@ -325,10 +692,6 @@
 
         // close the modal
         modal.style.display = 'none';
-
-        // reset the button text
-        const searchButton = document.getElementById('placeID-search-button');
-        searchButton.textContent = 'Search for nearby Place IDs';
     }
 </script>
 {% endblock %}

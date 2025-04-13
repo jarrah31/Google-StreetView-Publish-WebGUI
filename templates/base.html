@@ -15,17 +15,17 @@
         <a href="{{ url_for('photos_page') }}" class="nav-link">Photos</a>
         <a href="{{ url_for('photo_database') }}" class="nav-link">Database</a>
     </nav>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message | safe }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
     <main>
         {% block content %}{% endblock %}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash-message {{ category }}">{{ message | safe }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
     </main>
     <footer>
         {% block footer %}{% endblock %}
