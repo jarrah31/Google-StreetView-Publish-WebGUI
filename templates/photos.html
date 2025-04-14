@@ -42,7 +42,11 @@
     <div class="pagination-container">
         <div class="pagination-info">
             {% if per_page != 'all' %}
-                Showing {{ ((page - 1) * per_page|int) + 1 }} to {{ [page * per_page|int, total_records]|min }} of {{ total_records }} records
+                {% if pagination_start is not none and pagination_end is not none %}
+                    Showing {{ pagination_start }} to {{ pagination_end }} of {{ total_records }} records
+                {% else %}
+                    Showing {{ ((page - 1) * per_page|int) + 1 }} to {{ [page * per_page|int, total_records]|min }} of {{ total_records }} records
+                {% endif %}
             {% else %}
                 Showing all {{ total_records }} records
             {% endif %}
@@ -448,6 +452,16 @@
             filterElement.style.display = 'none';
         } else {
             filterElement.style.display = 'block';
+            
+            // Auto-focus on the places search input when opening the places filter
+            if (filterId === 'places-filter') {
+                setTimeout(() => {
+                    const placesSearchInput = document.getElementById('places-search');
+                    if (placesSearchInput) {
+                        placesSearchInput.focus();
+                    }
+                }, 50);
+            }
         }
         
         // Close filter dropdown when clicking outside

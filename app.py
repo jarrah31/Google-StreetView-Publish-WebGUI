@@ -612,10 +612,6 @@ def list_photos_table_page():
             app.logger.info(f"Place search query: {place_query}")
             app.logger.info(f"Place search parameter: {search_param}")
             
-            # Execute the query to get filtered photos
-            cursor.execute(place_query, [search_param])
-            photos = [dict(row) for row in cursor.fetchall()]
-            
             # Count total filtered records
             count_query = """
             SELECT COUNT(DISTINCT p.photo_id)
@@ -623,10 +619,18 @@ def list_photos_table_page():
             JOIN places ON p.photo_id = places.photo_id
             WHERE places.name LIKE ? COLLATE NOCASE
             """
-            cursor.execute(count_query, [search_param])
-            total_records = cursor.fetchone()[0]
+            app.logger.info(f"Count query: {count_query}")
             
-            app.logger.info(f"Found {total_records} photos matching places filter")
+            cursor.execute(count_query, [search_param])
+            filtered_total_records = cursor.fetchone()[0]
+            # Store this value for the entire function
+            total_records = filtered_total_records
+            app.logger.info(f"DEBUG: Found {total_records} total records matching places filter '{places_filter}'")
+            
+            # Execute the query to get filtered photos - only after we've counted total records
+            cursor.execute(place_query, [search_param])
+            all_photos = [dict(row) for row in cursor.fetchall()]
+            app.logger.info(f"DEBUG: Retrieved {len(all_photos)} photos before pagination")
             
             # Calculate pagination
             if per_page != 'all' and total_records > 0:
@@ -637,15 +641,43 @@ def list_photos_table_page():
                 # Apply pagination to the results if needed
                 start_idx = (page - 1) * per_page_int
                 end_idx = start_idx + per_page_int
-                photos = photos[start_idx:end_idx]
+                
+                photos_on_page = all_photos[start_idx:end_idx]
+                
+                # Explicitly set start and end indices for display
+                start_idx_display = start_idx + 1 if total_records > 0 else 0
+                end_idx_display = min(start_idx + len(photos_on_page), total_records)
+                
+                # Store these values in their own variables for the template
+                pagination_start = start_idx_display
+                pagination_end = end_idx_display
+                
+                app.logger.info(f"DEBUG: Pagination - page {page} of {total_pages}, showing records {pagination_start} to {pagination_end} of {total_records}")
+                app.logger.info(f"DEBUG: per_page={per_page}, per_page_int={per_page_int}, start_idx={start_idx}, end_idx={end_idx}")
+                app.logger.info(f"DEBUG: Sliced photos list from index {start_idx} to {end_idx}, got {len(photos_on_page)} results")
+                
+                photos = photos_on_page
             else:
-                total_pages = 1
+                total_pages = 1 if total_records > 0 else 0
+                pagination_start = 1 if total_records > 0 else 0
+                pagination_end = total_records
+                photos = all_photos
+                
+                app.logger.info(f"DEBUG: No pagination - showing all {len(photos)} records")
                 
             # Skip the rest of the query processing since we've handled everything here
             query_executed = True
+            # IMPORTANT: Skip recounting and calculating total_records further down
+            skip_count = True
+            
+            # Print the variables that will be passed to the template
+            app.logger.info(f"DEBUG: Final values for template: pagination_start={pagination_start}, pagination_end={pagination_end}, total_records={total_records}")
         else:
             # Initialize for normal query flow
             query_executed = False
+            pagination_start = None
+            pagination_end = None
+            skip_count = False
         
         # Capture date filter
         if capture_date_from:
@@ -666,7 +698,7 @@ def list_photos_table_page():
             
         if upload_date_to:
             # Get the last day of the month for the end date
-            year, month = map(int, upload_date_to.split('-'))
+            year, month = map.int(upload_date_to.split('-'))
             last_day = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day
             where_clauses.append("p.upload_time <= ?")
             query_params.append(f"{upload_date_to}-{last_day}T23:59:59Z")
@@ -679,9 +711,10 @@ def list_photos_table_page():
         base_query += " GROUP BY p.photo_id"
         
         # Count total filtered records
-        count_query = f"SELECT COUNT(*) FROM ({base_query})"
-        cursor.execute(count_query, query_params)
-        total_records = cursor.fetchone()[0]
+        if not skip_count:
+            count_query = f"SELECT COUNT(*) FROM ({base_query})"
+            cursor.execute(count_query, query_params)
+            total_records = cursor.fetchone()[0]
         
         # Add sorting
         base_query += f" ORDER BY {sort_by} {sort_order}"
@@ -731,6 +764,12 @@ def list_photos_table_page():
         
         conn.close()
         
+        # Important: Make sure we're passing the pagination variables to the template
+        # Debug log to confirm what we're passing
+        app.logger.info(f"DEBUG: Final template variables: pagination_start={pagination_start if 'pagination_start' in locals() else None}, pagination_end={pagination_end if 'pagination_end' in locals() else None}, total_records={total_records}")
+        
+        conn.close()
+        
         return render_template(
             'photos.html', 
             photos=photos, 
@@ -751,7 +790,9 @@ def list_photos_table_page():
             capture_date_from=capture_date_from,
             capture_date_to=capture_date_to,
             upload_date_from=upload_date_from,
-            upload_date_to=upload_date_to
+            upload_date_to=upload_date_to,
+            pagination_start=pagination_start if 'pagination_start' in locals() else None,
+            pagination_end=pagination_end if 'pagination_end' in locals() else None
         )
         
     except Exception as e:
