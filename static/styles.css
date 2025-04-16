@@ -665,7 +665,7 @@ input[type="submit"]:hover {
 }
 
 .custom-table-container {
-    margin: 24px 0; /* Changed from 'margin: 24px auto' to left-align the table */
+    margin: 10px 0; /* Changed from 24px to 10px */
     max-width: 960px;
 }
 
@@ -914,7 +914,7 @@ select option {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin: 20px 0;
+    margin: 0px 0 0px 0; /* Reduced bottom margin from 20px to 10px */
     font-size: 14px;
 }
 
@@ -1268,7 +1268,7 @@ select option {
 .sort-controls {
     display: flex;
     gap: 10px;
-    margin: 10px 0;
+    margin: 0px 0;
     justify-content: center;
     align-items: center;
 }
@@ -2183,4 +2183,115 @@ select option {
 .sort-controls-left {
     display: none; /* Hidden by default */
     justify-content: flex-start; /* Left alignment */
+}
+
+/* Date Range Picker Styles */
+.date-range-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 0; /* Remove the left margin to align fully left */
+    margin-top: 10px; /* Reduced from 15px to 10px */
+    margin-bottom: 5px; /* Add minimal bottom margin to create a small gap */
+    padding-left: 0; /* Ensure no padding on the left */
+}
+
+#date-range {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #ffffff;
+    font-size: 14px;
+    width: 230px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233498db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+#date-range:hover {
+    border-color: #3498db;
+    background-color: #f0f7fc;
+    box-shadow: 0 1px 5px rgba(52, 152, 219, 0.2);
+}
+
+/* DateRangePicker overrides to match app style */
+.daterangepicker {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.daterangepicker .ranges li {
+    border-radius: 3px;
+    color: #3498db;
+    font-size: 15px; /* Increased font size for range options */
+    padding: 8px 12px; /* Added more padding for better clickability */
+}
+
+.daterangepicker .ranges ul {
+    width: 200px; /* Wider list to accommodate larger text */
+}
+
+.daterangepicker .ranges li:hover {
+    background-color: #f0f7fc;
+}
+
+.daterangepicker .ranges li.active {
+    background-color: #3498db;
+    color: #fff;
+}
+
+.daterangepicker td.active, .daterangepicker td.active:hover {
+    background-color: #3498db;
+    border-color: transparent;
+    color: #fff;
+}
+
+.daterangepicker .drp-buttons .btn {
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.daterangepicker .drp-buttons .btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.daterangepicker .drp-buttons .btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+/* Make date range picker container full width on mobile */
+@media (max-width: 768px) {
+    .pagination-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .date-range-picker-container {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    #date-range {
+        width: 100%;
+    }
+}
+
+.sort-label {
+    font-weight: normal;
+    color: #555;
+    font-size: 14px;
+    margin-right: 8px;
 }

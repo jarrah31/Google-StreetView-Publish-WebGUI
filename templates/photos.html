@@ -3,6 +3,11 @@
 {% block title %}Photos{% endblock %}
 
 {% block head %}
+<!-- Date Range Picker Dependencies -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 {% endblock %}
 
 {% block content %}
@@ -23,20 +28,7 @@
         </div>
     </div>
     
-    <!-- Sort Controls -->
-    <div class="sort-controls sort-controls-left">
-        <select id="sort-select" onchange="updateSort(this.value)">
-            <option value="">Sort-by</option>
-            <option value="maps_publish_status" {% if sort_by == 'maps_publish_status' %}selected{% endif %}>Status</option>
-            <option value="view_count" {% if sort_by == 'view_count' %}selected{% endif %}>Views</option>
-            <option value="capture_time" {% if sort_by == 'capture_time' %}selected{% endif %}>Capture Date</option>
-            <option value="upload_time" {% if sort_by == 'upload_time' %}selected{% endif %}>Upload Date</option>
-            <option value="place_names" {% if sort_by == 'place_names' %}selected{% endif %}>Places</option>
-        </select>
-        <a href="#" id="sort-direction-btn" onclick="toggleSortDirection(); return false;" class="page-link" data-sort-order="{{ sort_order }}">
-            {% if sort_order == 'desc' %}Descending{% else %}Ascending{% endif %}
-        </a>
-    </div>
+
     
     <!-- Pagination Controls -->
     <div class="pagination-container">
@@ -82,8 +74,29 @@
             </div>
             {% endif %}
         </div>
+        
+        <!-- Date Range Picker (moved below pagination) -->
+        <div class="date-range-picker-container">
+            <label for="date-range" class="sort-label">Date range:</label>
+            <input type="text" id="date-range" name="daterange" class="form-control" />
+        </div>
     </div>
-    
+
+    <!-- Sort Controls -->
+    <div class="sort-controls sort-controls-left">
+        <label for="sort-select" class="sort-label">Sort-by:</label>
+        <select id="sort-select" onchange="updateSort(this.value)">
+            <option value="maps_publish_status" {% if sort_by == 'maps_publish_status' %}selected{% endif %}>Status</option>
+            <option value="view_count" {% if sort_by == 'view_count' %}selected{% endif %}>Views</option>
+            <option value="capture_time" {% if sort_by == 'capture_time' %}selected{% endif %}>Capture Date</option>
+            <option value="upload_time" {% if sort_by == 'upload_time' %}selected{% endif %}>Upload Date</option>
+            <option value="place_names" {% if sort_by == 'place_names' %}selected{% endif %}>Places</option>
+        </select>
+        <a href="#" id="sort-direction-btn" onclick="toggleSortDirection(); return false;" class="page-link" data-sort-order="{{ sort_order }}">
+            {% if sort_order == 'desc' %}Descending{% else %}Ascending{% endif %}
+        </a>
+    </div>
+
     <!-- Photos Table View -->
     <div id="list-view" class="custom-table-container">
         <table class="photo-table">
@@ -130,73 +143,11 @@
                     <th>
                         <a href="{{ url_for('list_photos_table_page', sort_by='view_count', sort_order='asc' if sort_by == 'view_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Views</a>
                     </th>
-                    <th class="filterable-header">
-                        <div class="header-content">
-                            <a href="{{ url_for('list_photos_table_page', sort_by='capture_time', sort_order='asc' if sort_by == 'capture_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Capture Date</a>
-                            <button class="filter-toggle" onclick="toggleFilter('capture-date-filter')"><i class="filter-icon">▼</i></button>
-                        </div>
-                        <form id="capture-date-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
-                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
-                            <input type="hidden" name="per_page" value="{{ per_page }}">
-                            <input type="hidden" name="page" value="1">
-                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
-                            <input type="hidden" name="places_filter" value="{{ places_filter }}">
-                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
-                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
-                            
-                            <div id="capture-date-filter" class="filter-dropdown">
-                                <div class="filter-dropdown-content date-filter">
-                                    <div class="date-range">
-                                        <label>From:
-                                            <input type="month" name="capture_date_from" value="{{ capture_date_from }}">
-                                        </label>
-                                        <label>To:
-                                            <input type="month" name="capture_date_to" value="{{ capture_date_to }}">
-                                        </label>
-                                    </div>
-                                    <div class="filter-actions">
-                                        <button type="submit">Apply</button>
-                                        <button type="button" onclick="clearCaptureDateFilter()">Clear</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='capture_time', sort_order='asc' if sort_by == 'capture_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Capture Date</a>
                     </th>
-                    <th class="filterable-header">
-                        <div class="header-content">
-                            <a href="{{ url_for('list_photos_table_page', sort_by='upload_time', sort_order='asc' if sort_by == 'upload_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Upload Date</a>
-                            <button class="filter-toggle" onclick="toggleFilter('upload-date-filter')"><i class="filter-icon">▼</i></button>
-                        </div>
-                        <form id="upload-date-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
-                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                            <input type="hidden" name="sort_order" value="{{ sort_order }}">
-                            <input type="hidden" name="per_page" value="{{ per_page }}">
-                            <input type="hidden" name="page" value="1">
-                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
-                            <input type="hidden" name="places_filter" value="{{ places_filter }}">
-                            <input type="hidden" name="capture_date_from" value="{{ capture_date_from }}">
-                            <input type="hidden" name="capture_date_to" value="{{ capture_date_to }}">
-                            <input type="hidden" name="upload_date_from" value="{{ upload_date_from }}">
-                            <input type="hidden" name="upload_date_to" value="{{ upload_date_to }}">
-                            
-                            <div id="upload-date-filter" class="filter-dropdown">
-                                <div class="filter-dropdown-content date-filter">
-                                    <div class="date-range">
-                                        <label>From:
-                                            <input type="month" name="upload_date_from" value="{{ upload_date_from }}">
-                                        </label>
-                                        <label>To:
-                                            <input type="month" name="upload_date_to" value="{{ upload_date_to }}">
-                                        </label>
-                                    </div>
-                                    <div class="filter-actions">
-                                        <button type="submit">Apply</button>
-                                        <button type="button" onclick="clearUploadDateFilter()">Clear</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='upload_time', sort_order='asc' if sort_by == 'upload_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Upload Date</a>
                     </th>
                     <th class="filterable-header">
                         <div class="header-content">
@@ -358,6 +309,92 @@
 
 {% block scripts %}
 <script>
+    // Initialize date range picker
+    $(document).ready(function() {
+        // Set default dates from URL parameters if they exist
+        const urlParams = new URLSearchParams(window.location.search);
+        let startDate = null;
+        let endDate = null;
+        
+        // Check if capture date filters are already set
+        if (urlParams.has('capture_date_from') || urlParams.has('capture_date_to')) {
+            // Format for capture_date_from is YYYY-MM in URL, but we need YYYY-MM-DD for daterangepicker
+            if (urlParams.has('capture_date_from')) {
+                const fromParam = urlParams.get('capture_date_from');
+                startDate = moment(fromParam + '-01', 'YYYY-MM-DD');
+            }
+            
+            if (urlParams.has('capture_date_to')) {
+                const toParam = urlParams.get('capture_date_to');
+                // Get the last day of the month for the end date
+                const year = parseInt(toParam.split('-')[0]);
+                const month = parseInt(toParam.split('-')[1]);
+                const lastDay = new Date(year, month, 0).getDate(); // Get last day of month
+                endDate = moment(toParam + '-' + lastDay, 'YYYY-MM-DD');
+            }
+        }
+        
+        // Initialize with detected dates or default to no selection
+        $('#date-range').daterangepicker({
+            opens: 'left',
+            autoApply: false,
+            autoUpdateInput: false, // Don't update the input value automatically
+            locale: {
+                format: 'YYYY-MM-DD',
+                separator: ' to ',
+                applyLabel: 'Apply',
+                cancelLabel: 'Clear'
+            },
+            startDate: startDate || moment().subtract(29, 'days'),
+            endDate: endDate || moment(),
+            ranges: {
+               'Today': [moment(), moment()],
+               'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+               'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+               'Last 14 Days': [moment().subtract(14, 'days'), moment()],
+               'This Month': [moment().startOf('month'), moment().endOf('month')],
+               'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+               'Last 2 Months': [moment().subtract(2, 'months'), moment()],
+               'Last 6 Months': [moment().subtract(6, 'months'), moment()],
+               'This Year': [moment().startOf('year'), moment().endOf('year')],
+               'Last Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')]
+            }
+        });
+
+        // Set initial input value if we have URL parameters
+        if (startDate && endDate) {
+            $('#date-range').val(startDate.format('YYYY-MM-DD') + ' to ' + endDate.format('YYYY-MM-DD'));
+        } else {
+            // Otherwise, make sure the input is empty
+            $('#date-range').val('');
+        }
+
+        // Handle date range picker clear button
+        $('#date-range').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+            
+            // Clear capture date filters from URL and reload
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('capture_date_from');
+            currentUrl.searchParams.delete('capture_date_to');
+            currentUrl.searchParams.set('page', '1'); // Reset to first page when changing filter
+            window.location.href = currentUrl.toString();
+        });
+
+        // Handle date range picker apply button
+        $('#date-range').on('apply.daterangepicker', function(ev, picker) {
+            // Format the display in the input field
+            $(this).val(picker.startDate.format('YYYY-MM-DD') + ' to ' + picker.endDate.format('YYYY-MM-DD'));
+            
+            // Update URL with filtered months (backend expects YYYY-MM format)
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('capture_date_from', picker.startDate.format('YYYY-MM'));
+            currentUrl.searchParams.set('capture_date_to', picker.endDate.format('YYYY-MM'));
+            currentUrl.searchParams.set('page', '1'); // Reset to first page when changing filter
+            window.location.href = currentUrl.toString();
+        });
+    });
+
     // Initialize the view based on local storage or default to list view
     document.addEventListener('DOMContentLoaded', function() {
         const selects = document.querySelectorAll('.action-select');
