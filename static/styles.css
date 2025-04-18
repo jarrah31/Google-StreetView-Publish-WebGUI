@@ -132,9 +132,17 @@ body {
 }
 
 .form-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Database form container - used for the Create Database button */
+.db-form-container {
+    display: grid;
+    grid-template-columns: 1fr; /* Single column */
+    justify-items: center; /* Center items horizontally */
+    width: 100%;
 }
 
 h1 {
@@ -416,12 +424,6 @@ select {
 .form-inline button {
     width: 100px;
     margin-right: 0.5rem;
-}
-
-.form-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
 }
 
 .form-group p {
@@ -920,6 +922,7 @@ select option {
 
 .pagination-container.bottom {
     align-items: flex-start; /* Left-align bottom pagination controls */
+    margin-top: 30px; /* Add space above bottom pagination */
 }
 
 .pagination-info {
@@ -2294,4 +2297,114 @@ select option {
     color: #555;
     font-size: 14px;
     margin-right: 8px;
+}
+
+/* Result section styling */
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: start;
+}
+
+.result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.result-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.result-label {
+    font-weight: 600;
+    color: #3498db;
+    font-size: 1rem;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.result-value {
+    padding: 5px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.link-value {
+    color: #3498db;
+    text-decoration: none;
+    transition: all 0.2s;
+    word-break: break-all;
+}
+
+.link-value:hover {
+    text-decoration: underline;
+    color: #2980b9;
+}
+
+.result-thumbnail {
+    width: 200px;
+    height: 200px;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #f0f7fc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #3498db;
+}
+
+.result-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Success icon for the Upload Successful screen */
+.success-icon::before {
+    content: "✓";
+    color: #2ecc71;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.file-icon::before {
+    content: "📄";
+    font-size: 18px;
+}
+
+/* Loading overlay for upload process */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    color: white;
+}
+
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid #3498db;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

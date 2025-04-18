@@ -1035,68 +1035,119 @@ def nearby_places():
 @token_required
 def upload_photosphere():
     if request.method == 'POST':
+        # Add detailed request debugging
         app.logger.debug("Received POST request for uploading photosphere.")
         app.logger.debug(f"Form data: {request.form}")
+        app.logger.debug(f"Headers: {dict(request.headers)}")
+        app.logger.debug(f"Is AJAX request: {request.headers.get('X-Requested-With') == 'XMLHttpRequest'}")
+        app.logger.debug(f"Accept header: {request.headers.get('Accept')}")
+        app.logger.debug(f"Content-Type header: {request.headers.get('Content-Type')}")
 
         credentials = get_credentials()
 
         # Start the upload
-        upload_ref = start_upload(credentials.token)
-        upload_ref_message = f"Created upload url: {upload_ref}"
-        app.logger.debug(upload_ref_message)
+        try:
+            upload_ref = start_upload(credentials.token)
+            upload_ref_message = f"Created upload url: {upload_ref}"
+            app.logger.debug(upload_ref_message)
+        except Exception as e:
+            app.logger.error(f"Error creating upload URL: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": "Failed to create upload URL", "details": str(e)}), 500
+            flash("Failed to create upload URL", "error")
+            return redirect(url_for('upload_photosphere'))
 
         # Save the uploaded file to a temporary location on the server
-        file = request.files['file']
-        file_path = os.path.join(tempfile.gettempdir(), file.filename)
-        file.save(file_path)
-        app.logger.debug(f"Saved file to {file_path}")
+        try:
+            file = request.files['file']
+            file_path = os.path.join(tempfile.gettempdir(), file.filename)
+            file.save(file_path)
+            app.logger.debug(f"Saved file to {file_path}")
+        except Exception as e:
+            app.logger.error(f"Error saving uploaded file: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": "Failed to save uploaded file", "details": str(e)}), 500
+            flash("Failed to save uploaded file", "error")
+            return redirect(url_for('upload_photosphere'))
 
         # Get the heading value from the form
         heading = request.form['heading']
 
         # Upload the photo bytes to the Upload URL
-        upload_status = upload_photo(credentials.token, upload_ref, file_path, heading)
-        upload_status_message = f"Upload status: {upload_status}"
-        app.logger.debug(upload_status_message)
+        try:
+            upload_status = upload_photo(credentials.token, upload_ref, file_path, heading)
+            upload_status_message = f"Upload status: {upload_status}"
+            app.logger.debug(upload_status_message)
+        except Exception as e:
+            app.logger.error(f"Error uploading photo data: {str(e)}")
+            # Clean up temp file
+            try:
+                os.remove(file_path)
+                app.logger.debug(f"Removed temporary file {file_path}")
+            except:
+                pass
+                
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": "Failed to upload photo data", "details": str(e)}), 500
+            flash("Failed to upload photo data", "error")
+            return redirect(url_for('upload_photosphere'))
 
         # Remove the temporary file
         os.remove(file_path)
         app.logger.debug(f"Removed temporary file {file_path}")
 
         # Upload the metadata of the photo
-        latitude = float(request.form['latitude'])
-        longitude = float(request.form['longitude'])
-        placeId = request.form['placeId']
+        try:
+            latitude = float(request.form['latitude'])
+            longitude = float(request.form['longitude'])
+            placeId = request.form['placeId']
 
-        create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
-        create_photo_response_message = f"Create photo response: {create_photo_response}"
-        app.logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
-        app.logger.debug(create_photo_response_message)
+            create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
+            create_photo_response_message = f"Create photo response: {create_photo_response}"
+            app.logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
+            app.logger.debug(create_photo_response_message)
+        except Exception as e:
+            app.logger.error(f"Error creating photo with metadata: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": "Failed to create photo with metadata", "details": str(e)}), 500
+            flash("Failed to create photo with metadata", "error")
+            return redirect(url_for('upload_photosphere'))
 
         # Save the create_photo_response JSON data to a file named after the photo filename
-        uploads_directory = config['uploads']['directory']
-        os.makedirs(uploads_directory, exist_ok=True)
+        try:
+            uploads_directory = config['uploads']['directory']
+            os.makedirs(uploads_directory, exist_ok=True)
 
-        # Prepare initial filename
-        base_filename = os.path.splitext(file.filename)[0]
-        counter = 0
-        json_filename = f"{base_filename}.json"
+            # Prepare initial filename
+            base_filename = os.path.splitext(file.filename)[0]
+            counter = 0
+            json_filename = f"{base_filename}.json"
 
-        # Iterate through possible filenames
-        while os.path.exists(os.path.join(uploads_directory, json_filename)):
-            counter += 1
-            json_filename = f"{base_filename}_{counter}.json"
+            # Iterate through possible filenames
+            while os.path.exists(os.path.join(uploads_directory, json_filename)):
+                counter += 1
+                json_filename = f"{base_filename}_{counter}.json"
 
-        # Write to the new file
-        json_filepath = os.path.join(uploads_directory, json_filename)
-        with open(json_filepath, 'w') as f:
-            json.dump(create_photo_response, f, indent=2)
+            # Write to the new file
+            json_filepath = os.path.join(uploads_directory, json_filename)
+            with open(json_filepath, 'w') as f:
+                json.dump(create_photo_response, f, indent=2)
+                
+            app.logger.debug(f"Saved photo metadata to {json_filepath}")
+        except Exception as e:
+            app.logger.error(f"Error saving photo metadata to file: {str(e)}")
+            # Not a critical error, don't return error response
 
-        # If this is an AJAX request, return JSON
+        # Check request type and return appropriate response
+        app.logger.debug(f"Preparing response, is AJAX: {request.headers.get('X-Requested-With') == 'XMLHttpRequest'}")
+        
+        # If this is an AJAX request or client accepts JSON, return JSON
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+            app.logger.debug("Returning JSON response")
             return jsonify(create_photo_response), 200
         else:
             # Otherwise, render the template as before
+            app.logger.debug("Returning HTML template response")
             return render_template('upload_result.html', 
                                 upload_ref_message=upload_ref_message, 
                                 upload_status_message=upload_status_message, 

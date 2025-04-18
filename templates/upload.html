@@ -90,7 +90,7 @@
                                     <!-- Technical metadata details in collapsible section -->
                                     <div class="metadata-item full-width">
                                         <details class="technical-details">
-                                            <summary>Technical Details</summary>
+                                            <summary>More Details</summary>
                                             <div class="details-grid">
                                                 <div class="detail-item" id="CroppedAreaTopPixels-label">
                                                     <span class="metadata-label">CroppedAreaTopPixels:</span>
@@ -177,18 +177,15 @@
                                 <span id="result-filename" class="result-value"></span>
                             </div>
                         </div>
-                        <div class="result-thumbnail">
-                            <img id="result-thumbnail-img" src="" alt="Thumbnail">
-                        </div>
                     </div>
                     <div class="card-footer">
                         <div class="button-container">
-                            <a href="{{ url_for('list_photos_page') }}" class="page-link view-photos-link">
-                                View All Photos
+                            <a href="{{ url_for('photo_database') }}" class="page-link view-photos-link">
+                                Update Database (Allow 5 mins for Google to process)
                             </a>
-                            <button id="upload-another-btn" class="page-link view-photos-link primary-button">
+                            <a href="{{ url_for('upload_photosphere') }}" class="page-link view-photos-link primary-button">
                                 Upload Another
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -274,55 +271,68 @@
         // Submit the form via AJAX
         const formData = new FormData(this);
         
+        console.log('[DEBUG] Starting upload process');
+        
         fetch('{{ url_for("upload_photosphere") }}', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.text();
-        })
-        .then(html => {
-            // Parse the HTML to extract the JSON data
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const responseJsonText = doc.querySelector('pre')?.textContent;
+            console.log('[DEBUG] Received server response:', {
+                status: response.status,
+                statusText: response.statusText,
+                contentType: response.headers.get('content-type'),
+                isJson: response.headers.get('content-type')?.includes('application/json')
+            });
             
-            if (responseJsonText) {
-                try {
-                    const responseData = JSON.parse(responseJsonText);
-                    displayUploadResult(responseData, document.getElementById('file-input').files[0].name);
-                } catch (e) {
-                    console.error('Error parsing JSON response', e);
-                    handleUploadError('Error processing server response');
-                }
-            } else {
-                // Try to extract data from the template directly
-                const status = doc.querySelector('p strong:contains("Publish Status:")').nextSibling.textContent.trim();
-                const photoId = doc.querySelector('p strong:contains("Photo Id:")').nextSibling.textContent.trim();
-                const shareLink = doc.querySelector('p strong:contains("Share Link:")').nextElementSibling.href;
-                const thumbnailUrl = doc.querySelector('p strong:contains("Thumbnail Url:")').nextElementSibling.href;
-                const captureTime = doc.querySelector('p strong:contains("Capture Time:")').nextSibling.textContent.trim();
-                const uploadTime = doc.querySelector('p strong:contains("Upload Time:")').nextSibling.textContent.trim();
-                const filename = doc.querySelector('p strong:contains("Filename:")').nextSibling.textContent.trim();
-                
-                const extractedData = {
-                    mapsPublishStatus: status,
-                    photoId: { id: photoId },
-                    shareLink: shareLink,
-                    thumbnailUrl: thumbnailUrl,
-                    captureTime: captureTime,
-                    uploadTime: uploadTime
-                };
-                
-                displayUploadResult(extractedData, filename);
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
             }
+            
+            // Check the content type of the response
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                console.log('[DEBUG] Processing JSON response');
+                return response.json().then(data => {
+                    console.log('[DEBUG] Parsed JSON data:', data);
+                    return data;
+                });
+            } else {
+                console.log('[DEBUG] Processing HTML response');
+                return response.text().then(html => {
+                    console.log('[DEBUG] Raw HTML response:', html.substring(0, 500) + '...');
+                    
+                    // Parse the HTML to extract the JSON data
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const responseJsonText = doc.querySelector('pre')?.textContent;
+                    
+                    if (responseJsonText) {
+                        try {
+                            const jsonData = JSON.parse(responseJsonText);
+                            console.log('[DEBUG] Extracted JSON from HTML:', jsonData);
+                            return jsonData;
+                        } catch (e) {
+                            console.error('[DEBUG] Error parsing JSON response:', e);
+                            throw new Error('Error processing server response: ' + e.message);
+                        }
+                    } else {
+                        console.error('[DEBUG] No JSON data found in response');
+                        throw new Error('Invalid server response format: No JSON data found');
+                    }
+                });
+            }
+        })
+        .then(responseData => {
+            console.log('[DEBUG] Processing successful response data');
+            displayUploadResult(responseData, document.getElementById('file-input').files[0].name);
         })
         .catch(error => {
-            console.error('Error:', error);
-            handleUploadError('Upload failed. Please try again.');
+            console.error('[DEBUG] Upload error:', error);
+            handleUploadError(error.message || 'Upload failed. Please try again.');
         })
         .finally(() => {
             // Hide loading overlay
@@ -339,6 +349,9 @@
         // Hide the upload section and show the result section
         document.getElementById('upload-section').style.display = 'none';
         document.getElementById('result-section').style.display = 'block';
+        
+        // Update the status indicator to show success
+        updateUploadStatus('active', 'Upload Successful');
         
         // Fill in the result data
         document.getElementById('result-status').textContent = data.mapsPublishStatus || 'Processing';
@@ -378,15 +391,6 @@
         document.getElementById('result-capture-time').textContent = captureTime;
         document.getElementById('result-upload-time').textContent = uploadTime;
         document.getElementById('result-filename').textContent = filename;
-        
-        // Set the thumbnail image if available
-        const thumbnailImg = document.getElementById('result-thumbnail-img');
-        if (data.thumbnailUrl) {
-            thumbnailImg.src = data.thumbnailUrl;
-            thumbnailImg.style.display = 'block';
-        } else {
-            thumbnailImg.style.display = 'none';
-        }
     }
     
     function handleUploadError(errorMessage) {

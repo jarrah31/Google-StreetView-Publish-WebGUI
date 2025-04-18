@@ -20,8 +20,7 @@
             </div>
             <div class="feature-content">
                 <h2>Upload Photos</h2>
-                <p>Upload your 360° photospheres to Google Street View directly from your computer. Set location information, 
-                connection details, and customize your uploads with ease.</p>
+                <p>Upload your 360° photospheres to Google Street View directly from your computer.</p>
                 <a href="{{ url_for('upload_photosphere') }}" class="feature-link">Upload Now</a>
             </div>
         </div>
@@ -35,7 +34,7 @@
             <div class="feature-content">
                 <h2>Manage Photos</h2>
                 <p>Browse and manage all your Google Street View photos in one place. View your photos in both grid and list layouts, 
-                access detailed information, edit metadata, and organize your 360° photo collection efficiently.</p>
+                access detailed information, edit metadata and photo connections, and organize your 360° photo collection efficiently.</p>
                 <a href="{{ url_for('photos_page') }}" class="feature-link">Manage Photos</a>
             </div>
         </div>
@@ -48,8 +47,9 @@
             </div>
             <div class="feature-content">
                 <h2>Photo Database</h2>
-                <p>Access your local photo database with advanced search and management features.
-                Synchronize with Google Street View and maintain an organized collection.</p>
+                <p>Create or update Streetview photos into a local database for more efficient photo management, and
+                view statistics for your entire photo collection.
+                </p>
                 <a href="{{ url_for('photo_database') }}" class="feature-link">Open Database</a>
             </div>
         </div>
@@ -100,6 +100,7 @@
         display: flex;
         flex-direction: column;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
     }
     
     .feature-card:hover {
@@ -120,6 +121,9 @@
     
     .feature-content {
         text-align: center;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
     }
     
     .feature-content h2 {
@@ -132,6 +136,7 @@
         color: #555;
         line-height: 1.5;
         margin-bottom: 15px;
+        flex-grow: 1;
     }
     
     .feature-link {
@@ -143,6 +148,7 @@
         text-decoration: none;
         font-weight: 500;
         transition: background-color 0.2s ease;
+        margin-top: auto;
     }
     
     .feature-link:hover {

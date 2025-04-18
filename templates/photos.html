@@ -268,7 +268,7 @@
     
     <!-- Bottom Pagination Controls -->
     {% if per_page != 'all' and total_pages > 1 %}
-    <div class="pagination-container bottom">
+    <div class="pagination-container bottom" style="margin-top: 30px;">
         <div class="pagination-controls">
             <div class="page-nav">
                 <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}" class="page-link {% if page == 1 %}disabled{% endif %}">First</a>

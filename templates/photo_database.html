@@ -3,6 +3,20 @@
 {% block title %}Photo Database{% endblock %}
 
 {% block content %}
+<style>
+    /* Custom centered button container that overrides the grid layout */
+    .centered-button-container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 20px auto 0;
+    }
+    
+    .centered-button-container button {
+        margin: 0 auto; /* This provides horizontal centering */
+    }
+</style>
+
 <div class="container_photos">
     <div class="title-container">
         <h1>Photo Database</h1>
@@ -77,8 +91,8 @@
                 <i class="empty-icon"></i>
                 <h3>No Database Found</h3>
                 <p>Create a database to start managing your Street View photos.</p>
-                <form id="databaseForm" action="{{ url_for('create_database') }}" method="post" class="form-container button-spacing">
-                    <button id="databaseButton" type="submit" class="page-link view-photos-link">
+                <form id="databaseForm" action="{{ url_for('create_database') }}" method="post" class="db-form-container button-spacing">
+                    <button id="databaseButton" type="submit" class="page-link view-photos-link" style="margin: 0 auto; display: block;">
                         <span id="buttonText">Create Database</span>
                     </button>
                 </form>
