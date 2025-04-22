@@ -23,19 +23,26 @@ You will need to (full insructions below):
 You can set up your Google Developer environment with a different Google account to what you use for publishing photospheres. 
 
 ## Screenshots
-<img width="327" alt="image" src="https://github.com/user-attachments/assets/c1772981-8fbe-491f-9591-01d637b7df6d" />
+![Capto_Capture 2025-04-22_07-55-17_pm](https://github.com/user-attachments/assets/0006c7c6-178b-48a6-b65f-8779897d6f96)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/510c0d05-b3dc-4cb2-9cd1-4afb3800f845)
+![Capto_Capture 2025-04-22_07-58-54_pm](https://github.com/user-attachments/assets/5129a7f5-a062-4536-b847-dd6b162a0e76)
 
-![Image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/050548c1-bdb6-436f-a933-7b33d5b00902)
+![Capto_Capture 2025-04-22_08-00-22_pm](https://github.com/user-attachments/assets/6c04bcfd-aa6b-43a4-8ac9-d99c8604379d)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/22b35b5e-c390-4e30-8e9a-16803faf268e)
+![Capto_Capture 2025-04-22_08-01-09_pm](https://github.com/user-attachments/assets/5d698a9d-ac77-46e5-8177-56998cd8074b)
 
-![image](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/4c2c7245-ac05-4793-a433-333cf3fc0398)
+![Capto_Capture 2025-04-18_04-06-48_pm](https://github.com/user-attachments/assets/a4432e1d-0974-489d-86ab-fa1ca47631cc)
+
+![Capto_Capture 2025-04-22_08-11-05_pm](https://github.com/user-attachments/assets/b56c2310-faf1-490d-8823-4f5f2ad526fe)
+
+![Capto_Capture 2025-04-22_08-05-36_pm](https://github.com/user-attachments/assets/bbd99a57-9095-4d71-95bd-da548e02872a)
+
+![Capto_Capture 2025-04-22_08-06-25_pm](https://github.com/user-attachments/assets/fc88185b-cfd9-488b-b3ad-61588a97d684)
 
 ![Capto_Capture 2025-02-16_07-52-05_pm](https://github.com/user-attachments/assets/37399be9-8e68-40dd-9126-97ca210e17c0)
 
 ![IMG_6ABF6090499C-1](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ab519b4b-2cac-4ac8-8954-1f37625c43fb)
+
 
 ## My Drone Photosphere Workflow
 I have a DJI Mini Pro 3 and I enjoy creating aerial StreetView photos and publishing them on Google Streetview for other people to find.
