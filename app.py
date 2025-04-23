@@ -916,27 +916,60 @@ def edit_connections(photo_id):
 def get_connections():
     data = request.json
     photo_ids = data.get('photoIds', [])
-
-    # if debug:
-    #     print(f"Received request to fetch connections for photo_ids: {photo_ids}")
-
+    
+    import database
     all_connections = []
-    for photo_id in photo_ids:
-        try:
-            app.logger.debug(f"Fetching connections for photo_id {photo_id}")
-            photo = get_photo_by_id(photo_id)
-            if photo and 'connections' in photo:
-                for conn in photo['connections']:
-                    all_connections.append({
-                        'source': photo_id,
-                        'target': conn['target']['id']
-                    })
-                app.logger.debug(f"Found connections for photo_id {photo_id}: {photo['connections']}")
-        except Exception as e:
-            print(f"Error fetching connections for photo_id {photo_id}: {e}")
-
-    # app.logger.debug(f"Returning all connections:")
-    # app.logger.debug(all_connections)
+    
+    try:
+        # Use the database function
+        all_connections = database.get_connections_by_photo_ids(photo_ids)
+        app.logger.debug(f"Retrieved {len(all_connections)} connections from database")
+        
+        # If no connections were found in the database, fall back to API
+        if not all_connections:
+            app.logger.warning("No connections found in database, falling back to API")
+            credentials = get_credentials()
+            if not credentials:
+                app.logger.error("No valid credentials available for API fallback")
+                return jsonify(connections=all_connections), 200
+                
+            for photo_id in photo_ids:
+                try:
+                    app.logger.debug(f"Fetching connections for photo_id {photo_id} from API")
+                    # Direct call to get_photo instead of get_photo_by_id
+                    photo = get_photo(credentials.token, photo_id)
+                    if photo and 'connections' in photo:
+                        for conn in photo['connections']:
+                            all_connections.append({
+                                'source': photo_id,
+                                'target': conn['target']['id']
+                            })
+                        app.logger.debug(f"Found connections for photo_id {photo_id}: {photo['connections']}")
+                except Exception as e:
+                    app.logger.error(f"Error fetching connections for photo_id {photo_id}: {e}")
+    except Exception as e:
+        app.logger.error(f"Error getting connections: {str(e)}")
+        # Fall back to API if there's an error with the database function
+        app.logger.warning("Error using database function, falling back to API")
+        credentials = get_credentials()
+        if not credentials:
+            app.logger.error("No valid credentials available for API fallback")
+            return jsonify(connections=all_connections), 200
+            
+        for photo_id in photo_ids:
+            try:
+                app.logger.debug(f"Fetching connections for photo_id {photo_id} from API")
+                # Direct call to get_photo instead of get_photo_by_id
+                photo = get_photo(credentials.token, photo_id)
+                if photo and 'connections' in photo:
+                    for conn in photo['connections']:
+                        all_connections.append({
+                            'source': photo_id,
+                            'target': conn['target']['id']
+                        })
+                    app.logger.debug(f"Found connections for photo_id {photo_id}: {photo['connections']}")
+            except Exception as e:
+                app.logger.error(f"Error fetching connections for photo_id {photo_id}: {e}")
 
     return jsonify(connections=all_connections), 200
 
@@ -1229,21 +1262,6 @@ def get_photo(token, photo_id):
         return handle_api_response(response, f"Failed to get photo {photo_id}")
     except Exception as e:
         app.logger.error(f"Error in get_photo: {str(e)}")
-        raise APIError(f"Failed to get photo {photo_id}", response=getattr(e, 'response', None))
-
-def get_photo_by_id(photo_id):
-    """Get photo by ID with comprehensive error handling"""
-    try:
-        credentials = get_credentials()
-        if not credentials:
-            raise AuthenticationError("No valid credentials available")
-        
-        app.logger.info(f"Fetching photo details for ID: {photo_id}")
-        return get_photo(credentials.token, photo_id)
-    except Exception as e:
-        app.logger.error(f"Error fetching photo details for photo_id {photo_id}: {str(e)}")
-        if isinstance(e, (APIError, AuthenticationError)):
-            raise
         raise APIError(f"Failed to get photo {photo_id}", response=getattr(e, 'response', None))
 
 def update_photo_api(token, photo_id, photo):

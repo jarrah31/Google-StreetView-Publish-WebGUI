@@ -393,3 +393,55 @@ def clean_deleted_photos(existing_photo_ids):
         
     finally:
         conn.close()
+
+def get_connections_by_photo_ids(photo_ids):
+    """
+    Fetch all connections for a list of photo IDs from the database
+    
+    Args:
+        photo_ids: A list of photo IDs to fetch connections for
+        
+    Returns:
+        A list of dictionaries with source and target photo IDs
+    """
+    if not photo_ids:
+        return []
+        
+    conn = None
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        all_connections = []
+        
+        # For each photo ID, fetch its connections
+        for photo_id in photo_ids:
+            logger.debug(f"Fetching connections for photo_id {photo_id} from database")
+            
+            # Query the connections table
+            cursor.execute(
+                "SELECT source_photo_id, target_photo_id FROM connections WHERE source_photo_id = ?",
+                (photo_id,)
+            )
+            
+            # Process the results
+            connections = cursor.fetchall()
+            for conn_row in connections:
+                all_connections.append({
+                    'source': conn_row['source_photo_id'],
+                    'target': conn_row['target_photo_id']
+                })
+            
+            logger.debug(f"Found {len(connections)} database connections for photo_id {photo_id}")
+            
+        return all_connections
+    
+    except Exception as e:
+        logger.error(f"Error fetching connections from database: {str(e)}")
+        return []
+        
+    finally:
+        if conn:
+            conn.close()
