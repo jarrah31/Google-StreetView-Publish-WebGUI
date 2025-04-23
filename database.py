@@ -445,3 +445,175 @@ def get_connections_by_photo_ids(photo_ids):
     finally:
         if conn:
             conn.close()
+
+def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
+    """
+    Get photos that are within a specified bounding box
+    
+    Args:
+        lat: Center latitude
+        lng: Center longitude
+        min_lat: Minimum latitude of bounding box
+        max_lat: Maximum latitude of bounding box
+        min_lng: Minimum longitude of bounding box
+        max_lng: Maximum longitude of bounding box
+        
+    Returns:
+        List of photo objects within the bounding box
+    """
+    conn = None
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Query for photos within the bounding box
+        cursor.execute("""
+            SELECT * FROM photos 
+            WHERE latitude >= ? AND latitude <= ? 
+            AND longitude >= ? AND longitude <= ?
+            AND photo_id IS NOT NULL
+        """, (min_lat, max_lat, min_lng, max_lng))
+        
+        photos = []
+        center_photo_id = None
+        
+        # Process results
+        for row in cursor.fetchall():
+            photo_data = dict(row)
+            photo_id = photo_data['photo_id']
+            
+            # Skip if no coordinates
+            if photo_data['latitude'] is None or photo_data['longitude'] is None:
+                continue
+                
+            # Format data to match API response format
+            formatted_photo = {
+                'photoId': {'id': photo_id},
+                'pose': {
+                    'latLngPair': {
+                        'latitude': photo_data['latitude'],
+                        'longitude': photo_data['longitude']
+                    },
+                    'heading': photo_data['heading']
+                },
+                'captureTime': photo_data['capture_time'],
+                'thumbnailUrl': photo_data['thumbnail_url'],
+                'viewCount': photo_data['view_count'],
+                'shareLink': photo_data['share_link'],
+                'uploadTime': photo_data['upload_time']
+            }
+            
+            # Get connections for this photo
+            cursor.execute("""
+                SELECT target_photo_id FROM connections 
+                WHERE source_photo_id = ?
+            """, (photo_id,))
+            
+            connections = []
+            for conn_row in cursor.fetchall():
+                connections.append({
+                    'target': {'id': conn_row['target_photo_id']}
+                })
+            
+            if connections:
+                formatted_photo['connections'] = connections
+            
+            # Get places for this photo
+            cursor.execute("""
+                SELECT place_id, name, language_code FROM places
+                WHERE photo_id = ?
+            """, (photo_id,))
+            
+            places = []
+            for place_row in cursor.fetchall():
+                places.append({
+                    'placeId': place_row['place_id'],
+                    'name': place_row['name'],
+                    'languageCode': place_row['language_code']
+                })
+            
+            if places:
+                formatted_photo['places'] = places
+            
+            # Check if this is the center photo
+            if abs(photo_data['latitude'] - lat) < 0.0000001 and abs(photo_data['longitude'] - lng) < 0.0000001:
+                center_photo_id = photo_id
+            
+            photos.append(formatted_photo)
+        
+        # Filter out the center photo from the results
+        if center_photo_id:
+            photos = [p for p in photos if p['photoId']['id'] != center_photo_id]
+        
+        return photos
+        
+    except Exception as e:
+        logger.error(f"Error getting nearby photos: {str(e)}")
+        return []
+        
+    finally:
+        if conn:
+            conn.close()
+
+def update_connections(source_id, target_ids, operation='add'):
+    """
+    Update connections for a photo in the database
+    
+    Args:
+        source_id: The ID of the source photo
+        target_ids: List of target photo IDs to connect to source
+        operation: 'add' to add connections, 'remove' to remove them
+        
+    Returns:
+        Number of connections affected
+    """
+    if not source_id or not target_ids:
+        return 0
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    count = 0
+    
+    try:
+        if operation == 'add':
+            # Add new connections one by one, using INSERT OR IGNORE to avoid duplicates
+            for target_id in target_ids:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO connections (source_photo_id, target_photo_id)
+                    VALUES (?, ?)
+                """, (source_id, target_id))
+                if cursor.rowcount > 0:
+                    count += 1
+        elif operation == 'remove':
+            # Remove specified connections
+            placeholders = ','.join(['?'] * len(target_ids))
+            cursor.execute(f"""
+                DELETE FROM connections
+                WHERE source_photo_id = ? AND target_photo_id IN ({placeholders})
+            """, [source_id] + target_ids)
+            count = cursor.rowcount
+        elif operation == 'replace':
+            # First remove all existing connections
+            cursor.execute("""
+                DELETE FROM connections WHERE source_photo_id = ?
+            """, (source_id,))
+            
+            # Then add the new ones
+            for target_id in target_ids:
+                cursor.execute("""
+                    INSERT INTO connections (source_photo_id, target_photo_id)
+                    VALUES (?, ?)
+                """, (source_id, target_id))
+                count += 1
+                
+        conn.commit()
+        logger.info(f"{operation} operation: Updated {count} connections for photo {source_id}")
+        return count
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating connections: {str(e)}")
+        return 0
+    finally:
+        conn.close()

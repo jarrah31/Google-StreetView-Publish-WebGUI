@@ -844,9 +844,63 @@ def edit_photo(photo_id):
 @token_required
 def edit_connections(photo_id):
     print(f"Editing connections with ID: {photo_id}")
-    # Retrieve the photo details from the Streetview API.
-    credentials = get_credentials()
-    response = get_photo(credentials.token, photo_id)
+    
+    # Check if database exists and try to get photo from database first
+    photo_from_db = None
+    db_nearby_photos = []
+    using_db = False
+    
+    try:
+        import database
+        if os.path.exists(database.DATABASE_PATH):
+            # Try to get the photo from database first
+            photo_from_db = database.get_photo_from_db(photo_id)
+            
+            if photo_from_db is not None:
+                app.logger.debug("Found photo in database")
+                using_db = True
+    except Exception as e:
+        app.logger.error(f"Error checking database for photo: {str(e)}")
+        # Continue with API as fallback
+    
+    # If photo not found in database, get from API
+    if not using_db:
+        # Retrieve the photo details from the Streetview API
+        credentials = get_credentials()
+        response = get_photo(credentials.token, photo_id)
+    else:
+        # Convert database format to API format
+        response = {
+            'photoId': {'id': photo_from_db['photo_id']},
+            'captureTime': photo_from_db['capture_time'],
+            'uploadTime': photo_from_db['upload_time'],
+            'viewCount': photo_from_db['view_count'],
+            'shareLink': photo_from_db['share_link'],
+            'thumbnailUrl': photo_from_db['thumbnail_url']
+        }
+        
+        if photo_from_db['latitude'] is not None and photo_from_db['longitude'] is not None:
+            response['pose'] = {
+                'latLngPair': {
+                    'latitude': photo_from_db['latitude'], 
+                    'longitude': photo_from_db['longitude']
+                }
+            }
+            
+            if photo_from_db['heading'] is not None:
+                response['pose']['heading'] = photo_from_db['heading']
+        
+        if 'connections' in photo_from_db and photo_from_db['connections']:
+            response['connections'] = photo_from_db['connections']
+            
+        if 'places' in photo_from_db and photo_from_db['places']:
+            response['places'] = []
+            for place in photo_from_db['places']:
+                response['places'].append({
+                    'placeId': place['place_id'],
+                    'name': place['name'],
+                    'languageCode': place['language_code']
+                })
 
     page_session_token = session.get('page_token', None)
     page_session_size = session.get('page_size', None)
@@ -876,11 +930,25 @@ def edit_connections(photo_id):
         response['longitude'] = longitude
         
         min_lat, max_lat, min_lng, max_lng = calculate_bounding_box(latitude, longitude, distance)
-        filters = f"min_latitude={min_lat} max_latitude={max_lat} min_longitude={min_lng} max_longitude={max_lng}"
         
-        page_token = None
-        while True:
+        # Try to get nearby photos from database first if already using database
+        if using_db:
             try:
+                db_nearby_photos = database.get_nearby_photos(
+                    latitude, longitude, min_lat, max_lat, min_lng, max_lng
+                )
+                app.logger.debug(f"Retrieved {len(db_nearby_photos)} nearby photos from database")
+            except Exception as e:
+                app.logger.error(f"Error getting nearby photos from database: {str(e)}")
+                db_nearby_photos = []
+        
+        # If database didn't return nearby photos or we're not using db, use API
+        if not db_nearby_photos:
+            filters = f"min_latitude={min_lat} max_latitude={max_lat} min_longitude={min_lng} max_longitude={max_lng}"
+            
+            page_token = None
+            try:
+                credentials = get_credentials()
                 nearby_photos_response = list_photos(credentials.token, page_size=50, page_token=page_token, filters=filters)
                 photos = nearby_photos_response.get('photos', [])
                 
@@ -895,11 +963,34 @@ def edit_connections(photo_id):
                             nearby_photos.append(nearby_photo)
                 
                 page_token = nearby_photos_response.get('nextPageToken')
-                if not page_token:
-                    break
+                while page_token:
+                    nearby_photos_response = list_photos(credentials.token, page_size=50, page_token=page_token, filters=filters)
+                    photos = nearby_photos_response.get('photos', [])
+                    
+                    for nearby_photo in photos:
+                        if 'pose' in nearby_photo and 'latLngPair' in nearby_photo['pose']:
+                            nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
+                            nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
+                            distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
+                            if distance_to_photo > 0:  # Exclude the source photo
+                                nearby_photo['distance'] = round(distance_to_photo, 2)
+                                nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
+                                nearby_photos.append(nearby_photo)
+                    
+                    page_token = nearby_photos_response.get('nextPageToken')
             except requests.exceptions.RequestException as e:
-                print(f"Error fetching nearby photos: {e}")
-                break
+                app.logger.error(f"Error fetching nearby photos from API: {e}")
+        else:
+            # Process nearby photos from database
+            for nearby_photo in db_nearby_photos:
+                if 'pose' in nearby_photo and 'latLngPair' in nearby_photo['pose']:
+                    nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
+                    nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
+                    distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
+                    if distance_to_photo > 0:  # Exclude the source photo
+                        nearby_photo['distance'] = round(distance_to_photo, 2)
+                        nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
+                        nearby_photos.append(nearby_photo)
         
         # Sort the nearby photos by distance
         nearby_photos.sort(key=lambda x: x['distance'])
@@ -908,8 +999,7 @@ def edit_connections(photo_id):
         for index, photo in enumerate(nearby_photos):
             photo['label'] = str(index + 1)  # Generate labels 1, 2, 3, ...
 
-    # passing the entire response dictionary to the render_template function
-    # Render the 'edit_connections.html' template with the photo details.
+    # Render the template with the photo details and nearby photos
     return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'])
 
 @app.route('/get_connections', methods=['POST'])
@@ -984,6 +1074,7 @@ def create_connections():
     app.logger.debug(request_data)
 
     try:
+        # Make API call to create connections
         response = requests.post(
             'https://streetviewpublish.googleapis.com/v1/photos:batchUpdate',
             headers={
@@ -996,6 +1087,38 @@ def create_connections():
 
         app.logger.debug("Connections Response:")
         app.logger.debug(response.json())
+
+        # After successful API call, update connections in local database
+        try:
+            import database
+            
+            # Check if database exists
+            if os.path.exists(database.DATABASE_PATH):
+                # Process each update in the request
+                updates_count = 0
+                for update_item in request_data.get('updatePhotoRequests', []):
+                    if 'updateMask' in update_item and 'connections' in update_item.get('updateMask', ''):
+                        source_id = update_item.get('photoId', {}).get('id')
+                        if source_id:
+                            # Get target IDs from connections
+                            target_ids = []
+                            connections = update_item.get('photo', {}).get('connections', [])
+                            for conn in connections:
+                                if 'target' in conn and 'id' in conn['target']:
+                                    target_ids.append(conn['target']['id'])
+                            
+                            # Update database connections
+                            if target_ids:
+                                operation = 'replace' if 'connections' == update_item.get('updateMask') else 'add'
+                                db_updates = database.update_connections(source_id, target_ids, operation)
+                                updates_count += db_updates
+                                app.logger.debug(f"Updated {db_updates} connections in database for photo {source_id}")
+                
+                if updates_count > 0:
+                    app.logger.info(f"Successfully updated {updates_count} connections in the local database")
+        except Exception as e:
+            app.logger.error(f"Error updating connections in database: {str(e)}")
+            # Don't return error response as API update was successful
 
         main_message = 'Connections created successfully'
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."

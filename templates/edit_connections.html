@@ -159,7 +159,7 @@
                         position: { lat: photo.pose.latLngPair.latitude, lng: photo.pose.latLngPair.longitude },
                         map: map,
                         label: photo.label,
-                        title: `${photo.label}: ${photo.distance} meters`,
+                        title: `${photo.label}: ${photo.formattedCaptureTime}`, // Show capture time in tooltip
                     });
 
                     if (!marker) {
