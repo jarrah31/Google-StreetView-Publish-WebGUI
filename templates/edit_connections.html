@@ -87,6 +87,7 @@
             <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
             <button class="view-btn button-spacing" type="button" id="create-connections">Create Connections</button>
             <button class="view-btn" type="button" id="toggle-connections">Toggle All Visible Connections</button>
+            <p class="reminder-text" style="color: #ff6600; margin-top: 10px; font-style: italic;">Remember to update the database after creating connections (wait 5 mins for Google to sync the changes) before toggling all connections</p>
         </div>
     </div>
 </div>
@@ -359,7 +360,7 @@
             // Revert to autoSelectExistingConnections
             autoSelectExistingConnections();
             showAllConnections = false;
-            button.innerHTML = 'Show All Connections';
+            button.innerHTML = 'Toggle All Visible Connections';
             button.disabled = false;
         } else {
             // Display all connections
