@@ -105,8 +105,12 @@
     let headingMarker;
     let headingInput = document.getElementById('heading');
     let polyline;
+    let mapInitialized = false; // Flag to prevent double initialization
 
     function initializeMap() {
+            if (mapInitialized) {
+                return;
+            }
             console.log("Initializing map..."); 
             let lat = parseFloat(document.getElementById('latitude').value);
             let lng = parseFloat(document.getElementById('longitude').value);
@@ -115,11 +119,23 @@
 
             const anchorPosition = { lat: lat, lng: lng };
             const headingValue = parseFloat(headingInput.value);
+            
+            // Get saved zoom level from localStorage, default to 17 if not found
+            const savedZoom = parseInt(localStorage.getItem('mapZoom')) || 17;
 
             map = new google.maps.Map(document.getElementById('map'), {
                 center: anchorPosition,
-                zoom: 17,
-                mapTypeId: 'satellite'
+                zoom: savedZoom,
+                mapTypeId: 'satellite',
+                zoomControl: true,
+                zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM
+                }
+            });
+            
+            // Save zoom level whenever it changes
+            map.addListener('zoom_changed', function() {
+                localStorage.setItem('mapZoom', map.getZoom());
             });
 
             // Marker at the photo's GPS position
@@ -161,9 +177,20 @@
             });
 
             google.maps.event.addListener(headingMarker, 'drag', updatePolylineAndHeading);
+            mapInitialized = true;
         }
+        
+        function retryInitializeMap() {
+            if (typeof google === 'object' && typeof google.maps === 'object') {
+                initializeMap();
+            } else {
+                console.log('Retrying map initialization...');
+                setTimeout(retryInitializeMap, 100);
+            }
+        }
+        
         window.addEventListener('load', function() {
-            initializeMap();
+            retryInitializeMap();
         });
 
         function updatePolylineAndHeading() {

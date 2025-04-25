@@ -1102,38 +1102,6 @@ def create_connections():
         app.logger.debug("Connections Response:")
         app.logger.debug(response.json())
 
-        # After successful API call, update connections in local database
-        try:
-            import database
-            
-            # Check if database exists
-            if os.path.exists(database.DATABASE_PATH):
-                # Process each update in the request
-                updates_count = 0
-                for update_item in request_data.get('updatePhotoRequests', []):
-                    if 'updateMask' in update_item and 'connections' in update_item.get('updateMask', ''):
-                        source_id = update_item.get('photoId', {}).get('id')
-                        if source_id:
-                            # Get target IDs from connections
-                            target_ids = []
-                            connections = update_item.get('photo', {}).get('connections', [])
-                            for conn in connections:
-                                if 'target' in conn and 'id' in conn['target']:
-                                    target_ids.append(conn['target']['id'])
-                            
-                            # Update database connections
-                            if target_ids:
-                                operation = 'replace' if 'connections' == update_item.get('updateMask') else 'add'
-                                db_updates = database.update_connections(source_id, target_ids, operation)
-                                updates_count += db_updates
-                                app.logger.debug(f"Updated {db_updates} connections in database for photo {source_id}")
-                
-                if updates_count > 0:
-                    app.logger.info(f"Successfully updated {updates_count} connections in the local database")
-        except Exception as e:
-            app.logger.error(f"Error updating connections in database: {str(e)}")
-            # Don't return error response as API update was successful
-
         main_message = 'Connections created successfully'
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
         flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
