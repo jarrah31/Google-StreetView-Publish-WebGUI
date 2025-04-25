@@ -210,10 +210,23 @@ def setup_logging(app, config):
     stream_handler.setFormatter(logging.Formatter(config['logging']['format']))
     stream_handler.setLevel(config['logging']['level'])
     
+    # Configure the root logger first (for database.py and other imported modules)
+    root_logger = logging.getLogger()
+    # Clear existing handlers
+    root_logger.handlers = []
+    # Add our handlers
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stream_handler)
+    root_logger.setLevel(config['logging']['level'])
+    
+    # Now configure the Flask app logger
     # Remove existing handlers to avoid duplicates
     app.logger.handlers = []
     
-    # Add both handlers
+    # Disable propagation to prevent double-logging
+    app.logger.propagate = False
+    
+    # Add both handlers to app logger
     app.logger.addHandler(file_handler)
     app.logger.addHandler(stream_handler)
     app.logger.setLevel(config['logging']['level'])
@@ -223,6 +236,7 @@ def setup_logging(app, config):
     app.logger.info(f"Environment: debug={config['app']['debug']}")
     app.logger.info(f"Uploads directory: {config['uploads']['directory']}")
     app.logger.info(f"Log level: {logging.getLevelName(config['logging']['level'])}")
+    app.logger.info("Logging configured - fixed double logging issue")
 
 def log_error(error_type, error):
     """Centralized error logging function"""

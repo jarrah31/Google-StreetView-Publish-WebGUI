@@ -12,14 +12,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Database constants
 DATABASE_PATH = os.path.join(BASE_DIR, 'userdata', 'data', 'streetview_photos.db')
-logger.info(f"Database path set to: {DATABASE_PATH}")
+logger.info(f"Database - Database path set to: {DATABASE_PATH}")
 
 def ensure_db_directory():
     """Ensure the database directory exists"""
     db_dir = os.path.dirname(DATABASE_PATH)
     if not os.path.exists(db_dir):
         os.makedirs(db_dir, exist_ok=True)
-        logger.info(f"Created database directory: {db_dir}")
+        logger.info(f"Database - Created database directory: {db_dir}")
 
 def init_db():
     """Initialize the SQLite database with necessary tables"""
@@ -76,13 +76,13 @@ def init_db():
     conn.commit()
     conn.close()
     
-    logger.info("Database initialized successfully")
+    logger.info("Database - Database initialized successfully")
     return True
 
 def insert_or_update_photo(photo_data):
     """Insert or update a photo record in the database"""
     if not photo_data or 'photoId' not in photo_data or 'id' not in photo_data['photoId']:
-        logger.warning("Invalid photo data: missing photoId")
+        logger.warning("Database - Invalid photo data: missing photoId")
         return False
     
     photo_id = photo_data['photoId']['id']
@@ -194,7 +194,7 @@ def insert_or_update_photo(photo_data):
         return True
     
     except Exception as e:
-        logger.error(f"Error inserting/updating photo {photo_id}: {str(e)}")
+        logger.error(f"Database - Error inserting/updating photo {photo_id}: {str(e)}")
         conn.rollback()
         return False
     
@@ -234,7 +234,7 @@ def get_photo_from_db(photo_id):
         return photo_data
     
     except Exception as e:
-        logger.error(f"Error retrieving photo {photo_id}: {str(e)}")
+        logger.error(f"Database - Error retrieving photo {photo_id}: {str(e)}")
         return None
     
     finally:
@@ -261,7 +261,7 @@ def get_all_photos_from_db():
         return photos
     
     except Exception as e:
-        logger.error(f"Error retrieving all photos: {str(e)}")
+        logger.error(f"Database - Error retrieving all photos: {str(e)}")
         return []
     
     finally:
@@ -274,7 +274,7 @@ def import_photos_from_json(json_file):
             photos = json.load(f)
         
         if not isinstance(photos, list):
-            logger.error(f"Invalid JSON format in {json_file}. Expected a list of photos.")
+            logger.error(f"Database - Invalid JSON format in {json_file}. Expected a list of photos.")
             return False
         
         success_count = 0
@@ -284,11 +284,11 @@ def import_photos_from_json(json_file):
             if insert_or_update_photo(photo):
                 success_count += 1
         
-        logger.info(f"Imported {success_count}/{total_count} photos from {json_file}")
+        logger.info(f"Database - Imported {success_count}/{total_count} photos from {json_file}")
         return True
     
     except Exception as e:
-        logger.error(f"Error importing photos from {json_file}: {str(e)}")
+        logger.error(f"Database - Error importing photos from {json_file}: {str(e)}")
         return False
 
 def get_db_stats():
@@ -336,7 +336,7 @@ def get_db_stats():
         return stats
     
     except Exception as e:
-        logger.error(f"Error getting database stats: {str(e)}")
+        logger.error(f"Database - Error getting database stats: {str(e)}")
         return {'error': str(e)}
     
     finally:
@@ -364,11 +364,11 @@ def clean_deleted_photos(existing_photo_ids):
         deleted_ids = db_photo_ids - set(existing_photo_ids)
         
         if not deleted_ids:
-            logger.info("No deleted photos found to clean up")
+            logger.info("Database - No deleted photos found to clean up")
             return 0
             
         # Log the IDs to be deleted
-        logger.info(f"Found {len(deleted_ids)} photos to remove from database: {deleted_ids}")
+        logger.info(f"Database - Found {len(deleted_ids)} photos to remove from database: {deleted_ids}")
         
         # Delete all related records for the deleted photos
         for deleted_id in deleted_ids:
@@ -383,11 +383,11 @@ def clean_deleted_photos(existing_photo_ids):
             cursor.execute("DELETE FROM photos WHERE photo_id = ?", (deleted_id,))
         
         conn.commit()
-        logger.info(f"Successfully removed {len(deleted_ids)} deleted photos from database")
+        logger.info(f"Database - Successfully removed {len(deleted_ids)} deleted photos from database")
         return len(deleted_ids)
         
     except Exception as e:
-        logger.error(f"Error cleaning deleted photos: {str(e)}")
+        logger.error(f"Database - Error cleaning deleted photos: {str(e)}")
         conn.rollback()
         return 0
         
@@ -418,7 +418,7 @@ def get_connections_by_photo_ids(photo_ids):
         
         # For each photo ID, fetch its connections
         for photo_id in photo_ids:
-            logger.debug(f"Fetching connections for photo_id {photo_id} from database")
+            logger.debug(f"Database - Fetching connections for photo_id {photo_id} from database")
             
             # Query the connections table
             cursor.execute(
@@ -434,12 +434,12 @@ def get_connections_by_photo_ids(photo_ids):
                     'target': conn_row['target_photo_id']
                 })
             
-            logger.debug(f"Found {len(connections)} database connections for photo_id {photo_id}")
+            logger.debug(f"Database - Found {len(connections)} database connections for photo_id {photo_id}")
             
         return all_connections
     
     except Exception as e:
-        logger.error(f"Error fetching connections from database: {str(e)}")
+        logger.error(f"Database - Error fetching connections from database: {str(e)}")
         return []
         
     finally:
@@ -550,7 +550,7 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
         return photos
         
     except Exception as e:
-        logger.error(f"Error getting nearby photos: {str(e)}")
+        logger.error(f"Database - Error getting nearby photos: {str(e)}")
         return []
         
     finally:
@@ -609,11 +609,11 @@ def update_connections(source_id, target_ids, operation='add'):
                 count += 1
                 
         conn.commit()
-        logger.info(f"{operation} operation: Updated {count} connections for photo {source_id}")
+        logger.info(f"Database - {operation} operation: Updated {count} connections for photo {source_id}")
         return count
     except Exception as e:
         conn.rollback()
-        logger.error(f"Error updating connections: {str(e)}")
+        logger.error(f"Database - Error updating connections: {str(e)}")
         return 0
     finally:
         conn.close()
