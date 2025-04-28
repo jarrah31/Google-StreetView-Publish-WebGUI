@@ -393,9 +393,19 @@ def apple_touch_icon():
 @app.route('/logout')
 def logout():
     # Clear the session
+    if os.path.exists('userdata/creds.data'):
+        try:
+            os.remove('userdata/creds.data')
+            app.logger.info("Removed credentials file during logout")
+        except Exception as e:
+            app.logger.error(f"Error removing credentials file: {str(e)}")
+    
+    # Clear the session
     session.clear()
     flash("You have been logged out.")
-    return redirect(url_for('index'))
+    
+    # Redirect with a special parameter that will trigger immediate auth status check
+    return redirect(url_for('index', _force_check_auth=True))
 
 @app.route('/authorize')
 def authorize():
@@ -1902,6 +1912,41 @@ def database_viewer():
             db_exists=False,
             db_error=str(e)
         )
+
+@app.route('/check_auth_status', methods=['GET'])
+def check_auth_status():
+    """API endpoint to check if the user is authenticated without redirecting"""
+    credentials = get_credentials()
+    
+    if credentials is None:
+        return jsonify({"authenticated": False, "message": "Not logged in"})
+        
+    # Check if credentials are still valid or can be refreshed
+    if not credentials.valid:
+        if credentials.expired and credentials.refresh_token:
+            try:
+                # Try to refresh the token
+                credentials = refresh_credentials(credentials)
+                if credentials and credentials.valid:
+                    return jsonify({
+                        "authenticated": True,
+                        "message": "Authenticated",
+                        "expires_in": credentials.expiry.isoformat() if credentials.expiry else None
+                    })
+                else:
+                    return jsonify({"authenticated": False, "message": "Credentials refresh failed"})
+            except Exception as e:
+                app.logger.error(f"Error refreshing credentials: {str(e)}")
+                return jsonify({"authenticated": False, "message": "Error refreshing credentials"})
+        else:
+            return jsonify({"authenticated": False, "message": "Credentials expired"})
+    
+    # Credentials are valid
+    return jsonify({
+        "authenticated": True,
+        "message": "Authenticated",
+        "expires_in": credentials.expiry.isoformat() if credentials.expiry else None
+    })
 
 def init_app():
     """Initialize the application"""

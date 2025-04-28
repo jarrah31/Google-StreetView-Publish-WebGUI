@@ -15,8 +15,14 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 15px 40px;
     display: flex;
-    gap: 30px;
+    justify-content: space-between;
     z-index: 1000;
+    box-sizing: border-box; /* Add this to include padding in width calculation */
+}
+
+.nav-links {
+    display: flex;
+    gap: 30px;
 }
 
 .nav-link {
@@ -31,7 +37,90 @@ body {
 
 .nav-link:hover {
     background-color: #f0f7fc;
+    color: #2980b9;
+}
+
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.login-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: default;
+}
+
+.login-status.authenticated {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.login-status.unauthenticated {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.login-status.error {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #6c757d;
+}
+
+.status-dot.authenticated {
+    background-color: #4caf50;
+}
+
+.status-dot.unauthenticated {
+    background-color: #ff9800;
+}
+
+.status-dot.error {
+    background-color: #f44336;
+}
+
+.auth-button {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
     text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.login-button {
+    background-color: #3e92cc;
+    color: white;
+}
+
+.login-button:hover {
+    background-color: #2980b9;
+}
+
+.logout-button {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.logout-button:hover {
+    background-color: #e9ecef;
+    color: #495057;
 }
 
 .container_connections,
@@ -2407,4 +2496,28 @@ select option {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Add responsive styles for smaller screens */
+@media (max-width: 768px) {
+    .nav-banner {
+        padding: 15px 20px; /* Reduce padding on smaller screens */
+    }
+    
+    .auth-status {
+        flex-shrink: 0; /* Prevent auth status from shrinking */
+    }
+}
+
+/* Make auth buttons more compact if needed */
+@media (max-width: 576px) {
+    .auth-button {
+        padding: 5px 8px;
+        font-size: 0.8rem;
+    }
+    
+    .login-status {
+        font-size: 0.8rem;
+        padding: 5px 8px;
+    }
 }
