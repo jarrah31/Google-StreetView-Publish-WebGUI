@@ -426,6 +426,7 @@ a:hover {
     gap: 8px 15px; /* Row gap and Column gap */
     align-items: baseline; /* Align items based on their text baseline */
     margin-top: 15px; /* Add some space above the grid */
+    padding-bottom: 20px; /* Add extra padding to the bottom of the grid */
 }
 
 .grid-label {

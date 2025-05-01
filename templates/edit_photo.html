@@ -10,7 +10,7 @@
 <div class="container_photos">
         <h1>Edit Photo</h1>
         <div class="navigation-buttons">
-            <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" class="view-btn">Edit Connections</a>
+            <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" id="edit-connections-link" class="view-btn">Edit Connections</a>
         </div>
         <div class="content-container">
             <div class="photo-details">
@@ -74,6 +74,12 @@
                 <h2>Photo Heading:</h2>                
                 <div id="map" style="height: 600px; width: 100%;"></div>
                 <p class="map-description">Use the marker on the map to set the correct heading for your photo. Drag the marker to point in the direction of the centre of the photo as indicated by the dashed line.</p>
+                <button class="view-btn" type="button" id="toggle-nearby-photos">Show Nearby Photos</button>
+                <div class="distance-control" style="margin-top: 10px; display: none;">
+                    <label for="nearby-distance">Distance (meters):</label>
+                    <input type="number" id="nearby-distance" value="200" min="1" max="1000">
+                    <button class="view-btn" type="button" id="refresh-nearby">Refresh</button>
+                </div>
             </div>
         </div>
        
@@ -106,6 +112,8 @@
     let headingInput = document.getElementById('heading');
     let polyline;
     let mapInitialized = false; // Flag to prevent double initialization
+    let nearbyMarkers = []; // Array to store nearby photo markers
+    let showingNearby = false; // Track if nearby photos are being shown
 
     function initializeMap() {
             if (mapInitialized) {
@@ -212,6 +220,93 @@
         var modal = document.getElementById("myModal");
 
         document.addEventListener('DOMContentLoaded', function(event) {
+            // Initialize the toggle nearby photos button
+            const toggleNearbyBtn = document.getElementById('toggle-nearby-photos');
+            const distanceControl = document.querySelector('.distance-control');
+            const refreshNearbyBtn = document.getElementById('refresh-nearby');
+            const nearbyDistanceInput = document.getElementById('nearby-distance');
+            const editConnectionsLink = document.getElementById('edit-connections-link');
+            
+            // Check for distance parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const distanceParam = urlParams.get('distance');
+            
+            // Load distance either from URL parameter or localStorage
+            if (distanceParam) {
+                nearbyDistanceInput.value = distanceParam;
+                localStorage.setItem('nearbyPhotosDistance', distanceParam);
+            } else {
+                const savedDistance = localStorage.getItem('nearbyPhotosDistance');
+                if (savedDistance) {
+                    nearbyDistanceInput.value = savedDistance;
+                }
+            }
+            
+            // Update the edit connections link with the current distance
+            function updateEditConnectionsLink() {
+                const distance = nearbyDistanceInput.value;
+                const baseUrl = editConnectionsLink.getAttribute('href').split('?')[0];
+                editConnectionsLink.href = `${baseUrl}?distance=${distance}`;
+            }
+            
+            // Update link initially
+            updateEditConnectionsLink();
+            
+            // Update link whenever distance changes
+            nearbyDistanceInput.addEventListener('change', updateEditConnectionsLink);
+            
+            // Load previously saved distance from localStorage
+            const savedDistance = localStorage.getItem('nearbyPhotosDistance');
+            if (savedDistance) {
+                nearbyDistanceInput.value = savedDistance;
+            }
+            
+            // Check if nearby photos were previously showing
+            const wasShowingNearby = localStorage.getItem('showingNearbyPhotos') === 'true';
+            if (wasShowingNearby) {
+                // Show nearby photos automatically
+                showingNearby = true;
+                toggleNearbyBtn.textContent = 'Hide Nearby Photos';
+                distanceControl.style.display = 'block';
+                // Wait for map to initialize before fetching nearby photos
+                const checkMapInterval = setInterval(() => {
+                    if (mapInitialized) {
+                        fetchAndDisplayNearbyPhotos();
+                        clearInterval(checkMapInterval);
+                    }
+                }, 100);
+            }
+            
+            // Toggle nearby photos visibility
+            toggleNearbyBtn.addEventListener('click', function() {
+                if (!showingNearby) {
+                    // Show nearby photos
+                    showingNearby = true;
+                    localStorage.setItem('showingNearbyPhotos', 'true');
+                    toggleNearbyBtn.textContent = 'Hide Nearby Photos';
+                    distanceControl.style.display = 'block';
+                    fetchAndDisplayNearbyPhotos();
+                } else {
+                    // Hide nearby photos
+                    showingNearby = false;
+                    localStorage.setItem('showingNearbyPhotos', 'false');
+                    toggleNearbyBtn.textContent = 'Show Nearby Photos';
+                    distanceControl.style.display = 'none';
+                    clearNearbyPhotos();
+                }
+            });
+            
+            // Refresh nearby photos with new distance
+            refreshNearbyBtn.addEventListener('click', function() {
+                // Save the distance to localStorage
+                localStorage.setItem('nearbyPhotosDistance', nearbyDistanceInput.value);
+                fetchAndDisplayNearbyPhotos();
+            });
+
+            // Save distance when it changes
+            nearbyDistanceInput.addEventListener('change', function() {
+                localStorage.setItem('nearbyPhotosDistance', this.value);
+            });
 
             // Change the submit button to Please Wait when pressed.
             const form = document.querySelector('form');
@@ -354,6 +449,93 @@
 
             // close the modal
             modal.style.display = 'none';
+        }
+        
+        // Function to fetch nearby photos and display them on the map
+        async function fetchAndDisplayNearbyPhotos() {
+            // Clear existing nearby photos
+            clearNearbyPhotos();
+            
+            // Get current photo's coordinates
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lng = parseFloat(document.getElementById('longitude').value);
+            const distance = parseInt(document.getElementById('nearby-distance').value) || 200;
+            const photoId = "{{ photo.photoId.id }}";
+            
+            // Calculate bounding box
+            const earthRadius = 6378137; // Earth's radius in meters
+            const latRadian = lat * (Math.PI / 180);
+            const metersPerDegreeLat = 111132.92 - 559.82 * Math.cos(2 * latRadian) + 1.175 * Math.cos(4 * latRadian);
+            const metersPerDegreeLng = 111412.84 * Math.cos(latRadian) - 93.5 * Math.cos(3 * latRadian);
+            
+            const latDiff = distance / metersPerDegreeLat;
+            const lngDiff = distance / metersPerDegreeLng;
+            
+            const minLat = lat - latDiff;
+            const maxLat = lat + latDiff;
+            const minLng = lng - lngDiff;
+            const maxLng = lng + lngDiff;
+            
+            // Construct URL for the edit_connections page with distance parameter
+            const url = `/edit_connections/${photoId}?distance=${distance}`;
+            
+            try {
+                // Fetch the edit_connections HTML page
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.error('Failed to fetch nearby photos');
+                    return;
+                }
+                
+                // Extract the JSON data from the response HTML using a hidden field
+                const text = await response.text();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = text;
+                
+                // Extract nearby photos data from script
+                const scriptContent = tempDiv.innerHTML.match(/const nearbyPhotos = (.*?);/);
+                if (!scriptContent || scriptContent.length < 2) {
+                    console.error('Could not find nearby photos data in response');
+                    return;
+                }
+                
+                // Parse the JSON data
+                const nearbyPhotos = JSON.parse(scriptContent[1]);
+                console.log(`Found ${nearbyPhotos.length} nearby photos`);
+                
+                // Add markers for each nearby photo
+                nearbyPhotos.forEach((photo, index) => {
+                    if (!photo.pose || !photo.pose.latLngPair) return;
+                    
+                    const photoLat = photo.pose.latLngPair.latitude;
+                    const photoLng = photo.pose.latLngPair.longitude;
+                    
+                    // Create marker
+                    const marker = new google.maps.Marker({
+                        position: { lat: photoLat, lng: photoLng },
+                        map: map,
+                        label: (index + 1).toString(),
+                        title: photo.formattedCaptureTime || 'Nearby Photo',
+                    });
+                    
+                    // Add click handler to load the photo details in the current page
+                    marker.addListener('click', function() {
+                        const currentDistance = document.getElementById('nearby-distance').value;
+                        window.location.href = `/edit_photo/${photo.photoId.id}?distance=${currentDistance}`;
+                    });
+                    
+                    nearbyMarkers.push(marker);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching nearby photos:', error);
+            }
+        }
+        
+        // Function to clear all nearby photo markers
+        function clearNearbyPhotos() {
+            nearbyMarkers.forEach(marker => marker.setMap(null));
+            nearbyMarkers = [];
         }
     </script>
 {% endblock %}
