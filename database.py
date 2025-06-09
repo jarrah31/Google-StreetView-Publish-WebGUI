@@ -556,3 +556,61 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
     finally:
         if conn:
             conn.close()
+
+
+def get_all_photos_with_gps():
+    """
+    Get all photos from the database that have GPS coordinates
+    
+    Returns:
+        List of photo objects with GPS coordinates formatted for map display
+    """
+    conn = None
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Query for photos that have GPS coordinates
+        cursor.execute("""
+            SELECT p.*, GROUP_CONCAT(DISTINCT pl.name) as place_names
+            FROM photos p
+            LEFT JOIN places pl ON p.photo_id = pl.photo_id
+            WHERE p.latitude IS NOT NULL 
+            AND p.longitude IS NOT NULL
+            GROUP BY p.photo_id
+            ORDER BY p.upload_time DESC
+        """)
+        
+        photos = []
+        
+        # Process results
+        for row in cursor.fetchall():
+            photo_data = dict(row)
+            
+            # Create simplified photo object for map display
+            photo = {
+                'photo_id': photo_data['photo_id'],
+                'latitude': photo_data['latitude'],
+                'longitude': photo_data['longitude'],
+                'place_names': photo_data['place_names'] or 'Unknown Location',
+                'maps_publish_status': photo_data['maps_publish_status'] or 'N/A',
+                'view_count': photo_data['view_count'] or 0,
+                'capture_time': photo_data['capture_time'],
+                'share_link': photo_data['share_link'],
+                'thumbnail_url': photo_data['thumbnail_url']
+            }
+            
+            photos.append(photo)
+        
+        logger.info(f"Database - Retrieved {len(photos)} photos with GPS coordinates for map view")
+        return photos
+        
+    except Exception as e:
+        logger.error(f"Database - Error getting photos with GPS coordinates: {str(e)}")
+        return []
+        
+    finally:
+        if conn:
+            conn.close()

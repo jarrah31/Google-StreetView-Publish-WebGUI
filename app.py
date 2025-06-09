@@ -519,6 +519,30 @@ def list_photos_page():
 def photos_page():
     return list_photos_table_page()
 
+# API endpoint to get all photos with GPS coordinates for map view
+@app.route('/api/photos/map', methods=['GET'])
+@token_required
+def get_photos_for_map():
+    """Return all photos with GPS coordinates for map display"""
+    try:
+        import database
+        
+        # Check if database exists
+        if not os.path.exists(database.DATABASE_PATH):
+            return jsonify({"error": "Database not found"}), 404
+        
+        # Get all photos with GPS coordinates using the database function
+        photos_data = database.get_all_photos_with_gps()
+        
+        return jsonify({
+            "photos": photos_data,
+            "total_count": len(photos_data)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching photos for map: {str(e)}")
+        return jsonify({"error": "Failed to fetch photos"}), 500
+
 # Keep the original route for backward compatibility
 @app.route('/list_photos_table', methods=['GET'])
 @token_required
@@ -545,7 +569,8 @@ def list_photos_table_page():
                 per_page=25,
                 total_pages=1,
                 total_records=0,
-                status_values=[]
+                status_values=[],
+                api_key=client_config['api_key']
             )
         
         # Get sorting parameters
@@ -824,7 +849,8 @@ def list_photos_table_page():
             upload_date_from=upload_date_from,
             upload_date_to=upload_date_to,
             pagination_start=pagination_start if 'pagination_start' in locals() else None,
-            pagination_end=pagination_end if 'pagination_end' in locals() else None
+            pagination_end=pagination_end if 'pagination_end' in locals() else None,
+            api_key=client_config['api_key']
         )
         
     except Exception as e:

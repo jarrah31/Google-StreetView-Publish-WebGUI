@@ -8,6 +8,8 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initGoogleMaps" async defer></script>
 {% endblock %}
 
 {% block content %}
@@ -15,6 +17,7 @@
     <div class="title-container">
         <h1>Photos</h1>
         <div class="view-toggle-container">
+            <button id="map-view-btn" class="view-btn" onclick="switchView('map')">Map View</button>
             <button id="list-view-btn" class="view-btn active" onclick="switchView('list')">List View</button>
             <button id="grid-view-btn" class="view-btn" onclick="switchView('grid')">Grid View</button>
         </div>
@@ -266,6 +269,15 @@
         {% endfor %}
     </div>
     
+    <!-- Photos Map View -->
+    <div id="map-view" class="map-view-container" style="display: none;">
+        <div class="map-info">
+            <h3>All Photos Map View</h3>
+            <p id="map-info-text">Loading photos with GPS coordinates...</p>
+        </div>
+        <div id="photos-map" style="height: 800px; width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+    </div>
+    
     <!-- Bottom Pagination Controls -->
     {% if per_page != 'all' and total_pages > 1 %}
     <div class="pagination-container bottom" style="margin-top: 30px;">
@@ -309,6 +321,24 @@
 
 {% block scripts %}
 <script>
+    // Global variable to track Google Maps loading
+    let googleMapsLoaded = false;
+    
+    // Global callback function for Google Maps API
+    function initGoogleMaps() {
+        googleMapsLoaded = true;
+        console.log('Google Maps API loaded successfully');
+    }
+    
+    // Global error handler for Google Maps
+    function gm_authFailure() {
+        console.error('Google Maps authentication failed');
+        const mapElement = document.getElementById('photos-map');
+        if (mapElement) {
+            mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #d32f2f; text-align: center;">Google Maps authentication failed. Please check your API key and ensure the Maps JavaScript API is enabled.</div>';
+        }
+    }
+
     // Initialize date range picker
     $(document).ready(function() {
         // Set default dates from URL parameters if they exist
@@ -410,26 +440,50 @@
         switchView(currentView);
     });
     
-    // Function to switch between list and grid views
+    // Function to switch between list, grid, and map views
     function switchView(viewType) {
         const listView = document.getElementById('list-view');
         const gridView = document.getElementById('grid-view');
+        const mapView = document.getElementById('map-view');
         const listBtn = document.getElementById('list-view-btn');
         const gridBtn = document.getElementById('grid-view-btn');
+        const mapBtn = document.getElementById('map-view-btn');
         const sortControls = document.querySelector('.sort-controls');
+        const paginationContainers = document.querySelectorAll('.pagination-container');
+        
+        // Hide all views first
+        listView.style.display = 'none';
+        gridView.style.display = 'none';
+        mapView.style.display = 'none';
+        
+        // Remove active class from all buttons
+        listBtn.classList.remove('active');
+        gridBtn.classList.remove('active');
+        mapBtn.classList.remove('active');
         
         if (viewType === 'grid') {
-            listView.style.display = 'none';
             gridView.style.display = 'flex';
-            listBtn.classList.remove('active');
             gridBtn.classList.add('active');
             sortControls.style.display = 'flex';
+            paginationContainers.forEach(container => {
+                container.style.display = 'flex';
+            });
+        } else if (viewType === 'map') {
+            mapView.style.display = 'block';
+            mapBtn.classList.add('active');
+            sortControls.style.display = 'none';
+            paginationContainers.forEach(container => {
+                container.style.display = 'none';
+            });
+            // Initialize the map when switching to map view
+            setTimeout(initializePhotosMap, 100);
         } else {
             listView.style.display = 'block';
-            gridView.style.display = 'none';
             listBtn.classList.add('active');
-            gridBtn.classList.remove('active');
             sortControls.style.display = 'none';
+            paginationContainers.forEach(container => {
+                container.style.display = 'flex';
+            });
         }
         
         // Save preference
@@ -603,6 +657,156 @@
                 modal.style.display = 'none';
             }
         }
+    }
+
+    // Global variable to store the map instance
+    let photosMap = null;
+    let photosMarkers = [];
+
+    // Function to initialize the photos map
+    function initializePhotosMap() {
+        // Check if Google Maps API is loaded
+        if (!googleMapsLoaded || typeof google === 'undefined' || typeof google.maps === 'undefined') {
+            console.log('Google Maps API not loaded yet, waiting...');
+            // Wait for Google Maps to load and try again
+            setTimeout(initializePhotosMap, 500);
+            return;
+        }
+
+        if (photosMap) {
+            // Map already initialized, just trigger a resize
+            google.maps.event.trigger(photosMap, 'resize');
+            return;
+        }
+
+        const mapElement = document.getElementById('photos-map');
+        if (!mapElement) {
+            console.error('Map element not found');
+            return;
+        }
+
+        // Show loading message
+        mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #666;">Loading map data...</div>';
+
+        // Fetch all photos with GPS coordinates from the API
+        fetch('/api/photos/map')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const photosData = data.photos;
+                const totalCount = data.total_count;
+
+                // Update the info text with the correct count
+                const mapInfoText = document.getElementById('map-info-text');
+                if (mapInfoText) {
+                    mapInfoText.textContent = `Showing ${totalCount} photos with GPS coordinates. Click on markers to view photo details.`;
+                }
+
+                if (photosData.length === 0) {
+                    mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #666;">No photos with GPS coordinates found.</div>';
+                    return;
+                }
+
+                // Calculate the center point and bounds
+                const bounds = new google.maps.LatLngBounds();
+                photosData.forEach(photo => {
+                    bounds.extend(new google.maps.LatLng(photo.latitude, photo.longitude));
+                });
+
+                // Initialize the map with a country-level zoom
+                try {
+                    photosMap = new google.maps.Map(mapElement, {
+                        zoom: 6, // Country-level zoom
+                        center: bounds.getCenter(),
+                        mapTypeId: google.maps.MapTypeId.ROADMAP,
+                        streetViewControl: true,
+                        mapTypeControl: true,
+                        fullscreenControl: true,
+                        zoomControl: true
+                    });
+                } catch (error) {
+                    console.error('Error creating Google Map:', error);
+                    mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #d32f2f; text-align: center;">Failed to initialize Google Maps. Please check your API key and ensure the Maps JavaScript API is enabled.</div>';
+                    return;
+                }
+
+                // Fit the map to show all markers
+                photosMap.fitBounds(bounds);
+
+                // Clear any existing markers
+                photosMarkers.forEach(m => {
+                    if (m.marker) {
+                        m.marker.setMap(null);
+                    }
+                });
+                photosMarkers = [];
+
+                // Create markers for each photo
+                photosData.forEach(photo => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: photo.latitude, lng: photo.longitude },
+                        map: photosMap,
+                        title: photo.place_names,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                            scaledSize: new google.maps.Size(32, 32)
+                        }
+                    });
+
+                    // Create info window content
+                    const infoWindowContent = `
+                        <div style="max-width: 300px;">
+                            <div style="margin-bottom: 10px;">
+                                <img src="${photo.thumbnail_url}" alt="Photo thumbnail" style="width: 100%; max-width: 200px; height: auto; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <strong>Location:</strong> ${photo.place_names}<br>
+                                <strong>Status:</strong> ${photo.maps_publish_status}<br>
+                                <strong>Views:</strong> ${photo.view_count}<br>
+                                <strong>Capture Date:</strong> ${photo.capture_time ? photo.capture_time.split('T')[0] : 'N/A'}<br>
+                                <div style="margin-top: 10px;">
+                                    <a href="${photo.share_link}" target="_blank" style="color: #1976d2; text-decoration: none;">View on Google Maps</a> |
+                                    <a href="/edit_photo/${photo.photo_id}" style="color: #1976d2; text-decoration: none;">Edit Photo</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: infoWindowContent
+                    });
+
+                    marker.addListener('click', () => {
+                        // Close all other info windows
+                        photosMarkers.forEach(m => {
+                            if (m.infoWindow) {
+                                m.infoWindow.close();
+                            }
+                        });
+                        infoWindow.open(photosMap, marker);
+                    });
+
+                    // Store the marker and info window for later reference
+                    photosMarkers.push({
+                        marker: marker,
+                        infoWindow: infoWindow,
+                        photo: photo
+                    });
+                });
+
+                // Adjust zoom if there's only one photo
+                if (photosData.length === 1) {
+                    photosMap.setZoom(15);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching photos for map:', error);
+                mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 18px; color: #666;">Error loading map data. Please try again.</div>';
+            });
     }
 </script>
 {% endblock %}
