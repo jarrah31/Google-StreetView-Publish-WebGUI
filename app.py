@@ -334,8 +334,16 @@ def log_request_info():
 #     return response
 
 def format_capture_time(capture_time):
-    dt = datetime.fromisoformat(capture_time[:-1])
-    return dt.strftime('%d %b %Y')
+    if capture_time is None:
+        return "N/A"
+    try:
+        dt = datetime.fromisoformat(capture_time[:-1])
+        return dt.strftime('%d %b %Y')
+    except (ValueError, TypeError, IndexError):
+        # If there's any error in parsing, return the original value or handle gracefully
+        if capture_time:
+            return capture_time
+        return "N/A"
 
 def refresh_credentials(credentials):
     try:
@@ -845,15 +853,81 @@ def list_photos_table_page():
 @token_required
 def edit_photo(photo_id):
     print(f"Editing photo with ID: {photo_id}")
-    # Retrieve the photo details from the Streetview API.
-    credentials = get_credentials()
-    response = get_photo(credentials.token, photo_id)
+    
+    # Check if database exists and try to get photo from database first
+    photo_from_db = None
+    using_db = False
+    
+    try:
+        import database
+        if os.path.exists(database.DATABASE_PATH):
+            # Try to get the photo from database first
+            photo_from_db = database.get_photo_from_db(photo_id)
+            
+            if photo_from_db is not None:
+                app.logger.debug("Found photo in database")
+                using_db = True
+    except Exception as e:
+        app.logger.error(f"Error checking database for photo: {str(e)}")
+        # Continue with API as fallback
+    
+    # If photo not found in database, get from API
+    if not using_db:
+        # Retrieve the photo details from the Streetview API
+        credentials = get_credentials()
+        response = get_photo(credentials.token, photo_id)
+        
+        # Ensure thumbnailUrl has API key if needed
+        if 'thumbnailUrl' in response and '?key=' not in response['thumbnailUrl'] and client_config['api_key']:
+            if '?' in response['thumbnailUrl']:
+                response['thumbnailUrl'] += f"&key={client_config['api_key']}"
+            else:
+                response['thumbnailUrl'] += f"?key={client_config['api_key']}"
+    else:
+        # Convert database format to API format
+        response = {
+            'photoId': {'id': photo_from_db['photo_id']},
+            'captureTime': photo_from_db['capture_time'],
+            'uploadTime': photo_from_db['upload_time'],
+            'viewCount': photo_from_db['view_count'],
+            'shareLink': photo_from_db['share_link'],
+            'thumbnailUrl': photo_from_db['thumbnail_url']
+        }
+        
+        # Ensure thumbnailUrl has API key if needed
+        if response['thumbnailUrl'] and '?key=' not in response['thumbnailUrl'] and client_config['api_key']:
+            if '?' in response['thumbnailUrl']:
+                response['thumbnailUrl'] += f"&key={client_config['api_key']}"
+            else:
+                response['thumbnailUrl'] += f"?key={client_config['api_key']}"
+        
+        if photo_from_db['latitude'] is not None and photo_from_db['longitude'] is not None:
+            response['pose'] = {
+                'latLngPair': {
+                    'latitude': photo_from_db['latitude'], 
+                    'longitude': photo_from_db['longitude']
+                }
+            }
+            
+            if photo_from_db['heading'] is not None:
+                response['pose']['heading'] = photo_from_db['heading']
+        
+        if 'connections' in photo_from_db and photo_from_db['connections']:
+            response['connections'] = photo_from_db['connections']
+            
+        if 'places' in photo_from_db and photo_from_db['places']:
+            response['places'] = []
+            for place in photo_from_db['places']:
+                response['places'].append({
+                    'placeId': place['place_id'],
+                    'name': place['name'],
+                    'languageCode': place['language_code']
+                })
 
     page_token = session.get('page_token', None)
     page_size = session.get('page_size', None)
 
     # Display json result in console
-    # pretty-print the JSON response using the pprint function from the pprint module in Python.
     print("Photo details:")
     pprint(response)
 
@@ -1325,6 +1399,32 @@ def delete_photo():
         flash('Photo deleted successfully. Remember to update the database.', 'success')
 
     return redirect(url_for('photos_page'))
+
+@app.route('/update_db', methods=['POST'])
+@token_required
+def update_database():
+    """Update the database directly with the photo data without making an API call"""
+    data = request.json
+    app.logger.debug("Received database update request:")
+    app.logger.debug(data)
+    
+    try:
+        import database
+        if os.path.exists(database.DATABASE_PATH):
+            # Update the photo in the database
+            success = database.insert_or_update_photo(data)
+            if success:
+                app.logger.info(f"Successfully updated photo {data['photoId']['id']} in database")
+                return jsonify({"success": True, "message": "Database updated successfully"}), 200
+            else:
+                app.logger.error(f"Failed to update photo {data['photoId']['id']} in database")
+                return jsonify({"success": False, "error": "Failed to update database"}), 500
+        else:
+            app.logger.warning("Database does not exist, cannot update")
+            return jsonify({"success": False, "error": "Database does not exist"}), 404
+    except Exception as e:
+        app.logger.error(f"Error updating database: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 def get_filenames(directory):
     mapping = {}

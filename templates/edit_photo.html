@@ -313,8 +313,76 @@
             const submitButton = document.getElementById('submit-button');
 
             form.addEventListener('submit', function(event) {
+                // Prevent default form submission
+                event.preventDefault();
+                
+                // Disable the button and change text
                 submitButton.textContent = 'Please wait...';
                 submitButton.disabled = true;
+                
+                // Get the form data
+                const formData = new FormData(form);
+                
+                // Get values needed for the database update
+                const photoId = "{{ photo.photoId.id }}";
+                const latitude = formData.get('latitude');
+                const longitude = formData.get('longitude');
+                const heading = formData.get('heading');
+                const placeId = formData.get('placeId');
+                
+                // Create data object to update the database
+                // Include only the fields that will be updated by the API call
+                // while preserving all the existing photo data
+                const photoData = {
+                    photoId: { id: photoId },
+                    // Preserve existing data
+                    captureTime: "{{ photo.captureTime }}",
+                    uploadTime: "{{ photo.uploadTime }}",
+                    viewCount: {{ photo.viewCount|default(0) }},
+                    shareLink: "{{ photo.shareLink }}",
+                    thumbnailUrl: "{{ photo.thumbnailUrl }}",
+                    // Include the updated fields
+                    pose: {
+                        latLngPair: {
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude)
+                        },
+                        heading: parseFloat(heading)
+                    }
+                };
+                
+                // Add places if placeId exists
+                if (placeId) {
+                    photoData.places = [{ placeId: placeId, languageCode: "en" }];
+                } 
+                // If there was an existing place and no new placeId is provided, preserve the existing place data
+                else if ({% if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] %}true{% else %}false{% endif %}) {
+                    photoData.places = [{
+                        placeId: "{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}",
+                        name: "{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}",
+                        languageCode: "{{ photo.places[0].languageCode if 'places' in photo and photo.places|length > 0 and 'languageCode' in photo.places[0] else 'en' }}"
+                    }];
+                }
+                
+                // First update the database via a fetch request
+                fetch('/update_db', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(photoData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Database updated successfully:', data);
+                })
+                .catch(error => {
+                    console.error('Error updating database:', error);
+                })
+                .finally(() => {
+                    // Submit the form to update via API regardless of database update result
+                    form.submit();
+                });
             });
 
             // Dynamically update the "Back to List" link
