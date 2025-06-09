@@ -93,7 +93,7 @@
             <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
             <button class="view-btn button-spacing" type="button" id="create-connections">Create Connections</button>
             <button class="view-btn" type="button" id="toggle-connections">Toggle All Visible Connections</button>
-            <p class="reminder-text" style="color: #ff6600; margin-top: 10px; font-style: italic;">Remember to update the database after creating connections (wait 5 mins for Google to sync the changes) before toggling all connections</p>
+            <!-- Removed the manual database update reminder since we now auto-update the database -->
         </div>
     </div>
 </div>
@@ -318,6 +318,43 @@
         // Debug: Print connections array
         console.log('Connections:', connections);
 
+        // Create photo data object for database update (following edit_photo.html pattern)
+        const photoData = {
+            photoId: { id: sourcePhotoId },
+            // Preserve existing data
+            captureTime: "{{ photo.captureTime }}",
+            uploadTime: "{{ photo.uploadTime }}",
+            viewCount: {{ photo.viewCount|default(0) }},
+            shareLink: "{{ photo.shareLink }}",
+            thumbnailUrl: "{{ photo.thumbnailUrl }}",
+            // Include pose data if available
+            {% if 'pose' in photo and 'latLngPair' in photo.pose %}
+            pose: {
+                latLngPair: {
+                    latitude: {{ photo.pose.latLngPair.latitude }},
+                    longitude: {{ photo.pose.latLngPair.longitude }}
+                }
+                {% if 'heading' in photo.pose and photo.pose.heading != 'NaN' %}
+                ,heading: {{ photo.pose.heading }}
+                {% endif %}
+            },
+            {% endif %}
+            // Include places data if available
+            {% if 'places' in photo and photo.places|length > 0 %}
+            places: [
+                {% for place in photo.places %}
+                {
+                    placeId: "{{ place.placeId }}",
+                    name: "{{ place.name }}",
+                    languageCode: "{{ place.languageCode }}"
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            {% endif %}
+            // Add the updated connections
+            connections: connections
+        };
+
         const requestBody = {
             updatePhotoRequests: [
                 {
@@ -336,6 +373,23 @@
         console.log('Request Body:', requestBody);
 
         try {
+            // First update the database via a fetch request (same as edit_photo.html)
+            await fetch('/update_db', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(photoData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Database updated successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error updating database:', error);
+            });
+
+            // Then make the API call (regardless of database update result)
             const response = await fetch('/create_connections', {
                 method: 'POST',
                 headers: {
