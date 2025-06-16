@@ -2212,7 +2212,7 @@ select option {
     padding: 10px;
     border-bottom: 1px solid #e9ecef;
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
 }
 
@@ -2227,6 +2227,7 @@ select option {
 .place-icon {
     width: 24px;
     height: 24px;
+    flex-shrink: 0;
 }
 
 .place-icon img {
@@ -2236,18 +2237,14 @@ select option {
 }
 
 .place-name {
-    flex-grow: 1;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
-.place-distance, .place-id {
-    width: 100%;
+.place-details {
     font-size: 0.85rem;
     color: #6c757d;
-}
-
-.place-distance strong, .place-id strong {
-    margin-right: 5px;
+    text-align: left;
 }
 
 .loading-indicator {

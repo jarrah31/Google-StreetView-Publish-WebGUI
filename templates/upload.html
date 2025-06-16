@@ -271,8 +271,6 @@
         // Submit the form via AJAX
         const formData = new FormData(this);
         
-        console.log('[DEBUG] Starting upload process');
-        
         fetch('{{ url_for("upload_photosphere") }}', {
             method: 'POST',
             body: formData,
@@ -281,13 +279,6 @@
             }
         })
         .then(response => {
-            console.log('[DEBUG] Received server response:', {
-                status: response.status,
-                statusText: response.statusText,
-                contentType: response.headers.get('content-type'),
-                isJson: response.headers.get('content-type')?.includes('application/json')
-            });
-            
             if (!response.ok) {
                 throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
             }
@@ -295,16 +286,9 @@
             // Check the content type of the response
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
-                console.log('[DEBUG] Processing JSON response');
-                return response.json().then(data => {
-                    console.log('[DEBUG] Parsed JSON data:', data);
-                    return data;
-                });
+                return response.json();
             } else {
-                console.log('[DEBUG] Processing HTML response');
                 return response.text().then(html => {
-                    console.log('[DEBUG] Raw HTML response:', html.substring(0, 500) + '...');
-                    
                     // Parse the HTML to extract the JSON data
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
@@ -312,26 +296,20 @@
                     
                     if (responseJsonText) {
                         try {
-                            const jsonData = JSON.parse(responseJsonText);
-                            console.log('[DEBUG] Extracted JSON from HTML:', jsonData);
-                            return jsonData;
+                            return JSON.parse(responseJsonText);
                         } catch (e) {
-                            console.error('[DEBUG] Error parsing JSON response:', e);
                             throw new Error('Error processing server response: ' + e.message);
                         }
                     } else {
-                        console.error('[DEBUG] No JSON data found in response');
                         throw new Error('Invalid server response format: No JSON data found');
                     }
                 });
             }
         })
         .then(responseData => {
-            console.log('[DEBUG] Processing successful response data');
             displayUploadResult(responseData, document.getElementById('file-input').files[0].name);
         })
         .catch(error => {
-            console.error('[DEBUG] Upload error:', error);
             handleUploadError(error.message || 'Upload failed. Please try again.');
         })
         .finally(() => {
@@ -398,51 +376,7 @@
         updateUploadStatus('inactive', 'Upload Failed');
     }
     
-    // Button to upload another photo
-    document.getElementById('upload-another-btn').addEventListener('click', function() {
-        // Reset the form
-        document.getElementById('upload-form').reset();
-        document.getElementById('preview').style.display = 'none';
-        document.getElementById('file-name').textContent = 'No file selected';
-        document.getElementById('upload-button').disabled = true;
-        
-        // Clear all metadata display fields
-        const metadataIds = [
-            'latitude', 'longitude', 'FlightYawDegree', 'ProjectionType', 'UsePanoramaViewer',
-            'CroppedAreaTopPixels', 'CroppedAreaLeftPixels', 'CroppedAreaImageHeightPixels',
-            'CroppedAreaImageWidthPixels', 'FullPanoHeightPixels', 'FullPanoWidthPixels'
-        ];
-        
-        metadataIds.forEach(id => {
-            const displayEl = document.getElementById(`${id}-display`);
-            if (displayEl) displayEl.textContent = '';
-            
-            const labelEl = document.getElementById(`${id}-label`);
-            if (labelEl) {
-                const labelSpan = labelEl.querySelector('.metadata-label');
-                if (labelSpan) {
-                    labelSpan.classList.remove('has-value');
-                    labelSpan.classList.add('no-value');
-                }
-            }
-            
-            const inputEl = document.getElementById(`${id}-input`);
-            if (inputEl) inputEl.value = '';
-        });
-        
-        // Reset Place ID
-        document.getElementById('placeId').value = '';
-        
-        // Clear any error messages
-        document.getElementById('message').textContent = '';
-        
-        // Show the upload section and hide the result section
-        document.getElementById('upload-section').style.display = 'block';
-        document.getElementById('result-section').style.display = 'none';
-        
-        // Reset status indicator
-        updateUploadStatus('inactive', 'Ready to Upload');
-    });
+    // Note: Upload Another button functionality is handled by its href attribute
     
     function updateUploadStatus(status, message) {
         const indicator = document.getElementById('upload-status-indicator');
@@ -585,6 +519,11 @@
             let longitude = document.querySelector("#longitude-input").value;
             let radius = document.querySelector("#radius").value;
             
+            if (!latitude || !longitude) {
+                document.getElementById("modal-text").innerHTML = '<div class="error-message">Missing GPS coordinates. Please upload a photo with location data first.</div>';
+                return;
+            }
+            
             // Update modal content to show loading state
             document.getElementById("modal-text").innerHTML = '<div class="loading-indicator"><span class="loader"></span> Searching for places...</div>';
     
@@ -605,12 +544,11 @@
                     for (let i = 0; i < places_info.length; i++) {
                         let place = places_info[i];
                         let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
-                        // create a clickable div for each place
+                        // create a clickable div for each place - all info on one line
                         text += `<div class="place">
                                     ${iconHTML}
                                     <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
-                                    <span class="place-distance"><strong>Distance:</strong>${place.distance} miles</span>
-                                    <span class="place-id"><strong>Place ID:</strong>${place.place_id}</span>
+                                    <span class="place-details"> • ${place.distance} miles • ${place.place_id}</span>
                                 </div>`;
                     }
 
@@ -632,15 +570,33 @@
                         // Append the new paragraph just after the radius input and refresh button
                         document.querySelector(".radius-input").appendChild(countText);
                     }
+                } else {
+                    document.getElementById("modal-text").innerHTML = '<div class="error-message">Failed to search for nearby places. Please try again.</div>';
                 }
             };
+            
+            xhr.onerror = function() {
+                document.getElementById("modal-text").innerHTML = '<div class="error-message">Network error while searching for places.</div>';
+            };
+            
             xhr.send();
         }
   
         document.getElementById('placeID-search-button').addEventListener('click', async function(event) {
             event.preventDefault(); // prevent the form from being submitted
+            
             const searchButton = this;
             const originalText = searchButton.textContent;
+            
+            // Check if coordinates are available
+            const latitude = document.querySelector("#latitude-input").value;
+            const longitude = document.querySelector("#longitude-input").value;
+            
+            if (!latitude || !longitude) {
+                alert('Please upload a photo with GPS coordinates first before searching for nearby places.');
+                return;
+            }
+            
             searchButton.textContent = 'Searching...';
             searchButton.classList.add('loading');
             
@@ -649,6 +605,8 @@
             
             try {
                 await fetchPlaces();
+            } catch (error) {
+                alert('Error searching for nearby places: ' + error.message);
             } finally {
                 searchButton.textContent = originalText;
                 searchButton.classList.remove('loading');
