@@ -34,6 +34,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 app = Flask(__name__)
 
 def migrate_to_userdata_structure():
+    app.logger.debug(f"=== FUNCTION APP: migrate_to_userdata_structure ===")
     """
     Migrate existing files and directories to the userdata structure.
     This ensures compatibility with existing installations.
@@ -81,6 +82,7 @@ def migrate_to_userdata_structure():
 # Function Definitions
 def get_default_config():
     """Return default configuration values"""
+    app.logger.debug(f"=== FUNCTION APP: get_default_config ===")
     return {
         "app": {
             "debug": True,
@@ -92,7 +94,7 @@ def get_default_config():
             "file": "userdata/logs/streetview.log",
             "max_bytes": 1048576,
             "backup_count": 10,
-            "format": "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+            "format": "%(asctime)s %(levelname)s: %(message)s [in %(filename)s:%(lineno)d]"
         },
         "uploads": {
             "directory": "userdata/uploads",
@@ -114,6 +116,7 @@ def get_default_config():
 
 def load_config():
     """Load configuration from userdata/config.json or create with defaults if it doesn't exist"""
+    app.logger.debug(f"=== FUNCTION APP: load_config ===")
     config_path = "userdata/config.json"
     
     try:
@@ -144,6 +147,7 @@ def load_config():
 
 def get_client_config(config):
     """Get OAuth client configuration"""
+    app.logger.debug(f"=== FUNCTION APP: get_client_config ===")
     client_id = os.getenv('GOOGLE_CLIENT_ID')
     client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
     api_key = os.getenv('GOOGLE_MAPS_API_KEY')
@@ -192,6 +196,7 @@ class ValidationError(StreetViewError):
 # Configure Logging
 def setup_logging(app, config):
     """Configure application logging based on settings"""
+    app.logger.debug(f"=== FUNCTION APP: setup_logging ===")
     log_dir = os.path.dirname(config['logging']['file'])
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
@@ -334,6 +339,7 @@ def log_request_info():
 #     return response
 
 def format_capture_time(capture_time):
+    app.logger.debug(f"=== FUNCTION APP: format_capture_time ===")
     if capture_time is None:
         return "N/A"
     try:
@@ -346,6 +352,7 @@ def format_capture_time(capture_time):
         return "N/A"
 
 def refresh_credentials(credentials):
+    app.logger.debug(f"=== FUNCTION APP: refresh_credentials ===")
     try:
         credentials.refresh(Request())
     except google.auth.exceptions.RefreshError:
@@ -355,6 +362,7 @@ def refresh_credentials(credentials):
     return credentials
 
 def get_credentials():
+    app.logger.debug(f"=== FUNCTION APP: get_credentials ===")
     creds_file = 'userdata/creds.data'
     if os.path.exists(creds_file):
         credentials = Credentials.from_authorized_user_file(creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
@@ -368,10 +376,12 @@ def get_credentials():
 
 
 def save_credentials(credentials):
+    app.logger.debug(f"=== FUNCTION APP: save_credentials ===")
     with open('userdata/creds.data', 'w') as f:
         f.write(credentials.to_json())
 
 def token_required(f):
+    app.logger.debug(f"=== FUNCTION APP: token_required ===")
     @wraps(f)
     def decorated_function(*args, **kwargs):
         credentials = get_credentials()
@@ -400,6 +410,7 @@ def apple_touch_icon():
 
 @app.route('/logout')
 def logout():
+    app.logger.debug(f"=== FUNCTION APP: logout ===")
     # Clear the session
     if os.path.exists('userdata/creds.data'):
         try:
@@ -417,6 +428,7 @@ def logout():
 
 @app.route('/authorize')
 def authorize():
+    app.logger.debug(f"=== FUNCTION APP: authorize ===")
     redirect_uri = os.getenv('REDIRECT_URI')
     try:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
@@ -438,6 +450,7 @@ def authorize():
 
 @app.route('/oauth2callback')
 def oauth2callback():
+    app.logger.debug(f"=== FUNCTION APP: oauth2callback ===")
     redirect_uri = os.getenv('REDIRECT_URI')
     state = session.get('oauth_state')  # Get state from session
     if not state:
@@ -465,6 +478,7 @@ def oauth2callback():
 @app.route('/list_photos', methods=['GET'])
 @token_required
 def list_photos_page():
+    app.logger.debug(f"=== FUNCTION APP: list_photos_page ===")
 
     page_size = request.args.get('page_size', session.get('page_size', str(config['api']['photos']['default_page_size'])))
     session['page_size'] = page_size
@@ -517,12 +531,14 @@ def list_photos_page():
 @app.route('/photos', methods=['GET'])
 @token_required
 def photos_page():
+    app.logger.debug(f"=== FUNCTION APP: photos_page ===")
     return list_photos_table_page()
 
 # API endpoint to get all photos with GPS coordinates for map view
 @app.route('/api/photos/map', methods=['GET'])
 @token_required
 def get_photos_for_map():
+    app.logger.debug(f"=== FUNCTION APP: get_photos_for_map ===")
     """Return all photos with GPS coordinates for map display"""
     try:
         import database
@@ -547,6 +563,7 @@ def get_photos_for_map():
 @app.route('/list_photos_table', methods=['GET'])
 @token_required
 def list_photos_table_page():
+    app.logger.debug(f"=== FUNCTION APP: list_photos_table_page ===")
     """Display all photos from the database in a table format with pagination"""
     try:
         import database
@@ -878,6 +895,7 @@ def list_photos_table_page():
 @app.route('/edit_photo/<photo_id>', methods=['GET'])
 @token_required
 def edit_photo(photo_id):
+    app.logger.debug(f"=== FUNCTION APP: edit_photo ===")
     print(f"Editing photo with ID: {photo_id}")
     
     # Check if database exists and try to get photo from database first
@@ -953,12 +971,27 @@ def edit_photo(photo_id):
     page_token = session.get('page_token', None)
     page_size = session.get('page_size', None)
 
+    # DEBUG: Log complete photo data before formatting dates
+    app.logger.debug("============================================================")
+    app.logger.debug(f"=== EDIT_PHOTO DEBUG: Photo data BEFORE date formatting ===")
+    app.logger.debug(f"Photo ID: {response.get('photoId', {}).get('id', 'N/A')}")
+    app.logger.debug(f"Raw captureTime: {response.get('captureTime', 'N/A')}")
+    app.logger.debug(f"Raw uploadTime: {response.get('uploadTime', 'N/A')}")
+    app.logger.debug(f"ViewCount: {response.get('viewCount', 'N/A')}")
+    app.logger.debug(f"ShareLink: {response.get('shareLink', 'N/A')}")
+    app.logger.debug(f"Complete response object: {response}")
+
     # Display json result in console
     print("Photo details:")
     pprint(response)
 
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
+
+    # DEBUG: Log photo data AFTER date formatting
+    app.logger.debug(f"=== EDIT_PHOTO DEBUG: Photo data AFTER date formatting ===")
+    app.logger.debug(f"Formatted captureTime: {response.get('captureTime', 'N/A')}")
+    app.logger.debug(f"Formatted uploadTime: {response.get('uploadTime', 'N/A')}")
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_photo.html' template with the photo details.
@@ -967,6 +1000,7 @@ def edit_photo(photo_id):
 @app.route('/edit_connections/<photo_id>', methods=['GET'])
 @token_required
 def edit_connections(photo_id):
+    app.logger.debug(f"=== FUNCTION APP: edit_connections ===")
     print(f"Editing connections with ID: {photo_id}")
     
     # Check if database exists and try to get photo from database first
@@ -1128,6 +1162,7 @@ def edit_connections(photo_id):
 
 @app.route('/get_connections', methods=['POST'])
 def get_connections():
+    app.logger.debug(f"=== FUNCTION APP: get_connections ===")
     data = request.json
     photo_ids = data.get('photoIds', [])
     
@@ -1191,6 +1226,7 @@ def get_connections():
 @app.route('/create_connections', methods=['POST'])
 @token_required
 def create_connections():
+    app.logger.debug(f"=== FUNCTION APP: create_connections ===")
     request_data = request.get_json()
     credentials = get_credentials()
 
@@ -1225,6 +1261,7 @@ def create_connections():
 @app.route('/update_photo/<photo_id>', methods=['POST'])
 @token_required
 def update_photo(photo_id):
+    app.logger.debug(f"=== FUNCTION APP: update_photo ===")
     def parse_float(value):
         try:
             return round(float(value), 7) if value not in [None, ''] else None
@@ -1265,6 +1302,7 @@ def update_photo(photo_id):
 
 @app.route('/nearby_places', methods=['GET'])
 def nearby_places():
+    app.logger.debug(f"=== FUNCTION APP: nearby_places ===")
     latitude = request.args.get('latitude')
     longitude = request.args.get('longitude')
     radius = request.args.get('radius', default=config['api']['places']['default_radius'])  # use configured default radius
@@ -1282,6 +1320,7 @@ def nearby_places():
 @app.route('/upload', methods=['GET', 'POST'])
 @token_required
 def upload_photosphere():
+    app.logger.debug(f"=== FUNCTION APP: upload_photosphere ===")
     if request.method == 'POST':
         # Add detailed request debugging
         app.logger.debug("Received POST request for uploading photosphere.")
@@ -1408,6 +1447,7 @@ def upload_photosphere():
 @app.route('/delete_photo', methods=['POST'])
 @token_required
 def delete_photo():
+    app.logger.debug(f"=== FUNCTION APP: delete_photo ===")
     credentials = get_credentials()
     photo_id = request.form.get("photo_id").strip("{'id': }")
 
@@ -1429,10 +1469,23 @@ def delete_photo():
 @app.route('/update_db', methods=['POST'])
 @token_required
 def update_database():
+    app.logger.debug(f"=== FUNCTION APP: update_db ===")
     """Update the database directly with the photo data without making an API call"""
     data = request.json
-    app.logger.debug("Received database update request:")
-    app.logger.debug(data)
+    
+    # DEBUG: Enhanced logging for database update
+    app.logger.debug("=========================================================")
+    app.logger.debug("=== UPDATE_DB DEBUG: Received database update request ===")
+    app.logger.debug(f"Photo ID: {data.get('photoId', {}).get('id', 'N/A')}")
+    app.logger.debug(f"Received captureTime: {data.get('captureTime', 'N/A')}")
+    app.logger.debug(f"Received uploadTime: {data.get('uploadTime', 'N/A')}")
+    app.logger.debug(f"Received viewCount: {data.get('viewCount', 'N/A')}")
+    app.logger.debug(f"Received shareLink: {data.get('shareLink', 'N/A')}")
+    if 'pose' in data:
+        app.logger.debug(f"Received pose data: {data['pose']}")
+    if 'places' in data:
+        app.logger.debug(f"Received places data: {data['places']}")
+    app.logger.debug(f"Complete data object: {data}")
     
     try:
         import database
@@ -1453,6 +1506,7 @@ def update_database():
         return jsonify({"success": False, "error": str(e)}), 500
 
 def get_filenames(directory):
+    app.logger.debug(f"=== FUNCTION APP: get_filenames ===")
     mapping = {}
     for filename in os.listdir(directory):
         if filename.endswith(".json"):
@@ -1469,6 +1523,7 @@ def get_filenames(directory):
     return mapping
 
 def list_photos(token, page_size=10, page_token=None, filters=None):
+    app.logger.debug(f"=== FUNCTION APP: list_photos ===")
     """List photos with error handling and validation"""
     try:
         url = "https://streetviewpublish.googleapis.com/v1/photos"
@@ -1492,6 +1547,7 @@ def list_photos(token, page_size=10, page_token=None, filters=None):
         raise APIError("Failed to list photos", response=getattr(e, 'response', None))
 
 def get_photo(token, photo_id):
+    app.logger.debug(f"=== FUNCTION APP: get_photo ===")
     """Get a single photo with error handling"""
     try:
         url = f"https://streetviewpublish.googleapis.com/v1/photo/{photo_id}"
@@ -1506,6 +1562,7 @@ def get_photo(token, photo_id):
         raise APIError(f"Failed to get photo {photo_id}", response=getattr(e, 'response', None))
 
 def update_photo_api(token, photo_id, photo):
+    app.logger.debug(f"=== FUNCTION APP: update_photo_api ===")
     """Update photo with validation and error handling"""
     try:
         # Validate coordinates if present
@@ -1555,6 +1612,7 @@ def update_photo_api(token, photo_id, photo):
         raise APIError(f"Failed to update photo {photo_id}", response=getattr(e, 'response', None))
 
 def start_upload(token):
+    app.logger.debug(f"=== FUNCTION APP: start_upload ===")
     """Start a new photo upload with error handling"""
     try:
         url = "https://streetviewpublish.googleapis.com/v1/photo:startUpload"
@@ -1570,6 +1628,7 @@ def start_upload(token):
         raise APIError("Failed to start upload", response=getattr(e, 'response', None))
 
 def add_or_update_xmp_metadata(file_path, heading):
+    app.logger.debug(f"=== FUNCTION APP: add_or_update_xmp_metadata ===")
     """Add or update XMP metadata with error handling"""
     try:
         # Validate heading
@@ -1633,6 +1692,7 @@ def add_or_update_xmp_metadata(file_path, heading):
         raise FileOperationError(f"Failed to process image metadata: {str(e)}")
 
 def upload_photo(token, upload_ref, file_path, heading):
+    app.logger.debug(f"=== FUNCTION APP: upload_photo ===")
     """Upload photo with validation and error handling"""
     try:
         # Add XMP metadata to the photo
@@ -1670,6 +1730,7 @@ def upload_photo(token, upload_ref, file_path, heading):
                 app.logger.warning(f"Failed to clean up temporary file: {str(e)}")
 
 def create_photo(token, upload_ref, latitude, longitude, placeId):
+    app.logger.debug(f"=== FUNCTION APP: create_photo ===")
     """Create photo with validation and error handling"""
     try:
         # Validate coordinates
@@ -1702,6 +1763,7 @@ def create_photo(token, upload_ref, latitude, longitude, placeId):
         raise APIError("Failed to create photo", response=getattr(e, 'response', None))
 
 def calculate_distance(lat1, lon1, lat2, lon2):
+    app.logger.debug(f"=== FUNCTION APP: calculate_distance ===")
     # approximate radius of earth in km
     R = 6371.0
 
@@ -1723,6 +1785,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return distance
 
 def get_nearby_places(latitude, longitude, radius, api_key):
+    app.logger.debug(f"=== FUNCTION APP: get_nearby_places ===")
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     
     params = {
@@ -1772,6 +1835,7 @@ def get_nearby_places(latitude, longitude, radius, api_key):
     return places_info
 
 def calculate_bounding_box(lat, lng, radius):
+    app.logger.debug(f"=== FUNCTION APP: calculate_bounding_box ===")
     # Latitude: 1 degree = 111.32 km
     lat_diff = radius / 111320
     # Longitude: 1 degree = 111.32 * cos(latitude) km
@@ -1787,6 +1851,7 @@ def calculate_bounding_box(lat, lng, radius):
 # Second calculate_distance function removed as it duplicates functionality
 
 def validate_coordinates(latitude, longitude):
+    app.logger.debug(f"=== FUNCTION APP: validate_coordinates ===")
     """Validate latitude and longitude values"""
     try:
         lat = float(latitude)
@@ -1798,6 +1863,7 @@ def validate_coordinates(latitude, longitude):
         raise ValidationError("Invalid coordinates: Must be valid numbers")
 
 def validate_heading(heading):
+    app.logger.debug(f"=== FUNCTION APP: validate_heading ===")
     """Validate heading value"""
     if heading is None:
         return None
@@ -1810,6 +1876,7 @@ def validate_heading(heading):
         raise ValidationError("Invalid heading: Must be a valid number")
 
 def handle_api_response(response, error_message="API request failed"):
+    app.logger.debug(f"=== FUNCTION APP: handle_api_response ===")
     """Handle API response and raise appropriate exceptions"""
     try:
         response.raise_for_status()
@@ -1828,6 +1895,7 @@ def handle_api_response(response, error_message="API request failed"):
         )
 
 def fetch_all_photos(credentials, page_size=100):
+    app.logger.debug(f"=== FUNCTION APP: fetch_all_photos ===")
     """Fetch all photos from the Street View Publish API"""
     photos_list = []
     page_token = None
@@ -1881,6 +1949,7 @@ def fetch_all_photos(credentials, page_size=100):
 @app.route('/photo_database')
 @token_required
 def photo_database():
+    app.logger.debug(f"=== FUNCTION APP: photo_database ===")
     """Display the photo database page with statistics"""
     stats = {}
     json_files = []
@@ -1927,6 +1996,7 @@ def photo_database():
 @app.route('/create_database', methods=['POST'])
 @token_required
 def create_database():
+    app.logger.debug(f"=== FUNCTION APP: create_database ===")
     """Create/update the database with all photos from the API"""
     try:
         credentials = get_credentials()
@@ -1948,6 +2018,7 @@ def create_database():
 @app.route('/database_viewer', methods=['GET'])
 @token_required
 def database_viewer():
+    app.logger.debug(f"=== FUNCTION APP: database_viewer ===")
     """Display all photos from the database in a table format"""
     try:
         import database
@@ -2041,6 +2112,7 @@ def database_viewer():
 
 @app.route('/check_auth_status', methods=['GET'])
 def check_auth_status():
+    app.logger.debug(f"=== FUNCTION APP: check_auth_status ===")
     """API endpoint to check if the user is authenticated without redirecting"""
     credentials = get_credentials()
     
@@ -2075,6 +2147,7 @@ def check_auth_status():
     })
 
 def init_app():
+    app.logger.debug(f"=== FUNCTION APP: init_app ===")
     """Initialize the application"""
     # Set up basic console logging before migration
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':

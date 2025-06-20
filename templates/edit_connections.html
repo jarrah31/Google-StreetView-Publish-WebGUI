@@ -324,7 +324,7 @@
             // Preserve existing data
             captureTime: "{{ photo.captureTime }}",
             uploadTime: "{{ photo.uploadTime }}",
-            viewCount: {{ photo.viewCount|default(0) }},
+            viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
             shareLink: "{{ photo.shareLink }}",
             thumbnailUrl: "{{ photo.thumbnailUrl }}",
             // Include pose data if available

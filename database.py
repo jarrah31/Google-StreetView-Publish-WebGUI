@@ -81,11 +81,20 @@ def init_db():
 
 def insert_or_update_photo(photo_data):
     """Insert or update a photo record in the database"""
+    logger.debug(f"=== FUNCTION DB: insert_or_update_photo ===")
     if not photo_data or 'photoId' not in photo_data or 'id' not in photo_data['photoId']:
         logger.warning("Database - Invalid photo data: missing photoId")
         return False
     
     photo_id = photo_data['photoId']['id']
+    
+    # DEBUG: Enhanced logging for database insert/update
+    logger.debug("=========================================================")
+    logger.debug(f"=== DATABASE DEBUG: Processing photo {photo_id} ===")
+    logger.debug(f"Input captureTime: {photo_data.get('captureTime', 'N/A')}")
+    logger.debug(f"Input uploadTime: {photo_data.get('uploadTime', 'N/A')}")
+    logger.debug(f"Input viewCount: {photo_data.get('viewCount', 'N/A')}")
+    logger.debug(f"Complete input data: {photo_data}")
     
     # Extract pose data
     latitude = None
@@ -146,6 +155,18 @@ def insert_or_update_photo(photo_data):
     cursor = conn.cursor()
     
     try:
+        # DEBUG: Log final values being written to database
+        logger.debug("=========================================================")
+        logger.debug(f"=== DATABASE DEBUG: Final values for photo {photo_id} ===")
+        logger.debug(f"=Final capture_time: {capture_time}")
+        logger.debug(f"=Final upload_time: {upload_time}")
+        logger.debug(f"=Final view_count: {view_count}")
+        logger.debug(f"=Final maps_publish_status: {maps_publish_status}")
+        logger.debug(f"=Final share_link: {share_link}")
+        logger.debug(f"=Final thumbnail_url: {thumbnail_url}")
+        logger.debug(f"=Final updated_at: {updated_at}")
+        logger.debug(f"=Final coordinates: lat={latitude}, lng={longitude}, heading={heading}")
+        
         # Insert or update the photo record
         cursor.execute('''
         INSERT OR REPLACE INTO photos (
@@ -203,6 +224,7 @@ def insert_or_update_photo(photo_data):
 
 def get_photo_from_db(photo_id):
     """Retrieve a photo from the database by its ID"""
+    logger.debug(f"=== FUNCTION DB: get_photo_from_db ===")
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row  # Return rows as dictionaries
     cursor = conn.cursor()
@@ -213,6 +235,7 @@ def get_photo_from_db(photo_id):
         photo_row = cursor.fetchone()
         
         if not photo_row:
+            logger.debug(f"=== DATABASE DEBUG: Photo {photo_id} not found in database ===")
             return None
         
         photo_data = dict(photo_row)
@@ -231,6 +254,20 @@ def get_photo_from_db(photo_id):
         if conn_rows:
             photo_data['connections'] = [{'target': {'id': row['target_photo_id']}} for row in conn_rows]
         
+        # DEBUG: Log retrieved photo data from database
+        logger.debug("==================================================================")
+        logger.debug(f"=== DATABASE DEBUG: Final photo data being returned for {photo_id} ===")
+        logger.debug(f"=Returned capture_time: {photo_data.get('capture_time', 'N/A')}")
+        logger.debug(f"=Returned upload_time: {photo_data.get('upload_time', 'N/A')}")
+        logger.debug(f"=Returned view_count: {photo_data.get('view_count', 'N/A')}")
+        logger.debug(f"=Raw database maps_publish_status: {photo_data.get('maps_publish_status', 'N/A')}")
+        logger.debug(f"=Raw database share_link: {photo_data.get('share_link', 'N/A')}")
+        logger.debug(f"=Raw database thumbnail_url: {photo_data.get('thumbnail_url', 'N/A')}")
+        logger.debug(f"=Raw database coordinates: lat={photo_data.get('latitude', 'N/A')}, lng={photo_data.get('longitude', 'N/A')}, heading={photo_data.get('heading', 'N/A')}")
+        logger.debug(f"=Returned places count: {len(photo_data.get('places', []))}")
+        logger.debug(f"=Returned connections count: {len(photo_data.get('connections', []))}")
+        logger.debug(f"=Complete returned photo data: {photo_data}")
+        
         return photo_data
     
     except Exception as e:
@@ -242,6 +279,7 @@ def get_photo_from_db(photo_id):
 
 def get_all_photos_from_db():
     """Retrieve all photos from the database"""
+    logger.debug(f"=== FUNCTION DB: get_all_photos_from_db ===")
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -251,12 +289,21 @@ def get_all_photos_from_db():
         cursor.execute("SELECT photo_id FROM photos")
         photo_ids = [row['photo_id'] for row in cursor.fetchall()]
         
+        # DEBUG: Log photo retrieval process
+        logger.debug(f"=== DATABASE DEBUG: Retrieving all photos from database ===")
+        logger.debug(f"Found {len(photo_ids)} photo IDs in database: {photo_ids}")
+        
         # Retrieve complete photo data for each ID
         photos = []
         for photo_id in photo_ids:
             photo_data = get_photo_from_db(photo_id)
             if photo_data:
                 photos.append(photo_data)
+        
+        # DEBUG: Log summary of retrieved photos
+        logger.debug(f"=== DATABASE DEBUG: Retrieved {len(photos)} complete photo records ===")
+        for i, photo in enumerate(photos):
+            logger.debug(f"Photo {i+1}: ID={photo.get('photo_id', 'N/A')}, capture_time={photo.get('capture_time', 'N/A')}, upload_time={photo.get('upload_time', 'N/A')}")
         
         return photos
     
@@ -269,6 +316,7 @@ def get_all_photos_from_db():
 
 def import_photos_from_json(json_file):
     """Import photos from a JSON file into the database"""
+    logger.debug(f"=== FUNCTION DB: import_photos_from_json ===")
     try:
         with open(json_file, 'r') as f:
             photos = json.load(f)
@@ -293,6 +341,7 @@ def import_photos_from_json(json_file):
 
 def get_db_stats():
     """Get statistics about the database"""
+    logger.debug(f"=== FUNCTION DB: get_db_stats ===")
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     
@@ -352,6 +401,7 @@ def clean_deleted_photos(existing_photo_ids):
     Returns:
         Number of photos removed from the database
     """
+    logger.debug(f"=== FUNCTION DB: clean_deleted_photos ===")
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     
@@ -404,6 +454,7 @@ def get_connections_by_photo_ids(photo_ids):
     Returns:
         A list of dictionaries with source and target photo IDs
     """
+    logger.debug(f"=== FUNCTION DB: get_connections_by_photo_ids ===")
     if not photo_ids:
         return []
         
@@ -461,6 +512,7 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
     Returns:
         List of photo objects within the bounding box
     """
+    logger.debug(f"=== FUNCTION DB: get_nearby_photos ===")
     conn = None
     try:
         # Connect to the database
@@ -565,6 +617,7 @@ def get_all_photos_with_gps():
     Returns:
         List of photo objects with GPS coordinates formatted for map display
     """
+    logger.debug(f"=== FUNCTION DB: get_all_photos_with_gps ===")
     conn = None
     try:
         # Connect to the database

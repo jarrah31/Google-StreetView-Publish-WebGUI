@@ -338,7 +338,7 @@
                     // Preserve existing data
                     captureTime: "{{ photo.captureTime }}",
                     uploadTime: "{{ photo.uploadTime }}",
-                    viewCount: {{ photo.viewCount|default(0) }},
+                    viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
                     shareLink: "{{ photo.shareLink }}",
                     thumbnailUrl: "{{ photo.thumbnailUrl }}",
                     // Include the updated fields
@@ -350,6 +350,17 @@
                         heading: parseFloat(heading)
                     }
                 };
+                
+                // DEBUG: Log the photoData being prepared for database update
+                console.log('=== EDIT_PHOTO DEBUG: PhotoData for database update ===');
+                console.log('PhotoID:', photoId);
+                console.log('Form values - Latitude:', latitude, 'Longitude:', longitude, 'Heading:', heading, 'PlaceID:', placeId);
+                console.log('Preserved data from template:');
+                console.log('  captureTime:', "{{ photo.captureTime }}");
+                console.log('  uploadTime:', "{{ photo.uploadTime }}");
+                console.log('  viewCount:', {{ photo.viewCount if photo.viewCount is not none else 0 }});
+                console.log('  shareLink:', "{{ photo.shareLink }}");
+                console.log('Complete photoData object:', JSON.stringify(photoData, null, 2));
                 
                 // Add places if placeId exists
                 if (placeId) {
