@@ -467,6 +467,7 @@
         // Extract XMP data
         let hasXmpData = false;
         if (exifReader['xmp']) {
+            hasXmpData = true;
             for (const id of xmpMetadataIds) {
                 const displayId = id + '-display';
                 const labelId = id + '-label';
@@ -495,7 +496,18 @@
                     labelSpan.classList.add('has-value');
                 }
             }
-            hasXmpData = true;
+        }
+        
+        // Handle missing FlightYawDegree - set default value of 0 if XMP data exists but FlightYawDegree is missing
+        if (hasXmpData && (!exifReader.xmp['FlightYawDegree'] || !exifReader.xmp['FlightYawDegree'].value)) {
+            const flightYawDisplay = document.getElementById('FlightYawDegree-display');
+            const flightYawLabel = document.getElementById('FlightYawDegree-label').querySelector('.metadata-label');
+            const headingInput = document.getElementById('heading-input');
+            
+            flightYawDisplay.textContent = '0';
+            headingInput.value = 0;
+            flightYawLabel.classList.remove('no-value');
+            flightYawLabel.classList.add('has-value');
         }       
 
         // Enable or disable submit button based on whether necessary data is present
