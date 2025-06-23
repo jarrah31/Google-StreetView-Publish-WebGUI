@@ -79,6 +79,9 @@
                 <input type="hidden" id="latitude" value="{{ (photo.pose.latLngPair.latitude if 'pose' in photo and 'latLngPair' in photo.pose and 'latitude' in photo.pose.latLngPair else '')|round(7) }}">
                 <input type="hidden" id="longitude" value="{{ (photo.pose.latLngPair.longitude if 'pose' in photo and 'latLngPair' in photo.pose and 'longitude' in photo.pose.latLngPair else '')|round(7) }}">
                 <input type="hidden" id="source-photo-id" value="{{ photo.photoId.id }}">
+                <!-- Hidden fields to store original date formats for database update -->
+                <input type="hidden" id="original-capture-time" value="{{ photo.originalCaptureTime }}">
+                <input type="hidden" id="original-upload-time" value="{{ photo.originalUploadTime }}">
             </div>
             <a href="{{ photo.shareLink }}" target="_blank">
                 <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail">
@@ -321,9 +324,9 @@
         // Create photo data object for database update (following edit_photo.html pattern)
         const photoData = {
             photoId: { id: sourcePhotoId },
-            // Preserve existing data
-            captureTime: "{{ photo.captureTime }}",
-            uploadTime: "{{ photo.uploadTime }}",
+            // Preserve existing data using the correct date formats from hidden fields
+            captureTime: document.getElementById('original-capture-time').value,
+            uploadTime: document.getElementById('original-upload-time').value,
             viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
             shareLink: "{{ photo.shareLink }}",
             thumbnailUrl: "{{ photo.thumbnailUrl }}",

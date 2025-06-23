@@ -35,6 +35,10 @@
 
                     <!-- Form starts here, integrated into the grid -->
                     <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST" class="grid-form">
+                        <!-- Hidden fields to store original date formats for database update -->
+                        <input type="hidden" id="original-capture-time" value="{{ photo.originalCaptureTime }}">
+                        <input type="hidden" id="original-upload-time" value="{{ photo.originalUploadTime }}">
+                        
                         <!-- Latitude -->
                         <label for="latitude" class="grid-label">Latitude:*</label>
                         <div class="grid-value">
@@ -335,9 +339,9 @@
                 // while preserving all the existing photo data
                 const photoData = {
                     photoId: { id: photoId },
-                    // Preserve existing data
-                    captureTime: "{{ photo.captureTime }}",
-                    uploadTime: "{{ photo.uploadTime }}",
+                    // Preserve existing data using the correct date formats from hidden fields
+                    captureTime: document.getElementById('original-capture-time').value,
+                    uploadTime: document.getElementById('original-upload-time').value,
                     viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
                     shareLink: "{{ photo.shareLink }}",
                     thumbnailUrl: "{{ photo.thumbnailUrl }}",
@@ -355,9 +359,9 @@
                 console.log('=== EDIT_PHOTO DEBUG: PhotoData for database update ===');
                 console.log('PhotoID:', photoId);
                 console.log('Form values - Latitude:', latitude, 'Longitude:', longitude, 'Heading:', heading, 'PlaceID:', placeId);
-                console.log('Preserved data from template:');
-                console.log('  captureTime:', "{{ photo.captureTime }}");
-                console.log('  uploadTime:', "{{ photo.uploadTime }}");
+                console.log('Preserved data from hidden fields:');
+                console.log('  captureTime:', document.getElementById('original-capture-time').value);
+                console.log('  uploadTime:', document.getElementById('original-upload-time').value);
                 console.log('  viewCount:', {{ photo.viewCount if photo.viewCount is not none else 0 }});
                 console.log('  shareLink:', "{{ photo.shareLink }}");
                 console.log('Complete photoData object:', JSON.stringify(photoData, null, 2));

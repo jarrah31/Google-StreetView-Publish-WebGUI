@@ -985,13 +985,23 @@ def edit_photo(photo_id):
     print("Photo details:")
     pprint(response)
 
+    # Store original dates before formatting for database operations
+    original_capture_time = response['captureTime']
+    original_upload_time = response['uploadTime']
+
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
+
+    # Add original dates to response for hidden fields
+    response['originalCaptureTime'] = original_capture_time
+    response['originalUploadTime'] = original_upload_time
 
     # DEBUG: Log photo data AFTER date formatting
     app.logger.debug(f"=== EDIT_PHOTO DEBUG: Photo data AFTER date formatting ===")
     app.logger.debug(f"Formatted captureTime: {response.get('captureTime', 'N/A')}")
     app.logger.debug(f"Formatted uploadTime: {response.get('uploadTime', 'N/A')}")
+    app.logger.debug(f"Original captureTime: {response.get('originalCaptureTime', 'N/A')}")
+    app.logger.debug(f"Original uploadTime: {response.get('originalUploadTime', 'N/A')}")
 
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_photo.html' template with the photo details.
@@ -1067,8 +1077,16 @@ def edit_connections(photo_id):
     app.logger.debug("Photo details:")
     app.logger.debug(response)
 
+    # Store original dates before formatting for database operations
+    original_capture_time = response['captureTime']
+    original_upload_time = response['uploadTime']
+
     response['captureTime'] = format_capture_time(response['captureTime'])
     response['uploadTime'] = format_capture_time(response['uploadTime'])
+
+    # Add original dates to response for hidden fields
+    response['originalCaptureTime'] = original_capture_time
+    response['originalUploadTime'] = original_upload_time
 
     # Validate and filter connections
     connections = response.get('connections', [])
