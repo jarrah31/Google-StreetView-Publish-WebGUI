@@ -166,15 +166,20 @@
                 headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
             }
 
-            // Marker to adjust heading
+            // Marker to adjust heading - using an arrow that points in the heading direction
             headingMarker = new google.maps.Marker({
                 position: headingPosition,
                 map: map,
                 draggable: true,
                 title: "Adjust Heading",
                 icon: {
-                    url: 'https://maps.google.com/mapfiles/kml/paddle/red-stars.png', // URL to custom icon
-                    scaledSize: new google.maps.Size(32, 32) // Adjust size if needed
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 6,
+                    fillColor: '#FF0000',
+                    fillOpacity: 1.0,
+                    strokeWeight: 1,
+                    strokeColor: '#FFFFFF',
+                    rotation: !isNaN(headingValue) ? headingValue : 0 // Initial rotation based on heading
                 }
             });
 
@@ -217,7 +222,15 @@
             if (heading < 0) {
                 heading += 359;
             }
-            headingInput.value = Math.round(heading); // Round the heading to the nearest whole number
+            const roundedHeading = Math.round(heading);
+            headingInput.value = roundedHeading; // Round the heading to the nearest whole number
+            
+            // Update the arrow marker rotation to point in the heading direction
+            const currentIcon = headingMarker.getIcon();
+            headingMarker.setIcon({
+                ...currentIcon,
+                rotation: roundedHeading
+            });
         }
 
         // Get the modal
