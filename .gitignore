@@ -57,3 +57,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Test scripts
+test_*.py

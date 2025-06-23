@@ -1503,6 +1503,8 @@ def update_database():
         app.logger.debug(f"Received pose data: {data['pose']}")
     if 'places' in data:
         app.logger.debug(f"Received places data: {data['places']}")
+    if 'connections' in data:
+        app.logger.debug(f"Received connections data: {data['connections']}")
     app.logger.debug(f"Complete data object: {data}")
     
     try:

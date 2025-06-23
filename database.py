@@ -28,6 +28,9 @@ def init_db():
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     
+    # Enable foreign key constraints
+    cursor.execute('PRAGMA foreign_keys = ON')
+    
     # Create photos table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS photos (
@@ -154,6 +157,9 @@ def insert_or_update_photo(photo_data):
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     
+    # Enable foreign key constraints
+    cursor.execute('PRAGMA foreign_keys = ON')
+    
     try:
         # DEBUG: Log final values being written to database
         logger.debug("=========================================================")
@@ -199,17 +205,40 @@ def insert_or_update_photo(photo_data):
         
         # Handle connections
         if 'connections' in photo_data and photo_data['connections']:
+            logger.debug(f"=== DATABASE DEBUG CONNECTIONS: Processing {len(photo_data['connections'])} connections for photo {photo_id} ===")
             # Delete existing connections for this photo
             cursor.execute("DELETE FROM connections WHERE source_photo_id = ?", (photo_id,))
             
-            # Insert new connections
+            # Insert new connections with validation
+            connections_added = 0
+            connections_skipped = 0
             for connection in photo_data['connections']:
                 if 'target' in connection and 'id' in connection['target']:
                     target_id = connection['target']['id']
-                    cursor.execute('''
-                    INSERT OR IGNORE INTO connections (source_photo_id, target_photo_id)
-                    VALUES (?, ?)
-                    ''', (photo_id, target_id))
+                    logger.debug(f"=== DATABASE DEBUG CONNECTIONS: Adding connection {photo_id} -> {target_id} ===")
+                    
+                    # First check if target photo exists
+                    cursor.execute("SELECT 1 FROM photos WHERE photo_id = ?", (target_id,))
+                    target_exists = cursor.fetchone()
+                    
+                    if target_exists:
+                        try:
+                            cursor.execute('''
+                            INSERT OR IGNORE INTO connections (source_photo_id, target_photo_id)
+                            VALUES (?, ?)
+                            ''', (photo_id, target_id))
+                            connections_added += 1
+                            logger.debug(f"=== DATABASE DEBUG CONNECTIONS: Successfully added connection {photo_id} -> {target_id} ===")
+                        except sqlite3.IntegrityError as e:
+                            logger.warning(f"=== DATABASE DEBUG CONNECTIONS: Failed to add connection {photo_id} -> {target_id}: {e} ===")
+                            connections_skipped += 1
+                    else:
+                        logger.warning(f"=== DATABASE DEBUG CONNECTIONS: Skipping connection {photo_id} -> {target_id} - target photo not found in database ===")
+                        connections_skipped += 1
+            
+            logger.debug(f"=== DATABASE DEBUG CONNECTIONS: Added {connections_added} connections, skipped {connections_skipped} for photo {photo_id} ===")
+        else:
+            logger.debug(f"=== DATABASE DEBUG CONNECTIONS: No connections to process for photo {photo_id} ===")
         
         conn.commit()
         return True
@@ -228,6 +257,9 @@ def get_photo_from_db(photo_id):
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row  # Return rows as dictionaries
     cursor = conn.cursor()
+    
+    # Enable foreign key constraints
+    cursor.execute('PRAGMA foreign_keys = ON')
     
     try:
         # Get photo data
@@ -283,6 +315,9 @@ def get_all_photos_from_db():
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    
+    # Enable foreign key constraints
+    cursor.execute('PRAGMA foreign_keys = ON')
     
     try:
         # Get all photo IDs
@@ -344,6 +379,9 @@ def get_db_stats():
     logger.debug(f"=== FUNCTION DB: get_db_stats ===")
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
+    
+    # Enable foreign key constraints
+    cursor.execute('PRAGMA foreign_keys = ON')
     
     try:
         stats = {}
@@ -465,6 +503,9 @@ def get_connections_by_photo_ids(photo_ids):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
+        # Enable foreign key constraints
+        cursor.execute('PRAGMA foreign_keys = ON')
+        
         all_connections = []
         
         # For each photo ID, fetch its connections
@@ -519,6 +560,9 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
         conn = sqlite3.connect(DATABASE_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
+        
+        # Enable foreign key constraints
+        cursor.execute('PRAGMA foreign_keys = ON')
         
         # Query for photos within the bounding box
         cursor.execute("""
