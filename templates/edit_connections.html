@@ -225,9 +225,22 @@
             });
         });
 
-        // Load saved distance value
+        // Load saved distance value and auto-reload if needed
         const savedDistance = localStorage.getItem('distance');
-        if (savedDistance) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDistance = urlParams.get('distance');
+        
+        // If we have a saved distance and no distance in URL, use saved distance
+        if (savedDistance && !urlDistance) {
+            document.getElementById('distance').value = savedDistance;
+            // Auto-reload with the saved distance to show nearby photos immediately
+            window.location.href = `${window.location.pathname}?distance=${savedDistance}`;
+            return; // Don't continue with initialization since we're reloading
+        } else if (savedDistance && savedDistance !== urlDistance) {
+            // If saved distance differs from URL distance, update the input field
+            document.getElementById('distance').value = savedDistance;
+        } else if (savedDistance) {
+            // Update the input field with saved distance
             document.getElementById('distance').value = savedDistance;
         }
 
