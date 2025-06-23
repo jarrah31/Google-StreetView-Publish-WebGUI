@@ -150,12 +150,12 @@
                 localStorage.setItem('mapZoom', map.getZoom());
             });
 
-            // Marker at the photo's GPS position
+            // Marker at the photo's GPS position - now draggable to update coordinates
             anchorMarker = new google.maps.Marker({
                 position: anchorPosition,
                 map: map,
-                draggable: false,
-                title: "Photo's GPS Position"
+                draggable: true,
+                title: "Drag to adjust Photo's GPS Position"
             });
 
             // Calculate the initial heading position if headingValue is available
@@ -194,6 +194,7 @@
             });
 
             google.maps.event.addListener(headingMarker, 'drag', updatePolylineAndHeading);
+            google.maps.event.addListener(anchorMarker, 'drag', updateCoordinatesAndPolyline);
             mapInitialized = true;
         }
         
@@ -231,6 +232,20 @@
                 ...currentIcon,
                 rotation: roundedHeading
             });
+        }
+
+        function updateCoordinatesAndPolyline() {
+            const anchorPosition = anchorMarker.getPosition();
+            const headingPosition = headingMarker.getPosition();
+
+            // Update latitude and longitude input fields with new position
+            const lat = anchorPosition.lat();
+            const lng = anchorPosition.lng();
+            document.getElementById('latitude').value = lat.toFixed(7);
+            document.getElementById('longitude').value = lng.toFixed(7);
+
+            // Update polyline to reflect new anchor position
+            polyline.setPath([anchorPosition, headingPosition]);
         }
 
         // Get the modal
