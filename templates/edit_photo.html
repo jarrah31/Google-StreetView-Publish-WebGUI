@@ -161,7 +161,7 @@
             // Calculate the initial heading position if headingValue is available
             let headingPosition;
             if (!isNaN(headingValue)) {
-                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 100, headingValue);
+                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 250, headingValue);
             } else {
                 headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
             }
@@ -621,12 +621,38 @@
                     const photoLat = photo.pose.latLngPair.latitude;
                     const photoLng = photo.pose.latLngPair.longitude;
                     
-                    // Create marker
+                    // Parse capture time to get MM/YY format
+                    let dateLabel = '';
+                    if (photo.formattedCaptureTime) {
+                        try {
+                            // Try to parse the date - it might be in various formats
+                            const date = new Date(photo.formattedCaptureTime);
+                            if (!isNaN(date.getTime())) {
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = String(date.getFullYear()).slice(-2);
+                                dateLabel = `${month}/${year}`;
+                            }
+                        } catch (e) {
+                            console.warn('Could not parse date:', photo.formattedCaptureTime);
+                        }
+                    }
+                    
+                    // Create marker with custom label showing date
                     const marker = new google.maps.Marker({
                         position: { lat: photoLat, lng: photoLng },
                         map: map,
-                        label: (index + 1).toString(),
+                        label: {
+                            text: dateLabel || (index + 1).toString(),
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            className: 'marker-label'
+                        },
                         title: photo.formattedCaptureTime || 'Nearby Photo',
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                            labelOrigin: new google.maps.Point(16, -5) // Position label above the marker
+                        }
                     });
                     
                     // Add click handler to load the photo details in the current page

@@ -164,11 +164,41 @@
                 // Add markers for nearby photos
                 const nearbyPhotos = {{ nearby_photos | tojson }};
                 nearbyPhotos.forEach(photo => {
+                    // Parse capture time to get MM/YY format
+                    let dateLabel = '';
+                    if (photo.formattedCaptureTime) {
+                        try {
+                            // Try to parse the date - it might be in various formats
+                            const date = new Date(photo.formattedCaptureTime);
+                            if (!isNaN(date.getTime())) {
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = String(date.getFullYear()).slice(-2);
+                                dateLabel = `${month}/${year}`;
+                            }
+                        } catch (e) {
+                            console.warn('Could not parse date:', photo.formattedCaptureTime);
+                        }
+                    }
+
                     let marker = new google.maps.Marker({
                         position: { lat: photo.pose.latLngPair.latitude, lng: photo.pose.latLngPair.longitude },
                         map: map,
-                        label: photo.label,
-                        title: `${photo.label}: ${photo.formattedCaptureTime}`, // Show capture time in tooltip
+                        label: {
+                            text: photo.label, // Number label inside the blue circle
+                            color: '#FFFFFF',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        },
+                        title: `${photo.formattedCaptureTime}`, // Show capture time in tooltip
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 13,
+                            fillColor: '#4285F4',
+                            fillOpacity: 1.0,
+                            strokeWeight: 2,
+                            strokeColor: '#FFFFFF',
+                            labelOrigin: new google.maps.Point(0, 0) // Position circle further below the date marker
+                        }
                     });
 
                     if (!marker) {
@@ -176,6 +206,34 @@
                     }
 
                     marker.photoId = photo.photoId.id; // include photoID property
+
+                    // Create a date label marker positioned above the main marker if date exists
+                    if (dateLabel) {
+                        // Calculate a position slightly north of the main marker for visual separation
+                        const offsetLat = photo.pose.latLngPair.latitude + 0.00030;
+                        const dateMarker = new google.maps.Marker({
+                            position: { lat: offsetLat, lng: photo.pose.latLngPair.longitude },
+                            map: map,
+                            label: {
+                                text: dateLabel,
+                                color: '#FFFFFF',
+                                fontSize: '13px',
+                                fontWeight: 'bold'
+                            },
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 0, // Make the icon invisible
+                                fillOpacity: 0,
+                                strokeOpacity: 0
+                            },
+                            clickable: false, // Prevent interaction with the date label
+                            zIndex: 1001 // Ensure it appears above the blue circle
+                        });
+                        
+                        // Store the date marker with the main marker for cleanup
+                        marker.dateMarker = dateMarker;
+                        nearbyMarkers.push(dateMarker);
+                    }
 
                     nearbyMarkers.push(marker);
 
