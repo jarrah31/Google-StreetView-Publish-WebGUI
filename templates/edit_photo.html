@@ -161,7 +161,7 @@
             // Calculate the initial heading position if headingValue is available
             let headingPosition;
             if (!isNaN(headingValue)) {
-                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 250, headingValue);
+                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 100, headingValue);
             } else {
                 headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
             }
