@@ -747,6 +747,22 @@
 
                 // Create markers for each photo
                 photosData.forEach(photo => {
+                    // Parse capture time to get MM/YY format
+                    let dateLabel = '';
+                    if (photo.capture_time) {
+                        try {
+                            // Try to parse the date - it might be in various formats
+                            const date = new Date(photo.capture_time);
+                            if (!isNaN(date.getTime())) {
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = String(date.getFullYear()).slice(-2);
+                                dateLabel = `${month}/${year}`;
+                            }
+                        } catch (e) {
+                            console.warn('Could not parse date:', photo.capture_time);
+                        }
+                    }
+
                     const marker = new google.maps.Marker({
                         position: { lat: photo.latitude, lng: photo.longitude },
                         map: photosMap,
@@ -756,6 +772,64 @@
                             scaledSize: new google.maps.Size(32, 32)
                         }
                     });
+
+                    // Create a date label overlay positioned above the main marker if date exists
+                    if (dateLabel) {
+                        // Create a custom overlay for the date label that stays positioned above the marker
+                        class DateLabelOverlay extends google.maps.OverlayView {
+                            constructor(position, text, map) {
+                                super();
+                                this.position = position;
+                                this.text = text;
+                                this.div = null;
+                                this.setMap(map);
+                            }
+
+                            onAdd() {
+                                const div = document.createElement('div');
+                                div.style.position = 'absolute';
+                                div.style.color = '#FFFFFF';
+                                div.style.fontSize = '13px';
+                                div.style.fontWeight = 'bold';
+                                div.style.textAlign = 'center';
+                                div.style.pointerEvents = 'none';
+                                div.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+                                div.style.whiteSpace = 'nowrap';
+                                div.style.zIndex = '1001';
+                                div.textContent = this.text;
+                                this.div = div;
+                                
+                                const panes = this.getPanes();
+                                panes.overlayMouseTarget.appendChild(div);
+                            }
+
+                            draw() {
+                                const overlayProjection = this.getProjection();
+                                const position = overlayProjection.fromLatLngToDivPixel(this.position);
+                                
+                                if (this.div) {
+                                    this.div.style.left = (position.x - 20) + 'px'; // Center horizontally
+                                    this.div.style.top = (position.y - 50) + 'px';  // Position above marker
+                                }
+                            }
+
+                            onRemove() {
+                                if (this.div) {
+                                    this.div.parentNode.removeChild(this.div);
+                                    this.div = null;
+                                }
+                            }
+                        }
+
+                        const dateOverlay = new DateLabelOverlay(
+                            new google.maps.LatLng(photo.latitude, photo.longitude),
+                            dateLabel,
+                            photosMap
+                        );
+                        
+                        // Store the overlay with the main marker for cleanup
+                        marker.dateOverlay = dateOverlay;
+                    }
 
                     // Create info window content
                     const infoWindowContent = `
