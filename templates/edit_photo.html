@@ -56,7 +56,7 @@
                         <div class="grid-value form-group-wrapper"> <!-- Keep form-group-wrapper for structure -->
                             <div class="input-wrapper">
                                 <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
-                                <button type="submit" class="search-button">&#128269;</button> <!-- magnifying glass icon -->
+                                <button type="button" class="search-button" id="placeID-search-button">&#128269;</button> <!-- magnifying glass icon -->
                             </div>
                             <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                         </div>
@@ -92,15 +92,22 @@
     <div id="myModal" class="modal">
         <!-- Modal content -->
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <div class="radius-input">
-                <label for="radius">Radius (up to 1000):</label>
-                <input type="number" id="radius" value="300" min="1" max="1000">
-                <button class="refresh-button">Refresh</button>
+            <div class="modal-header">
+                <h3>Nearby Places</h3>
+                <span class="close">&times;</span>
             </div>
-            <!-- Scrollable container for places -->
-            <div class="places-container">
-                <p id="modal-text">Please wait...</p>
+            <div class="modal-body">
+                <div class="radius-input">
+                    <label for="radius">Search Radius (meters):</label>
+                    <div class="radius-control">
+                        <input type="number" id="radius" value="300" min="1" max="1000">
+                        <button class="page-link view-photos-link refresh-button">Refresh</button>
+                    </div>
+                </div>
+                <!-- Scrollable container for places -->
+                <div class="places-container">
+                    <p id="modal-text">Searching for nearby places...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -110,6 +117,8 @@
 
 {% block scripts %}
 <script>
+    console.log('Script block loaded');
+    
     let map;
     let anchorMarker;
     let headingMarker;
@@ -126,8 +135,6 @@
             console.log("Initializing map..."); 
             let lat = parseFloat(document.getElementById('latitude').value);
             let lng = parseFloat(document.getElementById('longitude').value);
-
-            console.log("Latitude:", lat, "Longitude:", lng);
 
             const anchorPosition = { lat: lat, lng: lng };
             const headingValue = parseFloat(headingInput.value);
@@ -161,7 +168,7 @@
             // Calculate the initial heading position if headingValue is available
             let headingPosition;
             if (!isNaN(headingValue)) {
-                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 100, headingValue);
+                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 200, headingValue);
             } else {
                 headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
             }
@@ -248,10 +255,189 @@
             polyline.setPath([anchorPosition, headingPosition]);
         }
 
-        // Get the modal
-        var modal = document.getElementById("myModal");
+        // Function to set up refresh button event listener (called when modal is shown)
+        function setupRefreshButtonListener() {
+            const refreshButton = document.querySelector(".refresh-button");
+            console.log('🔍 Setting up refresh button listener, button found:', refreshButton); // Debug log
+            
+            if (refreshButton && !refreshButton.hasAttribute('data-listener-added')) {
+                console.log('✅ Adding refresh button event listener'); // Debug log
+                refreshButton.setAttribute('data-listener-added', 'true'); // Prevent duplicate listeners
+                refreshButton.addEventListener('click', async function(event) {
+                    console.log('🔄 Refresh button clicked!'); // Debug log
+                    event.preventDefault(); // prevent the form from being submitted
+                    const button = this;
+                    const originalText = button.textContent;
+                    console.log('Original button text:', originalText); // Debug log
+                    button.textContent = "Refreshing...";
+                    button.classList.add('loading');
+                    
+                    try {
+                        console.log('🔍 Calling fetchPlaces()...'); // Debug log
+                        await fetchPlaces();
+                        console.log('✅ Places refreshed successfully');
+                    } catch (error) {
+                        console.error('❌ Error refreshing places:', error);
+                    } finally {
+                        console.log('🔄 Restoring button text to:', originalText); // Debug log
+                        button.textContent = originalText;
+                        button.classList.remove('loading');
+                    }
+                });
+            } else if (!refreshButton) {
+                console.error('❌ Refresh button still not found even after modal is shown!'); // Debug log
+            } else {
+                console.log('⚠️ Refresh button already has event listener'); // Debug log
+            }
+        }
 
+        // Get the modal - define in global scope
+        var modal;
+
+        // Define fetchPlaces function in global scope - returns a Promise
+        function fetchPlaces() {
+            let latitude = document.querySelector("#latitude").value;
+            let longitude = document.querySelector("#longitude").value;
+            let radius = document.querySelector("#radius").value;
+            
+            if (!latitude || !longitude) {
+                document.getElementById("modal-text").innerHTML = '<div class="error-message">Missing GPS coordinates. Please enter valid coordinates first.</div>';
+                return Promise.reject(new Error('Missing coordinates'));
+            }
+            
+            // Update modal content to show loading state
+            document.getElementById("modal-text").innerHTML = '<div class="loading-indicator"><span class="loader"></span> Searching for places...</div>';
+    
+            return new Promise((resolve, reject) => {
+                let xhr = new XMLHttpRequest();
+                xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
+        
+                xhr.onload = function() {
+                    if (this.status == 200) {
+                        let places_info = JSON.parse(this.responseText);
+        
+                        // Sort the places by distance
+                        places_info.sort(function(a, b) {
+                            return a.distance - b.distance;
+                        });
+        
+                        // Prepare the text to display in the modal
+                        let text = "";
+                        for (let i = 0; i < places_info.length; i++) {
+                            let place = places_info[i];
+                            let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
+                            // create a clickable div for each place - all info on one line
+                            text += `<div class="place">
+                                        ${iconHTML}
+                                        <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
+                                        <span class="place-details"> • ${place.distance} miles • ${place.place_id}</span>
+                                    </div>`;
+                        }
+
+                        // Set the modal text
+                        document.getElementById("modal-text").innerHTML = text;
+
+                        // Check if the paragraph for the number of places found already exists
+                        let countText = document.querySelector(".count-text");
+
+                        if (countText) {
+                            // If it exists, just update the text
+                            countText.textContent = `Found ${places_info.length} places (max is 60)`;
+                        } else {
+                            // If it doesn't exist, create a new paragraph
+                            countText = document.createElement("p");
+                            countText.className = "count-text";
+                            countText.textContent = `Found ${places_info.length} places (max is 60)`;
+                            
+                            // Append the new paragraph just after the radius input and refresh button
+                            document.querySelector(".radius-input").appendChild(countText);
+                        }
+                        
+                        resolve(places_info);
+                    } else {
+                        document.getElementById("modal-text").innerHTML = '<div class="error-message">Failed to search for nearby places. Please try again.</div>';
+                        reject(new Error(`HTTP ${this.status}: Failed to search for nearby places`));
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    document.getElementById("modal-text").innerHTML = '<div class="error-message">Network error while searching for places.</div>';
+                    reject(new Error('Network error while searching for places'));
+                };
+                
+                xhr.send();
+            });
+        }        // Initialize modal and close handlers when DOM is ready
         document.addEventListener('DOMContentLoaded', function(event) {
+            console.log('DOM Content Loaded - setting up event listeners');
+            
+            // Initialize modal
+            modal = document.getElementById("myModal");
+            console.log('Modal found:', modal);
+            
+            // Check if search button exists before setting up event listener
+            const searchButton = document.getElementById('placeID-search-button');
+            console.log('Search button found:', searchButton);
+            
+            if (searchButton) {
+                console.log('Setting up search button event listener');
+                searchButton.addEventListener('click', async function(event) {
+                    console.log('Search button clicked!');
+                    event.preventDefault(); // prevent the form from being submitted
+                    
+                    const searchButton = this;
+                    const originalText = searchButton.textContent;
+                    
+                    // Check if coordinates are available
+                    const latitude = document.querySelector("#latitude").value;
+                    const longitude = document.querySelector("#longitude").value;
+                    
+                    console.log('Coordinates:', latitude, longitude);
+                    
+                    if (!latitude || !longitude) {
+                        alert('Please enter valid GPS coordinates before searching for nearby places.');
+                        return;
+                    }
+                    
+                    searchButton.textContent = 'Searching...';
+                    searchButton.classList.add('loading');
+                    
+                    // Show the modal before starting the search
+                    modal.style.display = "block";
+                    
+                    // Set up refresh button event listener NOW that modal is visible
+                    setupRefreshButtonListener();
+                    
+                    try {
+                        await fetchPlaces();
+                    } catch (error) {
+                        alert('Error searching for nearby places: ' + error.message);
+                    } finally {
+                        searchButton.textContent = originalText;
+                        searchButton.classList.remove('loading');
+                    }
+                });
+            } else {
+                console.error('Search button not found!');
+            }
+            
+            // Set up modal close handlers
+            var span = document.getElementsByClassName("close")[0];
+            
+            // When the user clicks on <span> (x), close the modal
+            if (span) {
+                span.onclick = function() {
+                    modal.style.display = "none";
+                }
+            }
+
+            // When the user clicks anywhere outside of the modal, close it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+            
             // Initialize the toggle nearby photos button
             const toggleNearbyBtn = document.getElementById('toggle-nearby-photos');
             const distanceControl = document.querySelector('.distance-control');
@@ -450,103 +636,6 @@
             } else {
                 backLink.href = '{{ url_for("list_photos_page") }}';
                 backLink.textContent = 'Back to List';
-            }
-
-            function fetchPlaces() {
-                // Show loading message
-                document.getElementById("modal-text").innerHTML = 'Please wait...';
-
-                let latitude = document.querySelector("#latitude").value;
-                let longitude = document.querySelector("#longitude").value;
-                let radius = document.querySelector("#radius").value;
-        
-                let xhr = new XMLHttpRequest();
-                xhr.open('GET', `/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`, true);
-        
-                xhr.onload = function() {
-                    // console.log(this.status);
-                    if (this.status == 200) {
-                        let places_info = JSON.parse(this.responseText);
-                        // console.log(places_info);
-        
-                        // Count the places
-                        let count = places_info.length;
-
-                        // Sort the places by distance
-                        places_info.sort(function(a, b) {
-                            return a.distance - b.distance;
-                        });
-        
-
-                        // Prepare the text to display in the modal
-                        let text = "";
-                        for (let i = 0; i < places_info.length; i++) {
-                            let place = places_info[i];
-                            // console.log("Icon:", place.icon);
-                            let iconHTML = place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : '';
-                            // create a clickable div for each place
-                            text += `<div class="place">
-                                        ${iconHTML}
-                                        <span class="place-name"><a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">${place.name}</a></span>
-                                        <span class="place-distance"><strong>Distance:</strong>${place.distance} miles</span>
-                                        <span class="place-id"><strong>Place ID:</strong>${place.place_id}</span>
-                                    </div>`;
-                        }
-
-                        // Set the modal text
-                        document.getElementById("modal-text").innerHTML = text;
-
-                        // Check if the paragraph for the number of places found already exists
-                        let countText = document.querySelector(".count-text");
-
-                        if (countText) {
-                            // If it exists, just update the text
-                            countText.textContent = `Found ${places_info.length} places (max is 60)... Please select a place, or close to cancel`;
-                        } else {
-                            // If it doesn't exist, create a new paragraph
-                            countText = document.createElement("p");
-                            countText.className = "count-text";
-                            countText.textContent = `Found ${places_info.length} places... Please select a place or close to cancel`;
-
-                            // Append the new paragraph just after the radius input and refresh button
-                            document.querySelector(".radius-input").appendChild(countText);
-                        }
-
-                        // Show the modal
-                        modal.style.display = "block";
-                    }
-                };
-                xhr.send();
-            }
-        
-            document.querySelector(".search-button").addEventListener('click', function(event) {
-                event.preventDefault(); // prevent the form from being submitted
-
-                // Show the modal
-                modal.style.display = "block";
-
-                // Then fetch the places
-                fetchPlaces();
-            });
-
-            document.querySelector(".refresh-button").addEventListener('click', function(event) {
-                event.preventDefault(); // prevent the form from being submitted
-                fetchPlaces();
-            });
-
-            // Get the <span> element that closes the modal
-            var span = document.getElementsByClassName("close")[0];
-
-            // When the user clicks on <span> (x), close the modal
-            span.onclick = function() {
-                modal.style.display = "none";
-            }
-
-            // When the user clicks anywhere outside of the modal, close it
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
             }
         });
 
