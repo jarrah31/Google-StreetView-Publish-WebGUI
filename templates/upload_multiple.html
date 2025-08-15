@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Multiple Photospheres{% endblock %}
+{% block title %}Upload Photospheres{% endblock %}
 
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
@@ -11,7 +11,7 @@
 {% block content %}
 <div class="container_upload">
     <div class="title-container">
-        <h1>Upload Multiple Photospheres</h1>
+        <h1>Upload Photospheres</h1>
         <div class="upload-status">
             <span id="upload-status-indicator" class="status-indicator inactive">
                 <span class="status-dot"></span>
@@ -23,9 +23,9 @@
     <!-- File Selection Section -->
     <div id="file-selection-section" class="upload-content-wrapper">
         <div class="upload-section">
-            <div class="photo-container db-card">
+            <div class="photo-container db-card-static">
                 <div class="card-header">
-                    <h2>Select Multiple Photospheres</h2>
+                    <h2>Select Photospheres</h2>
                     <div class="card-icon">
                         <i class="upload-icon"></i>
                     </div>
@@ -34,7 +34,7 @@
                     <div class="upload-area">
                         <div class="file-input-container">
                             <label for="multiple-file-input" class="page-link view-photos-link">
-                                <i class="file-icon"></i> Select Multiple Files
+                                <i class="file-icon"></i> Select Files
                             </label>
                             <input type="file" id="multiple-file-input" name="files" accept="image/*" multiple style="display:none;">
                             <p id="file-count">No files selected</p>
@@ -54,7 +54,7 @@
     <!-- Review Table Section -->
     <div id="review-section" class="upload-content-wrapper" style="display: none;">
         <div class="upload-section">
-            <div class="photo-container db-card">
+            <div class="photo-container db-card-static">
                 <div class="card-header">
                     <h2>Review Selected Photos</h2>
                     <div class="batch-controls">
@@ -115,7 +115,7 @@
     <!-- Upload Results Section -->
     <div id="results-section" class="upload-content-wrapper" style="display: none;">
         <div class="upload-section">
-            <div class="photo-container db-card">
+            <div class="photo-container db-card-static">
                 <div class="card-header">
                     <h2>Upload Results</h2>
                     <div class="card-icon">
@@ -544,7 +544,7 @@ function createDetailRow(index, fileData) {
         <td colspan="7" class="detail-content">
             <div class="file-details">
                 <!-- <h4>File Details: ${file.name}</h4> -->
-                <div class="details-grid">
+                <div class="file-details-grid">
                     <div class="detail-section">
                         <h5>File Information</h5>
                         <p><strong>Size:</strong> ${formatFileSize(file.size)}</p>

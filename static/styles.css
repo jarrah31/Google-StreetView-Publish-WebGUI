@@ -674,12 +674,97 @@ input[type="submit"]:hover {
 }
 
 .photo-table {
-    width: 800px;
-    table-layout: auto;
+    width: 100%;
+    table-layout: fixed;
     max-width: none;
     border-collapse: collapse;
     border-spacing: 0;
     margin-bottom: 20px;
+}
+
+/* Specific styles for photos.html List View table */
+#list-view .photo-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* Fixed width columns for photos.html */
+#list-view .photo-table thead th:nth-child(1) { /* Photo */
+    width: 80px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(2) { /* Status */
+    width: 120px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(3) { /* Views */
+    width: 80px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(4) { /* Capture Date */
+    width: 140px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(5) { /* Upload Date */
+    width: 140px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(6) { /* Places - dynamic width */
+    width: auto;
+    min-width: 200px;
+    text-align: left;
+}
+
+#list-view .photo-table thead th:nth-child(7) { /* Connections */
+    width: 100px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(8) { /* Actions */
+    width: 180px;
+    text-align: center;
+}
+
+/* Body cell alignment to match headers */
+#list-view .photo-table td:nth-child(1) { /* Photo */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(2) { /* Status */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(3) { /* Views */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(4) { /* Capture Date */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(5) { /* Upload Date */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(6) { /* Places - left aligned for readability */
+    text-align: left;
+    padding-left: 8px;
+    word-wrap: break-word;
+    white-space: normal;
+    overflow: visible;
+}
+
+#list-view .photo-table td:nth-child(7) { /* Connections */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(8) { /* Actions */
+    text-align: center;
 }
 
 .photo-table th {
@@ -720,12 +805,7 @@ input[type="submit"]:hover {
     background-color: #e6e6e6;
 }
 
-.photo-table td:nth-child(2),
-.photo-table td:nth-child(3),
-.photo-table td:nth-child(4),
-.photo-table td:nth-child(5) {
-    width: 100px;
-}
+/* Remove the old generic column width rules - replaced with specific #list-view rules above */
 
 #overlay {
     display: none;
@@ -768,7 +848,15 @@ input[type="submit"]:hover {
 
 .custom-table-container {
     margin: 10px 0; /* Changed from 24px to 10px */
-    max-width: 960px;
+    max-width: none;
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Specific styling for photos.html list view table container */
+#list-view.custom-table-container {
+    max-width: none;
+    width: 100%;
 }
 
 .custom-photo-table {
@@ -1552,6 +1640,21 @@ select option {
     height: 100%;
     display: flex;
     flex-direction: column;
+}
+
+/* Static version of db-card without transform hover effect */
+.db-card-static {
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.db-card-static:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 .db-card:hover {
@@ -3516,6 +3619,102 @@ input[type="checkbox"]:indeterminate::before {
     }
 }
 
+/* COMPREHENSIVE FIX FOR DETAILS-GRID LAYOUT ISSUES */
+/* This completely overrides any conflicting styles to ensure proper grid layout */
+
+/* Force the details-grid to work properly with high specificity */
+.details-grid {
+    display: grid !important;
+    grid-template-columns: max-content 1fr !important;
+    gap: 8px 15px !important;
+    align-items: center !important;
+    margin-top: 15px !important;
+    padding-bottom: 20px !important;
+    width: 100% !important;
+}
+
+/* Ensure the form integrates properly into the grid */
+.details-grid .grid-form {
+    display: contents !important;
+    width: 100% !important;
+}
+
+/* Force grid labels to behave properly */
+.details-grid .grid-label,
+.details-grid label.grid-label {
+    font-weight: bold !important;
+    text-align: right !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
+    align-self: center !important;
+    margin: 0 !important;
+}
+
+/* Force grid values to behave properly */
+.details-grid .grid-value {
+    width: 100% !important;
+    align-self: center !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Force inputs within grid values to size properly */
+.details-grid .grid-value input[type="text"],
+.details-grid .grid-value input[type="number"],
+.details-grid input[type="text"],
+.details-grid input[type="number"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 4px !important;
+}
+
+/* Fix the form-group-wrapper within grid */
+.details-grid .form-group-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    margin: 0 !important;
+    align-items: stretch !important;
+}
+
+/* Fix the input-wrapper within grid */
+.details-grid .input-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+}
+
+/* Fix search button alignment */
+.details-grid .search-button {
+    flex-shrink: 0 !important;
+    padding: 4px 8px !important;
+    margin: 0 !important;
+}
+
+/* Fix submit button to span both columns */
+.details-grid .grid-submit {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+    margin-top: 15px !important;
+    width: auto !important;
+}
+
+/* Ensure sub elements (like place name) don't break layout */
+.details-grid sub {
+    margin-top: 5px !important;
+    font-size: 0.8rem !important;
+    color: #666 !important;
+    display: block !important;
+}
+
+/* Fix any potential conflicts with general form styles */
+.details-grid * {
+    box-sizing: border-box !important;
+}
+
 /* Loading state for GPS map */
 .gps-map-loading {
     display: flex;
@@ -3533,3 +3732,58 @@ input[type="checkbox"]:indeterminate::before {
     font-size: 1.1rem;
 }
 
+
+/* FILE-DETAILS-GRID: 3-column side-by-side layout for upload_multiple.html Details section */
+.file-details-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px !important;
+    margin-top: 15px !important;
+    padding: 15px 0 !important;
+    width: 100% !important;
+    align-items: start !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+/* Ensure each section within file-details-grid is properly styled */
+.file-details-grid .detail-section {
+    background-color: white !important;
+    padding: 15px !important;
+    border-radius: 8px !important;
+    border: 1px solid #e9ecef !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.file-details-grid .detail-section h5 {
+    margin: 0 0 10px 0 !important;
+    color: #3498db !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 1px solid #e9ecef !important;
+    padding-bottom: 8px !important;
+}
+
+.file-details-grid .detail-section p {
+    margin: 5px 0 !important;
+    font-size: 0.9rem !important;
+    color: #495057 !important;
+    line-height: 1.4 !important;
+}
+
+/* Mobile responsiveness for file-details-grid */
+@media (max-width: 768px) {
+    .file-details-grid {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+        padding: 10px !important;
+    }
+}
+
+@media (max-width: 992px) and (min-width: 769px) {
+    .file-details-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
