@@ -1467,7 +1467,7 @@ def upload_photosphere():
 def upload_multiple_photospheres():
     app.logger.debug(f"=== FUNCTION APP: upload_multiple_photospheres ===")
     """Display the multiple upload page"""
-    return render_template('upload_multiple.html')
+    return render_template('upload_multiple.html', api_key=client_config['api_key'])
 
 @app.route('/delete_photo', methods=['POST'])
 @token_required

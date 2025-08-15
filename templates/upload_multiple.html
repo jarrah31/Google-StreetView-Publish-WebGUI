@@ -5,6 +5,7 @@
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifreader@3/dist/exif-reader.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry" async defer></script>
 {% endblock %}
 
 {% block content %}
@@ -167,6 +168,42 @@
         </div>
     </div>
 
+    <!-- GPS Edit Modal -->
+    <div id="gps-edit-modal" class="modal" style="display: none;">
+        <div class="modal-content gps-modal-content">
+            <div class="modal-header">
+                <h3>Edit GPS Location</h3>
+                <span class="close" id="gps-modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="current-coordinates">
+                    <p>Current Location: <span id="current-filename"></span></p>
+                    <div class="coordinate-display">
+                        <span>Latitude: <strong id="current-lat"></strong></span>
+                        <span>Longitude: <strong id="current-lng"></strong></span>
+                    </div>
+                </div>
+                <div id="gps-map" class="gps-map"></div>
+                <div class="coordinate-inputs">
+                    <div class="input-group">
+                        <label for="manual-lat">Latitude:</label>
+                        <input type="number" id="manual-lat" step="0.0000001" min="-90" max="90" placeholder="e.g. 51.5074">
+                    </div>
+                    <div class="input-group">
+                        <label for="manual-lng">Longitude:</label>
+                        <input type="number" id="manual-lng" step="0.0000001" min="-180" max="180" placeholder="e.g. -0.1278">
+                    </div>
+                    <button id="manual-coords-btn" class="view-photos-link">Set Manual Coordinates</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="gps-cancel-btn" class="view-photos-link">Cancel</button>
+                <button id="gps-reset-btn" class="view-photos-link" style="display: none;">Reset to Original</button>
+                <button id="gps-save-btn" class="view-photos-link primary-button">Save Location</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="loading-spinner"></div>
@@ -237,6 +274,9 @@ function initializeMultipleUpload() {
     
     // Initialize image preview modal
     initializeImagePreviewModal();
+    
+    // Initialize GPS edit modal
+    initializeGpsEditModal();
     
     // Set initial section visibility (show file selection, hide review)
     updateSectionVisibility();
@@ -332,7 +372,12 @@ async function processFiles(files, addToExisting = false) {
                 placeId: '',
                 selected: false,
                 status: determineInitialStatus(metadata),
-                uploadResult: null
+                uploadResult: null,
+                editedGPS: {
+                    latitude: null,
+                    longitude: null,
+                    isEdited: false
+                }
             };
         } catch (error) {
             console.error(`Error processing file ${file.name}:`, error);
@@ -343,7 +388,12 @@ async function processFiles(files, addToExisting = false) {
                 selected: false,
                 status: UploadStatus.ERROR,
                 uploadResult: null,
-                error: error.message
+                error: error.message,
+                editedGPS: {
+                    latitude: null,
+                    longitude: null,
+                    isEdited: false
+                }
             };
         }
     }
@@ -421,7 +471,7 @@ function createFileRow(index, fileData) {
             <img src="${thumbnailUrl}" alt="Thumbnail" class="file-thumbnail">
         </td>
         <td class="metadata-column">
-            ${getMetadataStatusIcon(metadata)}
+            ${getMetadataStatusIcon(metadata, fileData)}
         </td>
         <td class="filename-column" title="${file.name}">
             ${file.name}
@@ -505,8 +555,21 @@ function createDetailRow(index, fileData) {
                     <div class="detail-section">
                         <h5>GPS Data</h5>
                         ${metadata && metadata.hasGpsData ? `
-                            <p><strong>Latitude:</strong> ${metadata.latitude}</p>
-                            <p><strong>Longitude:</strong> ${metadata.longitude}</p>
+                            ${fileData.editedGPS.isEdited ? `
+                                <p><strong>Latitude:</strong> <span class="gps-coord edited" data-coord="lat">${fileData.editedGPS.latitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+                                <p><strong>Longitude:</strong> <span class="gps-coord edited" data-coord="lng">${fileData.editedGPS.longitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+                                <p class="gps-source edited">📍 Location manually adjusted</p>
+                                <div class="gps-actions">
+                                    <button class="edit-gps-btn" data-file-index="${index}">📍 Edit Map Location</button>
+                                    <button class="reset-gps-btn" data-file-index="${index}">↺ Reset to Original</button>
+                                </div>
+                            ` : `
+                                <p><strong>Latitude:</strong> <span class="gps-coord" data-coord="lat">${metadata.latitude}</span></p>
+                                <p><strong>Longitude:</strong> <span class="gps-coord" data-coord="lng">${metadata.longitude}</span></p>
+                                <div class="gps-actions">
+                                    <button class="edit-gps-btn" data-file-index="${index}">📍 Edit Map Location</button>
+                                </div>
+                            `}
                         ` : '<p>No GPS data found</p>'}
                     </div>
                     <div class="detail-section">
@@ -537,13 +600,19 @@ function createDetailRow(index, fileData) {
     return row;
 }
 
-function getMetadataStatusIcon(metadata) {
+function getMetadataStatusIcon(metadata, fileData) {
     if (!metadata) {
         return '<span class="metadata-status error" title="Failed to read metadata">❌</span>';
     }
     
+    const isGpsEdited = fileData && fileData.editedGPS && fileData.editedGPS.isEdited;
+    
     if (metadata.hasGpsData && metadata.hasXmpData) {
-        return '<span class="metadata-status valid" title="Valid photosphere metadata">✅</span>';
+        if (isGpsEdited) {
+            return '<span class="metadata-status valid" title="Valid photosphere metadata with edited GPS coordinates">✅📍</span>';
+        } else {
+            return '<span class="metadata-status valid" title="Valid photosphere metadata">✅</span>';
+        }
     } else if (metadata.hasGpsData || metadata.hasXmpData) {
         return '<span class="metadata-status warning" title="Partial metadata">⚠️</span>';
     } else {
@@ -930,8 +999,12 @@ async function uploadSingleFile(fileData) {
     // Create FormData for the file
     const formData = new FormData();
     formData.append('file', fileData.file);
-    formData.append('latitude', fileData.metadata.latitude);
-    formData.append('longitude', fileData.metadata.longitude);
+    // Use edited GPS coordinates if available, otherwise use original metadata
+    const latitude = fileData.editedGPS.isEdited ? fileData.editedGPS.latitude : fileData.metadata.latitude;
+    const longitude = fileData.editedGPS.isEdited ? fileData.editedGPS.longitude : fileData.metadata.longitude;
+    
+    formData.append('latitude', latitude);
+    formData.append('longitude', longitude);
     formData.append('heading', fileData.metadata.heading || 0);
     formData.append('placeId', fileData.placeId);
     
@@ -1324,6 +1397,314 @@ function resetToInitialState() {
     }
     
     console.log('Reset to initial state completed');
+}
+
+// GPS Edit Modal Variables
+let gpsEditMap = null;
+let gpsEditMarker = null;
+let currentEditingFileIndex = null;
+
+// Initialize GPS Edit Modal
+function initializeGpsEditModal() {
+    const modal = document.getElementById('gps-edit-modal');
+    const closeBtn = document.getElementById('gps-modal-close');
+    const cancelBtn = document.getElementById('gps-cancel-btn');
+    const saveBtn = document.getElementById('gps-save-btn');
+    const resetBtn = document.getElementById('gps-reset-btn');
+    const manualCoordsBtn = document.getElementById('manual-coords-btn');
+    
+    // Close button handlers
+    closeBtn.addEventListener('click', closeGpsEditModal);
+    cancelBtn.addEventListener('click', closeGpsEditModal);
+    
+    // Save button handler
+    saveBtn.addEventListener('click', saveGpsEdits);
+    
+    // Reset button handler
+    resetBtn.addEventListener('click', resetGpsToOriginal);
+    
+    // Manual coordinates button
+    manualCoordsBtn.addEventListener('click', setManualCoordinates);
+    
+    // Close on outside click
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeGpsEditModal();
+        }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.style.display === 'block') {
+            closeGpsEditModal();
+        }
+    });
+}
+
+// Event delegation for dynamically created GPS edit buttons
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('edit-gps-btn')) {
+        const fileIndex = parseInt(event.target.getAttribute('data-file-index'));
+        openGpsEditModal(fileIndex);
+    } else if (event.target.classList.contains('reset-gps-btn')) {
+        const fileIndex = parseInt(event.target.getAttribute('data-file-index'));
+        resetGpsCoordinates(fileIndex);
+    }
+});
+
+// Open GPS Edit Modal
+function openGpsEditModal(fileIndex) {
+    const fileData = filesMetadata[fileIndex];
+    
+    if (!fileData || !fileData.metadata || !fileData.metadata.hasGpsData) {
+        alert('No GPS data available for this photo.');
+        return;
+    }
+    
+    currentEditingFileIndex = fileIndex;
+    const modal = document.getElementById('gps-edit-modal');
+    const filenameSpan = document.getElementById('current-filename');
+    const resetBtn = document.getElementById('gps-reset-btn');
+    
+    // Set filename
+    filenameSpan.textContent = fileData.file.name;
+    
+    // Show/hide reset button based on whether GPS is edited
+    resetBtn.style.display = fileData.editedGPS.isEdited ? 'inline-block' : 'none';
+    
+    // Get current coordinates (edited if available, otherwise original)
+    const currentLat = fileData.editedGPS.isEdited ? fileData.editedGPS.latitude : fileData.metadata.latitude;
+    const currentLng = fileData.editedGPS.isEdited ? fileData.editedGPS.longitude : fileData.metadata.longitude;
+    
+    // Update coordinate display
+    updateCoordinateDisplay(currentLat, currentLng);
+    
+    // Set manual input fields
+    document.getElementById('manual-lat').value = currentLat;
+    document.getElementById('manual-lng').value = currentLng;
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    // Initialize map
+    setTimeout(() => {
+        initializeGpsMap(currentLat, currentLng);
+    }, 100);
+}
+
+// Initialize GPS Map
+function initializeGpsMap(lat, lng) {
+    const mapElement = document.getElementById('gps-map');
+    
+    if (!window.google || !window.google.maps) {
+        alert('Google Maps API not loaded. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Create map
+    gpsEditMap = new google.maps.Map(mapElement, {
+        center: { lat: lat, lng: lng },
+        zoom: 16,
+        mapTypeId: 'hybrid'
+    });
+    
+    // Create marker
+    gpsEditMarker = new google.maps.Marker({
+        position: { lat: lat, lng: lng },
+        map: gpsEditMap,
+        draggable: true,
+        title: 'Drag to adjust GPS location'
+    });
+    
+    // Add marker drag listener
+    gpsEditMarker.addListener('drag', function(event) {
+        const newLat = event.latLng.lat();
+        const newLng = event.latLng.lng();
+        updateCoordinateDisplay(newLat, newLng);
+        
+        // Update manual input fields
+        document.getElementById('manual-lat').value = newLat.toFixed(7);
+        document.getElementById('manual-lng').value = newLng.toFixed(7);
+    });
+    
+    // Add marker dragend listener for final update
+    gpsEditMarker.addListener('dragend', function(event) {
+        const newLat = event.latLng.lat();
+        const newLng = event.latLng.lng();
+        updateCoordinateDisplay(newLat, newLng);
+        
+        // Update manual input fields
+        document.getElementById('manual-lat').value = newLat.toFixed(7);
+        document.getElementById('manual-lng').value = newLng.toFixed(7);
+    });
+}
+
+// Update coordinate display
+function updateCoordinateDisplay(lat, lng) {
+    document.getElementById('current-lat').textContent = lat.toFixed(7);
+    document.getElementById('current-lng').textContent = lng.toFixed(7);
+}
+
+// Set manual coordinates
+function setManualCoordinates() {
+    const manualLat = parseFloat(document.getElementById('manual-lat').value);
+    const manualLng = parseFloat(document.getElementById('manual-lng').value);
+    
+    // Validate coordinates
+    if (isNaN(manualLat) || isNaN(manualLng)) {
+        alert('Please enter valid latitude and longitude values.');
+        return;
+    }
+    
+    if (manualLat < -90 || manualLat > 90) {
+        alert('Latitude must be between -90 and 90 degrees.');
+        return;
+    }
+    
+    if (manualLng < -180 || manualLng > 180) {
+        alert('Longitude must be between -180 and 180 degrees.');
+        return;
+    }
+    
+    // Update map and marker
+    const newPosition = { lat: manualLat, lng: manualLng };
+    gpsEditMap.setCenter(newPosition);
+    gpsEditMarker.setPosition(newPosition);
+    
+    // Update coordinate display
+    updateCoordinateDisplay(manualLat, manualLng);
+}
+
+// Save GPS edits
+function saveGpsEdits() {
+    if (currentEditingFileIndex === null) return;
+    
+    const newLat = parseFloat(document.getElementById('current-lat').textContent);
+    const newLng = parseFloat(document.getElementById('current-lng').textContent);
+    
+    // Update file metadata
+    updateGpsCoordinates(currentEditingFileIndex, newLat, newLng);
+    
+    // Close modal
+    closeGpsEditModal();
+    
+    // Show success message
+    showFlashMessage('GPS coordinates updated successfully!', 'success');
+}
+
+// Update GPS coordinates
+function updateGpsCoordinates(fileIndex, newLat, newLng) {
+    const fileData = filesMetadata[fileIndex];
+    
+    // Update edited GPS data
+    fileData.editedGPS = {
+        latitude: parseFloat(newLat.toFixed(7)),
+        longitude: parseFloat(newLng.toFixed(7)),
+        isEdited: true
+    };
+    
+    // Update the details section if it's visible
+    updateDetailRowGpsDisplay(fileIndex);
+    
+    // Update the main table metadata icon
+    updateMainTableMetadataIcon(fileIndex);
+    
+    console.log(`Updated GPS for file ${fileIndex}: ${newLat}, ${newLng}`);
+}
+
+// Reset GPS to original coordinates
+function resetGpsToOriginal() {
+    if (currentEditingFileIndex === null) return;
+    
+    resetGpsCoordinates(currentEditingFileIndex);
+    closeGpsEditModal();
+    showFlashMessage('GPS coordinates reset to original values.', 'info');
+}
+
+// Reset GPS coordinates to original
+function resetGpsCoordinates(fileIndex) {
+    const fileData = filesMetadata[fileIndex];
+    
+    // Reset edited GPS data
+    fileData.editedGPS = {
+        latitude: null,
+        longitude: null,
+        isEdited: false
+    };
+    
+    // Update the details section if it's visible
+    updateDetailRowGpsDisplay(fileIndex);
+    
+    // Update the main table metadata icon
+    updateMainTableMetadataIcon(fileIndex);
+    
+    console.log(`Reset GPS for file ${fileIndex} to original values`);
+}
+
+// Update detail row GPS display
+function updateDetailRowGpsDisplay(fileIndex) {
+    const detailRow = document.querySelector(`.detail-row[data-file-index="${fileIndex}"]`);
+    if (!detailRow || detailRow.style.display === 'none') return;
+    
+    const fileData = filesMetadata[fileIndex];
+    const metadata = fileData.metadata;
+    
+    if (!metadata || !metadata.hasGpsData) return;
+    
+    const gpsSection = detailRow.querySelector('.detail-section:nth-child(2)');
+    if (!gpsSection) return;
+    
+    // Regenerate GPS section HTML
+    const gpsHtml = `
+        <h5>GPS Data</h5>
+        ${fileData.editedGPS.isEdited ? `
+            <p><strong>Latitude:</strong> <span class="gps-coord edited" data-coord="lat">${fileData.editedGPS.latitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+            <p><strong>Longitude:</strong> <span class="gps-coord edited" data-coord="lng">${fileData.editedGPS.longitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+            <p class="gps-source edited">📍 Location manually adjusted</p>
+            <div class="gps-actions">
+                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit Map Location</button>
+                <button class="reset-gps-btn" data-file-index="${fileIndex}">↺ Reset to Original</button>
+            </div>
+        ` : `
+            <p><strong>Latitude:</strong> <span class="gps-coord" data-coord="lat">${metadata.latitude}</span></p>
+            <p><strong>Longitude:</strong> <span class="gps-coord" data-coord="lng">${metadata.longitude}</span></p>
+            <div class="gps-actions">
+                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit Map Location</button>
+            </div>
+        `}
+    `;
+    
+    gpsSection.innerHTML = gpsHtml;
+}
+
+// Update main table metadata icon
+function updateMainTableMetadataIcon(fileIndex) {
+    const mainRow = document.querySelector(`.photo-row[data-file-index="${fileIndex}"]`);
+    if (!mainRow) return;
+    
+    const metadataCell = mainRow.querySelector('.metadata-column');
+    if (!metadataCell) return;
+    
+    const fileData = filesMetadata[fileIndex];
+    const metadata = fileData.metadata;
+    
+    metadataCell.innerHTML = getMetadataStatusIcon(metadata, fileData);
+}
+
+// Close GPS Edit Modal
+function closeGpsEditModal() {
+    const modal = document.getElementById('gps-edit-modal');
+    modal.style.display = 'none';
+    
+    // Clean up map
+    if (gpsEditMap) {
+        gpsEditMap = null;
+    }
+    if (gpsEditMarker) {
+        gpsEditMarker = null;
+    }
+    
+    currentEditingFileIndex = null;
 }
 </script>
 {% endblock %}
