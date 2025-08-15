@@ -1,0 +1,1329 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Multiple Photospheres{% endblock %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifreader@3/dist/exif-reader.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container_upload">
+    <div class="title-container">
+        <h1>Upload Multiple Photospheres</h1>
+        <div class="upload-status">
+            <span id="upload-status-indicator" class="status-indicator inactive">
+                <span class="status-dot"></span>
+                <span id="upload-status-text">Ready to Select Files</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- File Selection Section -->
+    <div id="file-selection-section" class="upload-content-wrapper">
+        <div class="upload-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Select Multiple Photospheres</h2>
+                    <div class="card-icon">
+                        <i class="upload-icon"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="upload-area">
+                        <div class="file-input-container">
+                            <label for="multiple-file-input" class="page-link view-photos-link">
+                                <i class="file-icon"></i> Select Multiple Files
+                            </label>
+                            <input type="file" id="multiple-file-input" name="files" accept="image/*" multiple style="display:none;">
+                            <p id="file-count">No files selected</p>
+                            <p class="file-size-note">Maximum file size: 64MB per file</p>
+                        </div>
+                        
+                        <!-- Drag and Drop Area -->
+                        <div id="drop-area" class="drop-area">
+                            <p>Or drag and drop multiple files here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Table Section -->
+    <div id="review-section" class="upload-content-wrapper" style="display: none;">
+        <div class="upload-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Review Selected Photos</h2>
+                    <div class="batch-controls">
+                        <button id="select-all-btn" class="page-link view-photos-link">Select All</button>
+                        <button id="select-none-btn" class="page-link view-photos-link">Select None</button>
+                        <button id="select-valid-btn" class="page-link view-photos-link">Select Valid Only</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <!-- Progress Summary -->
+                    <div id="progress-summary" class="progress-summary" style="display: none;">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span id="progress-status">Ready to upload</span>
+                                <span id="progress-count">0/0 photos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Photos Review Table -->
+                    <div class="custom-table-container">
+                        <table class="photo-table" id="review-table">
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-column">
+                                        <input type="checkbox" id="master-checkbox" title="Select/Deselect All">
+                                    </th>
+                                    <th>Thumbnail</th>
+                                    <th>Metadata</th>
+                                    <th>Filename</th>
+                                    <th>PlaceID</th>
+                                    <th>Status</th>
+                                    <th>More Info</th>
+                                </tr>
+                            </thead>
+                            <tbody id="review-table-body">
+                                <!-- Rows will be dynamically generated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="button-container">
+                        <button id="cancel-btn" class="page-link view-photos-link">Cancel</button>
+                        <button id="select-more-files-btn" class="page-link view-photos-link">Select More Files</button>
+                        <button id="upload-selected-btn" class="page-link view-photos-link primary-button" disabled>
+                            <span id="upload-button-text">Upload Selected (0)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Results Section -->
+    <div id="results-section" class="upload-content-wrapper" style="display: none;">
+        <div class="upload-section">
+            <div class="photo-container db-card">
+                <div class="card-header">
+                    <h2>Upload Results</h2>
+                    <div class="card-icon">
+                        <i class="success-icon"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div id="results-summary" class="results-summary">
+                        <!-- Results will be populated here -->
+                    </div>
+                    <div class="card-footer">
+                        <div class="button-container">
+                            <a href="{{ url_for('photos_page') }}" class="page-link view-photos-link">View All Photos</a>
+                            <a href="{{ url_for('upload_photosphere') }}" class="page-link view-photos-link">Upload More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Place Search Modal (reused from upload.html) -->
+    <div id="placeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nearby Places</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="radius-input">
+                    <label for="radius">Search Radius (meters):</label>
+                    <div class="radius-control">
+                        <input type="number" id="radius" value="300" min="1" max="1000">
+                        <button class="page-link view-photos-link refresh-button">Refresh</button>
+                    </div>
+                </div>
+                <div class="places-container">
+                    <p id="modal-text">Searching for nearby places...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="image-preview-modal" class="image-preview-modal">
+        <div class="image-preview-content">
+            <span class="image-preview-close">&times;</span>
+            <img id="image-preview-img" class="image-preview-img" src="" alt="Preview">
+            <div id="image-preview-filename" class="image-preview-filename"></div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Processing files...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Global variables
+let selectedFiles = [];
+let filesMetadata = {};
+let uploadQueue = [];
+let currentUploadIndex = 0;
+let isUploading = false;
+let currentSearchFileIndex = null;
+
+// Upload status enum
+const UploadStatus = {
+    READY: { icon: '🔵', text: 'Ready', class: 'status-ready' },
+    WARNING: { icon: '⚠️', text: 'Warning', class: 'status-warning' },
+    ERROR: { icon: '❌', text: 'Error', class: 'status-error' },
+    UPLOADING: { icon: '⏳', text: 'Uploading...', class: 'status-uploading' },
+    COMPLETE: { icon: '✅', text: 'Complete', class: 'status-complete' },
+    RETRY: { icon: '🔄', text: 'Retry', class: 'status-retry' },
+    QUEUED: { icon: '⏸️', text: 'Queued', class: 'status-queued' },
+    ALREADY_UPLOADED: { icon: '✅', text: 'Already Uploaded', class: 'status-already-uploaded' }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMultipleUpload();
+});
+
+function initializeMultipleUpload() {
+    const fileInput = document.getElementById('multiple-file-input');
+    const dropArea = document.getElementById('drop-area');
+    const masterCheckbox = document.getElementById('master-checkbox');
+    
+    // File input change handler
+    fileInput.addEventListener('change', handleFileSelection);
+    
+    // Drag and drop handlers
+    dropArea.addEventListener('dragover', handleDragOver);
+    dropArea.addEventListener('drop', handleFileDrop);
+    dropArea.addEventListener('dragenter', handleDragEnter);
+    dropArea.addEventListener('dragleave', handleDragLeave);
+    
+    // Master checkbox handler
+    masterCheckbox.addEventListener('change', handleMasterCheckbox);
+    
+    // Batch control buttons
+    document.getElementById('select-all-btn').addEventListener('click', () => selectFiles('all'));
+    document.getElementById('select-none-btn').addEventListener('click', () => selectFiles('none'));
+    document.getElementById('select-valid-btn').addEventListener('click', () => selectFiles('valid'));
+    
+    // Upload button
+    document.getElementById('upload-selected-btn').addEventListener('click', startBatchUpload);
+    
+    // Select More Files button
+    document.getElementById('select-more-files-btn').addEventListener('click', selectMoreFiles);
+    
+    // Cancel button
+    document.getElementById('cancel-btn').addEventListener('click', resetToInitialState);
+    
+    // Place search modal handlers
+    initializePlaceSearchModal();
+    
+    // Initialize image preview modal
+    initializeImagePreviewModal();
+    
+    // Set initial section visibility (show file selection, hide review)
+    updateSectionVisibility();
+}
+
+function handleFileSelection(event) {
+    const files = Array.from(event.target.files);
+    const addToExisting = selectedFiles.length > 0; // Add to existing if we already have files
+    processFiles(files, addToExisting);
+    
+    // Reset the input so the same files can be selected again if needed
+    event.target.value = '';
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+}
+
+function handleDragEnter(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(event) {
+    event.preventDefault();
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+        event.currentTarget.classList.remove('drag-over');
+    }
+}
+
+function handleFileDrop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    const files = Array.from(event.dataTransfer.files);
+    const addToExisting = selectedFiles.length > 0; // Add to existing if we already have files
+    processFiles(files, addToExisting);
+}
+
+async function processFiles(files, addToExisting = false) {
+    if (files.length === 0) return;
+    
+    updateUploadStatus('processing', `Processing ${files.length} files...`);
+    document.getElementById('loading-overlay').style.display = 'flex';
+    
+    // Filter for image files only
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length !== files.length) {
+        const skipped = files.length - imageFiles.length;
+        alert(`Skipped ${skipped} non-image files. Only image files are supported.`);
+    }
+    
+    let filesToProcess = imageFiles;
+    let duplicateFiles = [];
+    
+    // Check for duplicates when adding to existing
+    if (addToExisting && selectedFiles.length > 0) {
+        const existingFilenames = selectedFiles.map(file => file.name);
+        filesToProcess = [];
+        
+        imageFiles.forEach(file => {
+            if (existingFilenames.includes(file.name)) {
+                duplicateFiles.push(file.name);
+            } else {
+                filesToProcess.push(file);
+            }
+        });
+    }
+    
+    // If adding to existing, append to selectedFiles array
+    let startIndex = 0;
+    if (addToExisting && selectedFiles.length > 0) {
+        startIndex = selectedFiles.length;
+        selectedFiles = selectedFiles.concat(filesToProcess);
+    } else {
+        selectedFiles = filesToProcess;
+        filesMetadata = {}; // Reset metadata when starting fresh
+    }
+    
+    document.getElementById('file-count').textContent =
+        `${selectedFiles.length} image files selected`;
+    
+    // Process metadata for new files only
+    for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
+        const metadataIndex = startIndex + i;
+        try {
+            const metadata = await extractMetadata(file);
+            filesMetadata[metadataIndex] = {
+                file: file,
+                metadata: metadata,
+                placeId: '',
+                selected: false,
+                status: determineInitialStatus(metadata),
+                uploadResult: null
+            };
+        } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            filesMetadata[metadataIndex] = {
+                file: file,
+                metadata: null,
+                placeId: '',
+                selected: false,
+                status: UploadStatus.ERROR,
+                uploadResult: null,
+                error: error.message
+            };
+        }
+    }
+    
+    document.getElementById('loading-overlay').style.display = 'none';
+    
+    // Check upload status for all files
+    await checkUploadStatusForFiles();
+    
+    // Update section visibility and populate table
+    updateSectionVisibility();
+    populateReviewTable();
+    updateUploadStatus('active', `${selectedFiles.length} files ready for review`);
+    
+    // Show duplicate message after processing is complete
+    if (duplicateFiles.length > 0) {
+        const message = duplicateFiles.length === 1
+            ? `Filename "${duplicateFiles[0]}" already selected.`
+            : `${duplicateFiles.length} files already selected: ${duplicateFiles.join(', ')}`;
+        showFlashMessage(message, 'warning');
+    }
+}
+
+function determineInitialStatus(metadata, uploadData = null) {
+    // If already uploaded, show as complete
+    if (uploadData && uploadData.uploaded) {
+        if (uploadData.status === 'PUBLISHED') {
+            return UploadStatus.ALREADY_UPLOADED;
+        } else {
+            return UploadStatus.WARNING; // Uploaded but not published
+        }
+    }
+    
+    // For new files, check metadata
+    if (!metadata || !metadata.hasGpsData || !metadata.hasXmpData) {
+        return UploadStatus.WARNING;
+    }
+    return UploadStatus.READY;
+}
+
+function populateReviewTable() {
+    const tbody = document.getElementById('review-table-body');
+    tbody.innerHTML = '';
+    
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fileData = filesMetadata[i];
+        const row = createFileRow(i, fileData);
+        tbody.appendChild(row);
+        
+        // Add detail row (initially hidden)
+        const detailRow = createDetailRow(i, fileData);
+        tbody.appendChild(detailRow);
+    }
+    
+    updateSelectionCount();
+}
+
+function createFileRow(index, fileData) {
+    const row = document.createElement('tr');
+    row.className = 'photo-row';
+    row.dataset.fileIndex = index;
+    
+    const metadata = fileData.metadata;
+    const file = fileData.file;
+    
+    // Create thumbnail
+    const thumbnailUrl = URL.createObjectURL(file);
+    
+    row.innerHTML = `
+        <td class="checkbox-column">
+            <input type="checkbox" class="file-checkbox" data-index="${index}" 
+                   ${fileData.selected ? 'checked' : ''}>
+        </td>
+        <td class="thumbnail-column">
+            <img src="${thumbnailUrl}" alt="Thumbnail" class="file-thumbnail">
+        </td>
+        <td class="metadata-column">
+            ${getMetadataStatusIcon(metadata)}
+        </td>
+        <td class="filename-column" title="${file.name}">
+            ${file.name}
+        </td>
+        <td class="placeid-column">
+            <div class="placeID-input-wrapper">
+                <input type="text" class="placeid-input" data-index="${index}" 
+                       value="${fileData.placeId}" placeholder="Optional">
+                <button type="button" class="page-link view-photos-link search-placeid-btn" 
+                        data-index="${index}" ${!metadata?.hasGpsData ? 'disabled' : ''}>🔍</button>
+            </div>
+        </td>
+        <td class="status-column">
+            <span class="upload-status ${fileData.status.class}">
+                ${fileData.status.icon} ${fileData.status.text}
+            </span>
+        </td>
+        <td class="actions-column">
+            <button class="detail-toggle-btn" data-index="${index}">Details ▼</button>
+        </td>
+    `;
+    
+    // Add event listeners
+    const checkbox = row.querySelector('.file-checkbox');
+    checkbox.addEventListener('change', (e) => handleFileCheckbox(e, index));
+    
+    const detailBtn = row.querySelector('.detail-toggle-btn');
+    detailBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent row click
+        toggleDetailRow(e, index);
+    });
+    
+    const placeInput = row.querySelector('.placeid-input');
+    placeInput.addEventListener('change', (e) => updatePlaceId(index, e.target.value));
+    placeInput.addEventListener('click', (e) => e.stopPropagation()); // Prevent row click
+    placeInput.addEventListener('focus', (e) => e.stopPropagation()); // Prevent row click
+    
+    const searchBtn = row.querySelector('.search-placeid-btn');
+    searchBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent row click
+        searchPlaceForFile(index);
+    });
+    
+    // Add thumbnail click handler for image preview
+    const thumbnail = row.querySelector('.file-thumbnail');
+    thumbnail.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent row click
+        showImagePreview(thumbnailUrl, file.name);
+    });
+    
+    // Add row click handler
+    row.addEventListener('click', (e) => handleRowClick(e, index));
+    
+    // Update row selection visual state
+    updateRowSelectionState(row, fileData.selected);
+    
+    return row;
+}
+
+function createDetailRow(index, fileData) {
+    const row = document.createElement('tr');
+    row.className = 'detail-row';
+    row.dataset.fileIndex = index;
+    row.style.display = 'none';
+    
+    const metadata = fileData.metadata;
+    const file = fileData.file;
+    
+    const detailsHtml = `
+        <td colspan="7" class="detail-content">
+            <div class="file-details">
+                <!-- <h4>File Details: ${file.name}</h4> -->
+                <div class="details-grid">
+                    <div class="detail-section">
+                        <h5>File Information</h5>
+                        <p><strong>Size:</strong> ${formatFileSize(file.size)}</p>
+                        <p><strong>Type:</strong> ${file.type}</p>
+                        <p><strong>Created:</strong> ${metadata && metadata.dateTimeOriginal ? formatExifDate(metadata.dateTimeOriginal) : 'Not available'}</p>
+                        <p><strong>Last Modified:</strong> ${new Date(file.lastModified).toLocaleString()}</p>
+                    </div>
+                    <div class="detail-section">
+                        <h5>GPS Data</h5>
+                        ${metadata && metadata.hasGpsData ? `
+                            <p><strong>Latitude:</strong> ${metadata.latitude}</p>
+                            <p><strong>Longitude:</strong> ${metadata.longitude}</p>
+                        ` : '<p>No GPS data found</p>'}
+                    </div>
+                    <div class="detail-section">
+                        <h5>Panorama Metadata</h5>
+                        ${metadata && metadata.hasXmpData ? `
+                            <p><strong>Projection Type:</strong> ${metadata.ProjectionType || 'N/A'}</p>
+                            <p><strong>Panorama Viewer:</strong> ${metadata.UsePanoramaViewer || 'N/A'}</p>
+                            <p><strong>Heading:</strong> ${metadata.heading || 'N/A'}</p>
+                        ` : '<p>No panorama metadata found</p>'}
+                    </div>
+                    ${fileData.uploadData && fileData.uploadData.uploaded ? `
+                    <div class="detail-section">
+                        <h5>Upload Information</h5>
+                        <p><strong>Status:</strong> ${fileData.uploadData.status}</p>
+                        ${fileData.uploadData.photoId ? `<p><strong>Photo ID:</strong> ${fileData.uploadData.photoId}</p>` : ''}
+                        ${fileData.uploadData.uploadTime ? `<p><strong>Upload Time:</strong> ${formatExifDate(fileData.uploadData.uploadTime)}</p>` : ''}
+                        ${fileData.uploadData.shareLink ? `<p><strong>Share Link:</strong> <a href="${fileData.uploadData.shareLink}" target="_blank">View on Maps</a></p>` : ''}
+                        <p><strong>JSON File:</strong> ${fileData.uploadData.jsonFile}</p>
+                    </div>
+                    ` : ''}
+                </div>
+                ${fileData.error ? `<div class="error-details"><strong>Error:</strong> ${fileData.error}</div>` : ''}
+            </div>
+        </td>
+    `;
+    
+    row.innerHTML = detailsHtml;
+    return row;
+}
+
+function getMetadataStatusIcon(metadata) {
+    if (!metadata) {
+        return '<span class="metadata-status error" title="Failed to read metadata">❌</span>';
+    }
+    
+    if (metadata.hasGpsData && metadata.hasXmpData) {
+        return '<span class="metadata-status valid" title="Valid photosphere metadata">✅</span>';
+    } else if (metadata.hasGpsData || metadata.hasXmpData) {
+        return '<span class="metadata-status warning" title="Partial metadata">⚠️</span>';
+    } else {
+        return '<span class="metadata-status error" title="Missing required metadata">❌</span>';
+    }
+}
+
+function truncateFilename(filename, maxLength) {
+    if (filename.length <= maxLength) return filename;
+    const extension = filename.substring(filename.lastIndexOf('.'));
+    const name = filename.substring(0, filename.lastIndexOf('.'));
+    const truncatedName = name.substring(0, maxLength - extension.length - 3) + '...';
+    return truncatedName + extension;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatExifDate(exifDateStr) {
+    if (!exifDateStr) return 'Not available';
+    try {
+        // EXIF date format is typically "YYYY:MM:DD HH:MM:SS"
+        const dateStr = exifDateStr.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return exifDateStr; // Return original if parsing fails
+        return date.toLocaleString();
+    } catch (error) {
+        return exifDateStr; // Return original string if formatting fails
+    }
+}
+
+function handleFileCheckbox(event, index) {
+    filesMetadata[index].selected = event.target.checked;
+    
+    // Update row visual state
+    const row = document.querySelector(`.photo-row[data-file-index="${index}"]`);
+    if (row) {
+        updateRowSelectionState(row, event.target.checked);
+    }
+    
+    updateSelectionCount();
+}
+
+function handleRowClick(event, index) {
+    // Don't trigger on clicks to interactive elements
+    if (event.target.tagName === 'INPUT' ||
+        event.target.tagName === 'BUTTON' ||
+        event.target.closest('button') ||
+        event.target.closest('input')) {
+        return;
+    }
+    
+    // Toggle the checkbox
+    const checkbox = document.querySelector(`.file-checkbox[data-index="${index}"]`);
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        filesMetadata[index].selected = checkbox.checked;
+        
+        // Update row visual state
+        const row = document.querySelector(`.photo-row[data-file-index="${index}"]`);
+        if (row) {
+            updateRowSelectionState(row, checkbox.checked);
+        }
+        
+        updateSelectionCount();
+    }
+}
+
+function updateRowSelectionState(row, selected) {
+    if (selected) {
+        row.classList.add('selected');
+    } else {
+        row.classList.remove('selected');
+    }
+}
+
+function handleMasterCheckbox(event) {
+    const checked = event.target.checked;
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+    
+    checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = checked;
+        filesMetadata[index].selected = checked;
+        
+        // Update row visual state
+        const row = document.querySelector(`.photo-row[data-file-index="${index}"]`);
+        if (row) {
+            updateRowSelectionState(row, checked);
+        }
+    });
+    
+    updateSelectionCount();
+}
+
+function selectFiles(type) {
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+    
+    checkboxes.forEach((checkbox, index) => {
+        let shouldSelect = false;
+        
+        switch(type) {
+            case 'all':
+                shouldSelect = true;
+                break;
+            case 'none':
+                shouldSelect = false;
+                break;
+            case 'valid':
+                const metadata = filesMetadata[index].metadata;
+                shouldSelect = metadata && metadata.hasGpsData && metadata.hasXmpData;
+                break;
+        }
+        
+        checkbox.checked = shouldSelect;
+        filesMetadata[index].selected = shouldSelect;
+        
+        // Update row visual state
+        const row = document.querySelector(`.photo-row[data-file-index="${index}"]`);
+        if (row) {
+            updateRowSelectionState(row, shouldSelect);
+        }
+    });
+    
+    updateMasterCheckbox();
+    updateSelectionCount();
+}
+
+function updateMasterCheckbox() {
+    const masterCheckbox = document.getElementById('master-checkbox');
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    
+    if (checkedCount === 0) {
+        masterCheckbox.indeterminate = false;
+        masterCheckbox.checked = false;
+    } else if (checkedCount === checkboxes.length) {
+        masterCheckbox.indeterminate = false;
+        masterCheckbox.checked = true;
+    } else {
+        masterCheckbox.indeterminate = true;
+    }
+}
+
+function updateSelectionCount() {
+    const selectedCount = Object.values(filesMetadata).filter(f => f.selected).length;
+    const uploadBtn = document.getElementById('upload-selected-btn');
+    const btnText = document.getElementById('upload-button-text');
+    
+    btnText.textContent = `Upload Selected (${selectedCount})`;
+    uploadBtn.disabled = selectedCount === 0 || isUploading;
+    
+    updateMasterCheckbox();
+}
+
+function toggleDetailRow(event, index) {
+    const detailRow = document.querySelector(`.detail-row[data-file-index="${index}"]`);
+    const toggleBtn = event.target;
+    
+    if (detailRow.style.display === 'none') {
+        detailRow.style.display = 'table-row';
+        toggleBtn.textContent = 'Details ▲';
+    } else {
+        detailRow.style.display = 'none';
+        toggleBtn.textContent = 'Details ▼';
+    }
+}
+
+function updatePlaceId(index, placeId) {
+    filesMetadata[index].placeId = placeId;
+}
+
+function searchPlaceForFile(index) {
+    const fileData = filesMetadata[index];
+    if (!fileData.metadata || !fileData.metadata.hasGpsData) {
+        alert('No GPS coordinates available for this photo.');
+        return;
+    }
+    
+    currentSearchFileIndex = index;
+    const modal = document.getElementById('placeModal');
+    modal.style.display = 'block';
+    
+    // Set up the search parameters
+    document.getElementById('latitude-input-hidden').value = fileData.metadata.latitude;
+    document.getElementById('longitude-input-hidden').value = fileData.metadata.longitude;
+    
+    fetchPlaces();
+}
+
+function selectMoreFiles() {
+    // Trigger file input to select more files
+    const fileInput = document.getElementById('multiple-file-input');
+    fileInput.click();
+}
+
+function updateSectionVisibility() {
+    const fileSelectionSection = document.getElementById('file-selection-section');
+    const reviewSection = document.getElementById('review-section');
+    
+    if (selectedFiles.length === 0) {
+        // Show file selection, hide review
+        fileSelectionSection.style.display = 'block';
+        reviewSection.style.display = 'none';
+    } else {
+        // Hide file selection, show review
+        fileSelectionSection.style.display = 'none';
+        reviewSection.style.display = 'block';
+    }
+}
+
+// Reuse the existing extractMetadata function from upload.html with modifications
+async function extractMetadata(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const arrayBuffer = e.target.result;
+                const exifReader = await ExifReader.load(arrayBuffer, {expanded: true});
+                
+                const metadata = {
+                    hasGpsData: false,
+                    hasXmpData: false,
+                    latitude: null,
+                    longitude: null,
+                    heading: null,
+                    ProjectionType: null,
+                    UsePanoramaViewer: null,
+                    dateTimeOriginal: null
+                };
+                
+                // Extract GPS data
+                if (exifReader['gps'] && exifReader.gps['Latitude'] && exifReader.gps['Longitude']) {
+                    metadata.latitude = parseFloat(exifReader.gps['Latitude'].toFixed(7));
+                    metadata.longitude = parseFloat(exifReader.gps['Longitude'].toFixed(7));
+                    metadata.hasGpsData = true;
+                }
+                
+                // Extract creation date from EXIF
+                if (exifReader['exif']) {
+                    if (exifReader.exif['DateTimeOriginal']) {
+                        metadata.dateTimeOriginal = exifReader.exif['DateTimeOriginal'].description;
+                    } else if (exifReader.exif['DateTime']) {
+                        metadata.dateTimeOriginal = exifReader.exif['DateTime'].description;
+                    } else if (exifReader.exif['DateTimeDigitized']) {
+                        metadata.dateTimeOriginal = exifReader.exif['DateTimeDigitized'].description;
+                    }
+                }
+                
+                // Extract XMP data
+                if (exifReader['xmp']) {
+                    metadata.hasXmpData = true;
+                    metadata.ProjectionType = exifReader.xmp['ProjectionType']?.value || null;
+                    metadata.UsePanoramaViewer = exifReader.xmp['UsePanoramaViewer']?.value || null;
+                    
+                    if (exifReader.xmp['FlightYawDegree']?.value) {
+                        let degree = parseFloat(exifReader.xmp['FlightYawDegree'].value);
+                        if (!isNaN(degree)) {
+                            if (degree < 0) degree = 360 + degree;
+                            degree = Math.round(degree % 360);
+                            if (degree === 360) degree = 359;
+                            metadata.heading = degree;
+                        }
+                    } else {
+                        metadata.heading = 0; // Default heading
+                    }
+                }
+                
+                resolve(metadata);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+function startBatchUpload() {
+    const selectedFileIndices = Object.keys(filesMetadata)
+        .filter(index => filesMetadata[index].selected)
+        .map(index => parseInt(index));
+    
+    if (selectedFileIndices.length === 0) {
+        alert('Please select at least one photo to upload.');
+        return;
+    }
+    
+    // Filter out already uploaded files
+    const alreadyUploadedFiles = selectedFileIndices.filter(index =>
+        filesMetadata[index].status === UploadStatus.ALREADY_UPLOADED &&
+        filesMetadata[index].uploadData &&
+        filesMetadata[index].uploadData.status === 'PUBLISHED');
+        
+    const filesToUpload = selectedFileIndices.filter(index =>
+        filesMetadata[index].status !== UploadStatus.ALREADY_UPLOADED ||
+        !filesMetadata[index].uploadData ||
+        filesMetadata[index].uploadData.status !== 'PUBLISHED');
+    
+    if (alreadyUploadedFiles.length > 0) {
+        const alreadyUploadedNames = alreadyUploadedFiles.map(index =>
+            selectedFiles[index].name).join(', ');
+        showFlashMessage(
+            `Skipping ${alreadyUploadedFiles.length} already uploaded files: ${alreadyUploadedNames}`,
+            'info'
+        );
+    }
+    
+    if (filesToUpload.length === 0) {
+        showFlashMessage('All selected files have already been uploaded.', 'warning');
+        return;
+    }
+    
+    // Confirm upload for files with warnings
+    const warningFiles = filesToUpload.filter(index =>
+        filesMetadata[index].status === UploadStatus.WARNING);
+    
+    if (warningFiles.length > 0) {
+        const confirm = window.confirm(
+            `${warningFiles.length} selected photos have metadata warnings. Continue with upload?`
+        );
+        if (!confirm) return;
+    }
+    
+    // Update the upload queue to only include files that need uploading
+    uploadQueue = filesToUpload;
+    
+    isUploading = true;
+    currentUploadIndex = 0;
+    
+    // Update UI for upload state
+    document.getElementById('progress-summary').style.display = 'block';
+    updateUploadButton(false);
+    
+    // Set initial status for queued files (only for files that will be uploaded)
+    uploadQueue.forEach((index, queuePosition) => {
+        if (queuePosition === 0) {
+            updateFileStatus(index, UploadStatus.UPLOADING);
+        } else {
+            updateFileStatus(index, UploadStatus.QUEUED);
+        }
+    });
+    
+    processNextUpload();
+}
+
+async function processNextUpload() {
+    if (currentUploadIndex >= uploadQueue.length) {
+        completeUploads();
+        return;
+    }
+    
+    const fileIndex = uploadQueue[currentUploadIndex];
+    const fileData = filesMetadata[fileIndex];
+    
+    updateFileStatus(fileIndex, UploadStatus.UPLOADING);
+    updateProgressBar();
+    
+    try {
+        const result = await uploadSingleFile(fileData);
+        fileData.uploadResult = result;
+        updateFileStatus(fileIndex, UploadStatus.COMPLETE);
+    } catch (error) {
+        console.error('Upload failed:', error);
+        fileData.uploadResult = { error: error.message };
+        updateFileStatus(fileIndex, UploadStatus.RETRY);
+    }
+    
+    currentUploadIndex++;
+    
+    // Update next file status
+    if (currentUploadIndex < uploadQueue.length) {
+        const nextFileIndex = uploadQueue[currentUploadIndex];
+        updateFileStatus(nextFileIndex, UploadStatus.UPLOADING);
+    }
+    
+    setTimeout(processNextUpload, 500); // Small delay between uploads
+}
+
+async function uploadSingleFile(fileData) {
+    // Create FormData for the file
+    const formData = new FormData();
+    formData.append('file', fileData.file);
+    formData.append('latitude', fileData.metadata.latitude);
+    formData.append('longitude', fileData.metadata.longitude);
+    formData.append('heading', fileData.metadata.heading || 0);
+    formData.append('placeId', fileData.placeId);
+    
+    const response = await fetch('{{ url_for("upload_photosphere") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+    }
+    
+    return await response.json();
+}
+
+function updateFileStatus(index, status) {
+    filesMetadata[index].status = status;
+    const statusCell = document.querySelector(`tr[data-file-index="${index}"] .status-column .upload-status`);
+    if (statusCell) {
+        statusCell.className = `upload-status ${status.class}`;
+        statusCell.innerHTML = `${status.icon} ${status.text}`;
+    }
+}
+
+function updateProgressBar() {
+    const progress = (currentUploadIndex / uploadQueue.length) * 100;
+    const progressBar = document.getElementById('progress-bar-fill');
+    const progressStatus = document.getElementById('progress-status');
+    const progressCount = document.getElementById('progress-count');
+    
+    progressBar.style.width = `${progress}%`;
+    progressStatus.textContent = `Uploading photo ${currentUploadIndex + 1} of ${uploadQueue.length}`;
+    progressCount.textContent = `${currentUploadIndex}/${uploadQueue.length} photos`;
+}
+
+function updateUploadButton(enabled) {
+    const uploadBtn = document.getElementById('upload-selected-btn');
+    const btnText = document.getElementById('upload-button-text');
+    
+    if (enabled) {
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove('loading');
+        btnText.textContent = `Upload Selected (${Object.values(filesMetadata).filter(f => f.selected).length})`;
+    } else {
+        uploadBtn.disabled = true;
+        uploadBtn.classList.add('loading');
+        btnText.textContent = 'Uploading...';
+    }
+}
+
+function completeUploads() {
+    isUploading = false;
+    
+    // Count results
+    const completed = uploadQueue.filter(index => 
+        filesMetadata[index].status === UploadStatus.COMPLETE).length;
+    const failed = uploadQueue.filter(index => 
+        filesMetadata[index].status === UploadStatus.RETRY).length;
+    
+    updateUploadStatus('active', `Upload complete: ${completed} successful, ${failed} failed`);
+    updateUploadButton(true);
+    
+    // Show results summary
+    showUploadResults(completed, failed);
+}
+
+function showUploadResults(completed, failed) {
+    const resultsHtml = `
+        <div class="upload-results">
+            <h3>Upload Summary</h3>
+            <div class="results-stats">
+                <div class="result-stat success">
+                    <span class="stat-number">${completed}</span>
+                    <span class="stat-label">Successful</span>
+                </div>
+                <div class="result-stat failed">
+                    <span class="stat-number">${failed}</span>
+                    <span class="stat-label">Failed</span>
+                </div>
+            </div>
+            <div class="results-details">
+                ${uploadQueue.map(index => {
+                    const fileData = filesMetadata[index];
+                    const result = fileData.uploadResult;
+                    const isSuccess = fileData.status === UploadStatus.COMPLETE;
+                    
+                    return `
+                        <div class="result-item ${isSuccess ? 'success' : 'error'}">
+                            <span class="result-filename">${fileData.file.name}</span>
+                            <span class="result-status">${fileData.status.icon} ${fileData.status.text}</span>
+                            ${isSuccess && result ? `
+                                <span class="result-link">
+                                    <a href="${result.shareLink}" target="_blank">View on Maps</a>
+                                </span>
+                            ` : ''}
+                            ${!isSuccess && result?.error ? `
+                                <span class="result-error">${result.error}</span>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('results-summary').innerHTML = resultsHtml;
+    document.getElementById('results-section').style.display = 'block';
+}
+
+function updateUploadStatus(status, message) {
+    const indicator = document.getElementById('upload-status-indicator');
+    const statusText = document.getElementById('upload-status-text');
+    
+    indicator.classList.remove('active', 'inactive', 'processing');
+    indicator.classList.add(status);
+    statusText.textContent = message;
+}
+
+// Place search modal functionality (adapted from upload.html)
+function initializePlaceSearchModal() {
+    const modal = document.getElementById('placeModal');
+    const closeBtn = modal.querySelector('.close');
+    const refreshBtn = modal.querySelector('.refresh-button');
+    
+    // Create hidden inputs for coordinates
+    const hiddenInputsHtml = `
+        <input type="hidden" id="latitude-input-hidden" value="">
+        <input type="hidden" id="longitude-input-hidden" value="">
+    `;
+    document.body.insertAdjacentHTML('beforeend', hiddenInputsHtml);
+    
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    refreshBtn.addEventListener('click', () => {
+        fetchPlaces();
+    });
+    
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+function fetchPlaces() {
+    const latitude = document.getElementById('latitude-input-hidden').value;
+    const longitude = document.getElementById('longitude-input-hidden').value;
+    const radius = document.getElementById('radius').value;
+    
+    if (!latitude || !longitude) {
+        document.getElementById('modal-text').innerHTML =
+            '<div class="error-message">Missing GPS coordinates.</div>';
+        return;
+    }
+    
+    document.getElementById('modal-text').innerHTML =
+        '<div class="loading-indicator"><span class="loader"></span> Searching for places...</div>';
+    
+    fetch(`/nearby_places?latitude=${latitude}&longitude=${longitude}&radius=${radius}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch places');
+            return response.json();
+        })
+        .then(places => {
+            places.sort((a, b) => a.distance - b.distance);
+            
+            const placesHtml = places.map(place => `
+                <div class="place">
+                    ${place.icon ? `<span class="place-icon"><img src="${place.icon}" alt="icon"></span>` : ''}
+                    <span class="place-name">
+                        <a href="#" data-place-id="${place.place_id}" onclick="selectPlace(event, this)">
+                            ${place.name}
+                        </a>
+                    </span>
+                    <span class="place-details"> • ${place.distance} miles • ${place.place_id}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('modal-text').innerHTML = placesHtml;
+            
+            // Update or create count text
+            let countText = document.querySelector('.count-text');
+            if (countText) {
+                countText.textContent = `Found ${places.length} places (max is 60)`;
+            } else {
+                countText = document.createElement('p');
+                countText.className = 'count-text';
+                countText.textContent = `Found ${places.length} places (max is 60)`;
+                document.querySelector('.radius-input').appendChild(countText);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching places:', error);
+            document.getElementById('modal-text').innerHTML =
+                '<div class="error-message">Failed to search for nearby places. Please try again.</div>';
+        });
+}
+
+function selectPlace(event, element) {
+    event.preventDefault();
+    const placeId = element.getAttribute('data-place-id');
+    
+    if (currentSearchFileIndex !== null) {
+        // Update the PlaceID input for the current file
+        const placeInput = document.querySelector(`input.placeid-input[data-index="${currentSearchFileIndex}"]`);
+        if (placeInput) {
+            placeInput.value = placeId;
+            updatePlaceId(currentSearchFileIndex, placeId);
+        }
+    }
+    
+    document.getElementById('placeModal').style.display = 'none';
+    currentSearchFileIndex = null;
+}
+
+// Image preview modal functionality
+function initializeImagePreviewModal() {
+    const modal = document.getElementById('image-preview-modal');
+    const closeBtn = modal.querySelector('.image-preview-close');
+    
+    // Close button handler
+    closeBtn.addEventListener('click', hideImagePreview);
+    
+    // Click outside to close
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            hideImagePreview();
+        }
+    });
+    
+    // Escape key to close
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.style.display === 'flex') {
+            hideImagePreview();
+        }
+    });
+}
+
+function showImagePreview(imageUrl, filename) {
+    const modal = document.getElementById('image-preview-modal');
+    const img = document.getElementById('image-preview-img');
+    const filenameDiv = document.getElementById('image-preview-filename');
+    
+    // Set image source and filename
+    img.src = imageUrl;
+    filenameDiv.textContent = filename;
+    
+    // Show modal and prevent body scroll
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Add fade-in animation
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+function hideImagePreview() {
+    const modal = document.getElementById('image-preview-modal');
+    const img = document.getElementById('image-preview-img');
+    
+    // Add fade-out animation
+    modal.classList.remove('show');
+    
+    // Hide modal after animation and restore body scroll
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        img.src = ''; // Clean up image source
+    }, 300);
+    }
+    
+    // Check upload status for selected files
+    async function checkUploadStatusForFiles() {
+        if (selectedFiles.length === 0) return;
+        
+        const filenames = selectedFiles.map(file => file.name);
+        
+        try {
+            const response = await fetch('/check_upload_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ filenames: filenames })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to check upload status');
+            }
+            
+            const uploadStatuses = await response.json();
+            
+            // Update file metadata with upload status
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const uploadData = uploadStatuses[file.name];
+                
+                if (filesMetadata[i] && uploadData) {
+                    filesMetadata[i].uploadData = uploadData;
+                    
+                    // Update initial status based on upload data
+                    filesMetadata[i].status = determineInitialStatus(
+                        filesMetadata[i].metadata,
+                        uploadData
+                    );
+                    
+                    // If already uploaded, pre-populate PlaceID if available
+                    if (uploadData.uploaded && uploadData.shareLink) {
+                        // Try to extract place info from share link or other data if available
+                        // For now, we'll leave PlaceID empty but could enhance this later
+                    }
+                }
+            }
+            
+            console.log('Upload status check completed');
+            
+        } catch (error) {
+            console.error('Error checking upload status:', error);
+            // Don't show error to user as this is a non-critical enhancement
+        }
+    }
+
+// Reset the page to initial state
+function resetToInitialState() {
+    // Clear all selected files and metadata
+    selectedFiles = [];
+    filesMetadata = {};
+    uploadQueue = [];
+    currentUploadIndex = 0;
+    isUploading = false;
+    currentSearchFileIndex = null;
+    
+    // Reset file count display
+    document.getElementById('file-count').textContent = 'No files selected';
+    
+    // Reset file input
+    const fileInput = document.getElementById('multiple-file-input');
+    fileInput.value = '';
+    
+    // Reset upload status
+    updateUploadStatus('inactive', 'Ready to Select Files');
+    
+    // Hide progress summary
+    const progressSummary = document.getElementById('progress-summary');
+    if (progressSummary) {
+        progressSummary.style.display = 'none';
+    }
+    
+    // Hide results section
+    const resultsSection = document.getElementById('results-section');
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+    }
+    
+    // Clear review table
+    const reviewTableBody = document.getElementById('review-table-body');
+    if (reviewTableBody) {
+        reviewTableBody.innerHTML = '';
+    }
+    
+    // Reset master checkbox
+    const masterCheckbox = document.getElementById('master-checkbox');
+    if (masterCheckbox) {
+        masterCheckbox.checked = false;
+        masterCheckbox.indeterminate = false;
+    }
+    
+    // Reset upload button
+    const uploadBtn = document.getElementById('upload-selected-btn');
+    const btnText = document.getElementById('upload-button-text');
+    if (uploadBtn && btnText) {
+        uploadBtn.disabled = true;
+        uploadBtn.classList.remove('loading');
+        btnText.textContent = 'Upload Selected (0)';
+    }
+    
+    // Reset section visibility to show file selection
+    updateSectionVisibility();
+    
+    // Clear any flash messages
+    const flashContainer = document.querySelector('.flash-messages');
+    if (flashContainer) {
+        flashContainer.innerHTML = '';
+    }
+    
+    console.log('Reset to initial state completed');
+}
+</script>
+{% endblock %}

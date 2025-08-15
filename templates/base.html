@@ -12,7 +12,8 @@
     <nav class="nav-banner">
         <div class="nav-links">
             <a href="{{ url_for('index') }}" class="nav-link">Home</a>
-            <a href="{{ url_for('upload_photosphere') }}" class="nav-link">Upload</a>
+            <a href="{{ url_for('upload_photosphere') }}" class="nav-link">Upload Single</a>
+            <a href="{{ url_for('upload_multiple_photospheres') }}" class="nav-link">Upload Multiple</a>
             <a href="{{ url_for('photos_page') }}" class="nav-link">Photos</a>
             <a href="{{ url_for('photo_database') }}" class="nav-link">Database</a>
         </div>
@@ -139,6 +140,41 @@
                     document.getElementById('login-status').innerHTML = '<span class="status-dot error"></span>Auth Status Error';
                     document.getElementById('login-status').className = 'login-status error';
                 });
+        }
+        
+        // Function to show client-side flash messages
+        function showFlashMessage(message, category = 'info') {
+            // Find or create flash messages container
+            let flashContainer = document.querySelector('.flash-messages');
+            if (!flashContainer) {
+                flashContainer = document.createElement('div');
+                flashContainer.className = 'flash-messages';
+                // Insert after nav banner
+                const nav = document.querySelector('.nav-banner');
+                nav.parentNode.insertBefore(flashContainer, nav.nextSibling);
+            }
+            
+            // Create flash message element
+            const flashMessage = document.createElement('div');
+            flashMessage.className = `flash-message ${category}`;
+            flashMessage.innerHTML = message;
+            
+            // Add to container
+            flashContainer.appendChild(flashMessage);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (flashMessage.parentNode) {
+                    flashMessage.remove();
+                    // Remove container if empty
+                    if (flashContainer.children.length === 0) {
+                        flashContainer.remove();
+                    }
+                }
+            }, 5000);
+            
+            // Scroll to top to ensure message is visible
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
     

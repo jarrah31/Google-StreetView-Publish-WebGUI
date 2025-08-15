@@ -338,6 +338,16 @@ a:hover {
     background-color: red;
 }
 
+.flash-message.warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+}
+
 .flash-message.success {
     color: #ffffff;
     background-color: #4CAF50;
@@ -2661,3 +2671,667 @@ select option {
     margin: 0;
     font-style: italic;
 }
+
+/* Multiple Upload Styles */
+.drop-area {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    margin-top: 20px;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.drop-area:hover,
+.drop-area.drag-over {
+    border-color: #3498db;
+    background-color: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.drop-area p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+/* Batch Controls */
+.batch-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.batch-controls button {
+    padding: 5px 12px;
+    font-size: 0.9rem;
+}
+
+/* Progress Summary */
+.progress-summary {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.progress-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Review Table Styles */
+.photo-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* Header column widths - these control the fixed layout */
+.photo-table thead th:nth-child(1) { /* Checkbox */
+    width: 40px;
+    text-align: center;
+}
+
+.photo-table thead th:nth-child(2) { /* Thumbnail */
+    width: 120px;
+    text-align: center;
+}
+
+.photo-table thead th:nth-child(3) { /* Metadata */
+    width: 80px;
+    text-align: center;
+}
+
+.photo-table thead th:nth-child(4) { /* Filename */
+    width: auto;
+    text-align: left;
+    max-width: 150px;
+}
+
+.photo-table thead th:nth-child(5) { /* PlaceID */
+    width: auto; /* Takes remaining space */
+    min-width: 180px;
+}
+
+.photo-table thead th:nth-child(6) { /* Status */
+    width: 150px;
+    text-align: center;
+}
+
+.photo-table thead th:nth-child(7) { /* Actions */
+    width: 100px;
+    text-align: center;
+}
+
+/* Body cell styles - inherit column widths from headers */
+.photo-table .checkbox-column {
+    text-align: center;
+}
+
+.photo-table .thumbnail-column {
+    text-align: center;
+}
+
+.photo-table .metadata-column {
+    text-align: center;
+}
+
+.photo-table .filename-column {
+    text-align: left;
+    white-space: nowrap;
+    padding-left: 8px;
+}
+
+.photo-table .placeid-column {
+    /* Width inherited from header */
+}
+
+.photo-table .status-column {
+    text-align: center;
+}
+
+.photo-table .actions-column {
+    text-align: center;
+}
+
+/* Clickable row styling */
+.photo-table .photo-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.photo-table .photo-row:hover {
+    background-color: #f0f7fc;
+}
+
+.photo-table .photo-row.selected {
+    background-color: #e3f2fd;
+}
+
+/* Make table container full width */
+.custom-table-container {
+    width: 100%;
+    max-width: none;
+    overflow-x: auto;
+}
+
+/* File thumbnail styling */
+.file-thumbnail {
+    max-width: 100px;
+    max-height: 60px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    transition: transform 0.2s ease;
+    display: block;
+    margin: 0 auto;
+}
+
+.file-thumbnail:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Metadata status icons */
+.metadata-status {
+    font-size: 1.2rem;
+    display: inline-block;
+    cursor: help;
+}
+
+.metadata-status.valid {
+    color: #28a745;
+}
+
+.metadata-status.warning {
+    color: #ffc107;
+}
+
+.metadata-status.error {
+    color: #dc3545;
+}
+
+/* Upload status indicators */
+.upload-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.upload-status.status-ready {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+    border: 1px solid #3498db;
+}
+
+.upload-status.status-warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid #ffc107;
+}
+
+.upload-status.status-error {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    border: 1px solid #dc3545;
+}
+
+.upload-status.status-uploading {
+    background-color: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    border: 1px solid #ff9800;
+    animation: pulse 1.5s infinite;
+}
+
+.upload-status.status-complete {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid #28a745;
+}
+
+.upload-status.status-retry {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    cursor: pointer;
+}
+
+.upload-status.status-retry:hover {
+    background-color: rgba(108, 117, 125, 0.25);
+}
+
+.upload-status.status-queued {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border: 1px solid #adb5bd;
+}
+
+.upload-status.status-already-uploaded {
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* PlaceID input wrapper */
+.placeID-input-wrapper {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.placeID-input-wrapper input {
+    flex-grow: 1;
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.placeID-input-wrapper button {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.placeID-input-wrapper button:hover:not(:disabled) {
+    background-color: #e9ecef;
+    border-color: #3498db;
+}
+
+.placeID-input-wrapper button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Detail toggle button */
+.detail-toggle-btn {
+    background: none;
+    border: 1px solid #ced4da;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.detail-toggle-btn:hover {
+    background-color: #e9ecef;
+    border-color: #3498db;
+}
+
+/* Detail rows */
+.detail-row {
+    background-color: #f8f9fa;
+    border-top: none !important;
+}
+
+.detail-content {
+    padding: 20px;
+}
+
+.file-details h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.detail-section {
+    background-color: white;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.detail-section h5 {
+    margin: 0 0 8px 0;
+    color: #3498db;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-section p {
+    margin: 2px 0;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.error-details {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    border-radius: 4px;
+    color: #721c24;
+}
+
+/* Upload Results Styles */
+.results-summary {
+    padding: 20px;
+}
+
+.upload-results h3 {
+    margin: 0 0 20px 0;
+    color: #495057;
+}
+
+.results-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.result-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 20px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    min-width: 100px;
+}
+
+.result-stat.success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-color: #28a745;
+}
+
+.result-stat.failed {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: #dc3545;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.result-stat.success .stat-number {
+    color: #28a745;
+}
+
+.result-stat.failed .stat-number {
+    color: #dc3545;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 5px;
+}
+
+.results-details {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e9ecef;
+    gap: 10px;
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.result-item.success {
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.result-item.error {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.result-filename {
+    flex-grow: 1;
+    font-weight: 500;
+    color: #495057;
+}
+
+.result-status {
+    min-width: 100px;
+    text-align: center;
+}
+
+.result-link a {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.result-link a:hover {
+    text-decoration: underline;
+}
+
+.result-error {
+    font-size: 0.85rem;
+    color: #dc3545;
+    font-style: italic;
+}
+
+/* Loading indicator */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+}
+
+.loading-indicator .loader {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .batch-controls {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .results-stats {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+    }
+    
+    .photo-table {
+        font-size: 0.8rem;
+    }
+    
+    .file-thumbnail {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .placeID-input-wrapper {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .placeID-input-wrapper input,
+    .placeID-input-wrapper button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* Master checkbox indeterminate state styling */
+input[type="checkbox"]:indeterminate {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+input[type="checkbox"]:indeterminate::before {
+    content: "—";
+    color: white;
+    font-weight: bold;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Image Preview Modal */
+.image-preview-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.9);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.image-preview-content {
+    position: relative;
+    margin: auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 1200px;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-preview-img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.image-preview-close {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 2001;
+    transition: color 0.3s ease;
+}
+
+.image-preview-close:hover,
+.image-preview-close:focus {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.image-preview-filename {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    text-align: center;
+    max-width: 80%;
+    word-break: break-word;
+}
+
+/* Enhanced thumbnail cursor styling */
+.file-thumbnail {
+    cursor: zoom-in;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.file-thumbnail:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+

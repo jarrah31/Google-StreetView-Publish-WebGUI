@@ -1462,6 +1462,13 @@ def upload_photosphere():
 
     return render_template('upload.html')
 
+@app.route('/upload_multiple', methods=['GET'])
+@token_required
+def upload_multiple_photospheres():
+    app.logger.debug(f"=== FUNCTION APP: upload_multiple_photospheres ===")
+    """Display the multiple upload page"""
+    return render_template('upload_multiple.html')
+
 @app.route('/delete_photo', methods=['POST'])
 @token_required
 def delete_photo():
@@ -2214,6 +2221,80 @@ def init_app():
         app.logger.info(f"Environment: debug={app.config['DEBUG']}")
         app.logger.info(f"Uploads directory: {app.config['UPLOAD_FOLDER']}")
         app.logger.info(f"Max upload size: {app.config['MAX_CONTENT_LENGTH']} bytes")
+
+@app.route('/check_upload_status', methods=['POST'])
+@token_required
+def check_upload_status():
+    """Check if files have already been uploaded by checking JSON files in uploads folder"""
+    app.logger.debug(f"=== FUNCTION APP: check_upload_status ===")
+    
+    try:
+        data = request.get_json()
+        filenames = data.get('filenames', [])
+        
+        if not filenames:
+            return jsonify({"error": "No filenames provided"}), 400
+        
+        upload_statuses = {}
+        uploads_directory = config['uploads']['directory']
+        
+        if not os.path.exists(uploads_directory):
+            # If uploads directory doesn't exist, all files are new
+            for filename in filenames:
+                upload_statuses[filename] = {"uploaded": False}
+            return jsonify(upload_statuses)
+        
+        # Check each filename against existing JSON files
+        for filename in filenames:
+            base_filename = os.path.splitext(filename)[0]
+            upload_statuses[filename] = {"uploaded": False}
+            
+            # Look for JSON files that match this filename
+            for json_file in os.listdir(uploads_directory):
+                if json_file.endswith('.json'):
+                    json_base = os.path.splitext(json_file)[0]
+                    
+                    # Check if this JSON file corresponds to the uploaded image
+                    # Handle both exact matches and numbered versions (filename_1.json, etc.)
+                    if json_base == base_filename or json_base.startswith(f"{base_filename}_"):
+                        try:
+                            json_path = os.path.join(uploads_directory, json_file)
+                            with open(json_path, 'r') as f:
+                                json_data = json.load(f)
+                                
+                            # Check if this file was successfully uploaded
+                            maps_status = json_data.get('mapsPublishStatus', '')
+                            if maps_status == 'PUBLISHED':
+                                upload_statuses[filename] = {
+                                    "uploaded": True,
+                                    "status": "PUBLISHED",
+                                    "photoId": json_data.get('photoId', {}).get('id', ''),
+                                    "shareLink": json_data.get('shareLink', ''),
+                                    "uploadTime": json_data.get('uploadTime', ''),
+                                    "jsonFile": json_file
+                                }
+                                break  # Found a successful upload, no need to check other JSON files
+                            else:
+                                # File was uploaded but not successfully published
+                                upload_statuses[filename] = {
+                                    "uploaded": True,
+                                    "status": maps_status or "UNKNOWN",
+                                    "photoId": json_data.get('photoId', {}).get('id', ''),
+                                    "shareLink": json_data.get('shareLink', ''),
+                                    "uploadTime": json_data.get('uploadTime', ''),
+                                    "jsonFile": json_file
+                                }
+                                
+                        except (json.JSONDecodeError, IOError) as e:
+                            app.logger.warning(f"Error reading JSON file {json_file}: {str(e)}")
+                            continue
+        
+        app.logger.info(f"Checked upload status for {len(filenames)} files")
+        return jsonify(upload_statuses)
+        
+    except Exception as e:
+        app.logger.error(f"Error checking upload status: {str(e)}")
+        return jsonify({"error": "Failed to check upload status"}), 500
 
 # Initialize the application
 init_app()
