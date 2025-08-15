@@ -358,6 +358,16 @@ a:hover {
     border-radius: 4px;
 }
 
+.flash-message.info {
+    color: #ffffff;
+    background-color: #3498db;
+    border-color: #3498db;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
 .flash-details {
     font-size: 16px;
     margin-top: 5px;

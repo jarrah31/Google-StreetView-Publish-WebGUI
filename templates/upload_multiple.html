@@ -429,9 +429,31 @@ function determineInitialStatus(metadata, uploadData = null) {
     
     // For new files, check metadata
     if (!metadata || !metadata.hasGpsData || !metadata.hasXmpData) {
-        return UploadStatus.WARNING;
+        return UploadStatus.ERROR; // Missing basic metadata
     }
+    
+    // Check if essential panorama fields are present
+    if (!hasEssentialPanoramaMetadata(metadata)) {
+        return UploadStatus.WARNING; // Has basic metadata but missing panorama fields
+    }
+    
     return UploadStatus.READY;
+}
+
+function hasEssentialPanoramaMetadata(metadata) {
+    // Check if the essential panorama cropping and dimension fields are present
+    const essentialFields = [
+        'CroppedAreaTopPixels',
+        'CroppedAreaLeftPixels',
+        'CroppedAreaImageHeightPixels',
+        'CroppedAreaImageWidthPixels',
+        'FullPanoHeightPixels',
+        'FullPanoWidthPixels'
+    ];
+    
+    return essentialFields.every(field =>
+        metadata[field] !== null && metadata[field] !== undefined && metadata[field] !== ''
+    );
 }
 
 function populateReviewTable() {
@@ -464,8 +486,10 @@ function createFileRow(index, fileData) {
     
     row.innerHTML = `
         <td class="checkbox-column">
-            <input type="checkbox" class="file-checkbox" data-index="${index}" 
-                   ${fileData.selected ? 'checked' : ''}>
+            <input type="checkbox" class="file-checkbox" data-index="${index}"
+                   ${fileData.selected ? 'checked' : ''}
+                   ${fileData.status === UploadStatus.ERROR ? 'disabled' : ''}
+                   title="${getCheckboxTooltip(fileData)}">
         </td>
         <td class="thumbnail-column">
             <img src="${thumbnailUrl}" alt="Thumbnail" class="file-thumbnail">
@@ -578,6 +602,12 @@ function createDetailRow(index, fileData) {
                             <p><strong>Projection Type:</strong> ${metadata.ProjectionType || 'N/A'}</p>
                             <p><strong>Panorama Viewer:</strong> ${metadata.UsePanoramaViewer || 'N/A'}</p>
                             <p><strong>Heading:</strong> ${metadata.heading || 'N/A'}</p>
+                            <p><strong>Cropped Area Top Pixels:</strong> ${metadata.CroppedAreaTopPixels || 'N/A'}</p>
+                            <p><strong>Cropped Area Left Pixels:</strong> ${metadata.CroppedAreaLeftPixels || 'N/A'}</p>
+                            <p><strong>Cropped Area Image Height Pixels:</strong> ${metadata.CroppedAreaImageHeightPixels || 'N/A'}</p>
+                            <p><strong>Cropped Area Image Width Pixels:</strong> ${metadata.CroppedAreaImageWidthPixels || 'N/A'}</p>
+                            <p><strong>Full Pano Height Pixels:</strong> ${metadata.FullPanoHeightPixels || 'N/A'}</p>
+                            <p><strong>Full Pano Width Pixels:</strong> ${metadata.FullPanoWidthPixels || 'N/A'}</p>
                         ` : '<p>No panorama metadata found</p>'}
                     </div>
                     ${fileData.uploadData && fileData.uploadData.uploaded ? `
@@ -602,21 +632,36 @@ function createDetailRow(index, fileData) {
 
 function getMetadataStatusIcon(metadata, fileData) {
     if (!metadata) {
-        return '<span class="metadata-status error" title="Failed to read metadata">❌</span>';
+        return '<span class="metadata-status error" title="Failed to read metadata - Cannot upload">❌</span>';
     }
     
     const isGpsEdited = fileData && fileData.editedGPS && fileData.editedGPS.isEdited;
+    const hasEssentialPanorama = hasEssentialPanoramaMetadata(metadata);
     
-    if (metadata.hasGpsData && metadata.hasXmpData) {
+    if (metadata.hasGpsData && metadata.hasXmpData && hasEssentialPanorama) {
         if (isGpsEdited) {
-            return '<span class="metadata-status valid" title="Valid photosphere metadata with edited GPS coordinates">✅📍</span>';
+            return '<span class="metadata-status valid" title="Complete photosphere metadata with edited GPS coordinates - Ready to upload">✅📍</span>';
         } else {
-            return '<span class="metadata-status valid" title="Valid photosphere metadata">✅</span>';
+            return '<span class="metadata-status valid" title="Complete photosphere metadata - Ready to upload">✅</span>';
         }
-    } else if (metadata.hasGpsData || metadata.hasXmpData) {
-        return '<span class="metadata-status warning" title="Partial metadata">⚠️</span>';
+    } else if (!metadata.hasGpsData || !metadata.hasXmpData) {
+        return '<span class="metadata-status error" title="Missing basic GPS or XMP metadata - Cannot upload">❌</span>';
+    } else if (!hasEssentialPanorama) {
+        return '<span class="metadata-status warning" title="Missing essential panorama fields (cropping/dimensions) - Upload with caution">⚠️</span>';
     } else {
-        return '<span class="metadata-status error" title="Missing required metadata">❌</span>';
+        return '<span class="metadata-status warning" title="Partial metadata - Upload with caution">⚠️</span>';
+    }
+}
+
+function getCheckboxTooltip(fileData) {
+    if (fileData.status === UploadStatus.ERROR) {
+        return "Cannot select - Missing essential metadata required for upload";
+    } else if (fileData.status === UploadStatus.WARNING) {
+        return "Can select but missing some panorama metadata - Upload with caution";
+    } else if (fileData.status === UploadStatus.ALREADY_UPLOADED) {
+        return "Already uploaded successfully";
+    } else {
+        return "Ready to upload";
     }
 }
 
@@ -650,6 +695,12 @@ function formatExifDate(exifDateStr) {
 }
 
 function handleFileCheckbox(event, index) {
+    // Don't allow selection of files with critical errors
+    if (filesMetadata[index].status === UploadStatus.ERROR) {
+        event.target.checked = false;
+        return;
+    }
+    
     filesMetadata[index].selected = event.target.checked;
     
     // Update row visual state
@@ -670,9 +721,14 @@ function handleRowClick(event, index) {
         return;
     }
     
+    // Don't allow selection of files with critical errors
+    if (filesMetadata[index].status === UploadStatus.ERROR) {
+        return;
+    }
+    
     // Toggle the checkbox
     const checkbox = document.querySelector(`.file-checkbox[data-index="${index}"]`);
-    if (checkbox) {
+    if (checkbox && !checkbox.disabled) {
         checkbox.checked = !checkbox.checked;
         filesMetadata[index].selected = checkbox.checked;
         
@@ -727,7 +783,7 @@ function selectFiles(type) {
                 break;
             case 'valid':
                 const metadata = filesMetadata[index].metadata;
-                shouldSelect = metadata && metadata.hasGpsData && metadata.hasXmpData;
+                shouldSelect = metadata && metadata.hasGpsData && metadata.hasXmpData && hasEssentialPanoramaMetadata(metadata);
                 break;
         }
         
@@ -845,7 +901,13 @@ async function extractMetadata(file) {
                     heading: null,
                     ProjectionType: null,
                     UsePanoramaViewer: null,
-                    dateTimeOriginal: null
+                    dateTimeOriginal: null,
+                    CroppedAreaTopPixels: null,
+                    CroppedAreaLeftPixels: null,
+                    CroppedAreaImageHeightPixels: null,
+                    CroppedAreaImageWidthPixels: null,
+                    FullPanoHeightPixels: null,
+                    FullPanoWidthPixels: null
                 };
                 
                 // Extract GPS data
@@ -871,6 +933,14 @@ async function extractMetadata(file) {
                     metadata.hasXmpData = true;
                     metadata.ProjectionType = exifReader.xmp['ProjectionType']?.value || null;
                     metadata.UsePanoramaViewer = exifReader.xmp['UsePanoramaViewer']?.value || null;
+                    
+                    // Extract cropping and panorama dimension fields
+                    metadata.CroppedAreaTopPixels = exifReader.xmp['CroppedAreaTopPixels']?.value || null;
+                    metadata.CroppedAreaLeftPixels = exifReader.xmp['CroppedAreaLeftPixels']?.value || null;
+                    metadata.CroppedAreaImageHeightPixels = exifReader.xmp['CroppedAreaImageHeightPixels']?.value || null;
+                    metadata.CroppedAreaImageWidthPixels = exifReader.xmp['CroppedAreaImageWidthPixels']?.value || null;
+                    metadata.FullPanoHeightPixels = exifReader.xmp['FullPanoHeightPixels']?.value || null;
+                    metadata.FullPanoWidthPixels = exifReader.xmp['FullPanoWidthPixels']?.value || null;
                     
                     if (exifReader.xmp['FlightYawDegree']?.value) {
                         let degree = parseFloat(exifReader.xmp['FlightYawDegree'].value);
@@ -904,7 +974,7 @@ function startBatchUpload() {
         return;
     }
     
-    // Filter out already uploaded files
+    // Filter already uploaded files
     const alreadyUploadedFiles = selectedFileIndices.filter(index =>
         filesMetadata[index].status === UploadStatus.ALREADY_UPLOADED &&
         filesMetadata[index].uploadData &&
@@ -915,17 +985,36 @@ function startBatchUpload() {
         !filesMetadata[index].uploadData ||
         filesMetadata[index].uploadData.status !== 'PUBLISHED');
     
+    // Handle already uploaded files with confirmation dialog
     if (alreadyUploadedFiles.length > 0) {
         const alreadyUploadedNames = alreadyUploadedFiles.map(index =>
-            selectedFiles[index].name).join(', ');
-        showFlashMessage(
-            `Skipping ${alreadyUploadedFiles.length} already uploaded files: ${alreadyUploadedNames}`,
-            'info'
+            selectedFiles[index].name);
+        
+        const fileList = alreadyUploadedNames.length > 3
+            ? alreadyUploadedNames.slice(0, 3).join(', ') + ` and ${alreadyUploadedNames.length - 3} more`
+            : alreadyUploadedNames.join(', ');
+            
+        const confirmReupload = window.confirm(
+            `${alreadyUploadedFiles.length} selected photos have already been uploaded:\n\n${fileList}\n\nDo you want to upload them again?`
         );
+        
+        if (confirmReupload) {
+            // Include already uploaded files in the upload queue
+            filesToUpload.push(...alreadyUploadedFiles);
+            showFlashMessage(
+                `Re-uploading ${alreadyUploadedFiles.length} already uploaded files as requested.`,
+                'info'
+            );
+        } else {
+            showFlashMessage(
+                `Skipping ${alreadyUploadedFiles.length} already uploaded files.`,
+                'info'
+            );
+        }
     }
     
     if (filesToUpload.length === 0) {
-        showFlashMessage('All selected files have already been uploaded.', 'warning');
+        showFlashMessage('No files selected for upload.', 'warning');
         return;
     }
     
@@ -986,13 +1075,18 @@ async function processNextUpload() {
     
     currentUploadIndex++;
     
+    // Update progress bar after completing current upload
+    updateProgressBar();
+    
     // Update next file status
     if (currentUploadIndex < uploadQueue.length) {
         const nextFileIndex = uploadQueue[currentUploadIndex];
         updateFileStatus(nextFileIndex, UploadStatus.UPLOADING);
+        setTimeout(processNextUpload, 500); // Small delay between uploads
+    } else {
+        // All uploads completed, ensure final progress update
+        setTimeout(completeUploads, 200);
     }
-    
-    setTimeout(processNextUpload, 500); // Small delay between uploads
 }
 
 async function uploadSingleFile(fileData) {
@@ -1039,8 +1133,16 @@ function updateProgressBar() {
     const progressCount = document.getElementById('progress-count');
     
     progressBar.style.width = `${progress}%`;
-    progressStatus.textContent = `Uploading photo ${currentUploadIndex + 1} of ${uploadQueue.length}`;
-    progressCount.textContent = `${currentUploadIndex}/${uploadQueue.length} photos`;
+    
+    if (currentUploadIndex >= uploadQueue.length) {
+        // All uploads completed
+        progressStatus.textContent = `Upload complete`;
+        progressCount.textContent = `${currentUploadIndex}/${uploadQueue.length} photos`;
+    } else {
+        // Still uploading
+        progressStatus.textContent = `Uploading photo ${currentUploadIndex + 1} of ${uploadQueue.length}`;
+        progressCount.textContent = `${currentUploadIndex}/${uploadQueue.length} photos`;
+    }
 }
 
 function updateUploadButton(enabled) {
@@ -1061,10 +1163,13 @@ function updateUploadButton(enabled) {
 function completeUploads() {
     isUploading = false;
     
+    // Ensure final progress bar update
+    updateProgressBar();
+    
     // Count results
-    const completed = uploadQueue.filter(index => 
+    const completed = uploadQueue.filter(index =>
         filesMetadata[index].status === UploadStatus.COMPLETE).length;
-    const failed = uploadQueue.filter(index => 
+    const failed = uploadQueue.filter(index =>
         filesMetadata[index].status === UploadStatus.RETRY).length;
     
     updateUploadStatus('active', `Upload complete: ${completed} successful, ${failed} failed`);
