@@ -934,6 +934,7 @@ def edit_photo(photo_id):
             'captureTime': photo_from_db['capture_time'],
             'uploadTime': photo_from_db['upload_time'],
             'viewCount': photo_from_db['view_count'],
+            'mapsPublishStatus': photo_from_db['maps_publish_status'],
             'shareLink': photo_from_db['share_link'],
             'thumbnailUrl': photo_from_db['thumbnail_url']
         }
@@ -1043,6 +1044,7 @@ def edit_connections(photo_id):
             'captureTime': photo_from_db['capture_time'],
             'uploadTime': photo_from_db['upload_time'],
             'viewCount': photo_from_db['view_count'],
+            'mapsPublishStatus': photo_from_db['maps_publish_status'],
             'shareLink': photo_from_db['share_link'],
             'thumbnailUrl': photo_from_db['thumbnail_url']
         }

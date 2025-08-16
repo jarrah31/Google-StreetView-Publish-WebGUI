@@ -51,6 +51,9 @@
                     <span class="grid-label">Share Link:</span>
                     <span class="grid-value"><a href="{{ photo.shareLink }}" target="_blank">Google Maps Streetview</a></span>
 
+                    <span class="grid-label">Published Status:</span>
+                    <span class="grid-value">{{ photo.mapsPublishStatus }}</span>
+
                     <span class="grid-label">View Count:</span>
                     <span class="grid-value">{{ photo.viewCount }}</span>
 
@@ -647,6 +650,7 @@
                     viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
                     shareLink: "{{ photo.shareLink }}",
                     thumbnailUrl: "{{ photo.thumbnailUrl }}",
+                    mapsPublishStatus: "{{ photo.mapsPublishStatus|default('') }}",
                     // Include the updated fields
                     pose: {
                         latLngPair: {
