@@ -15,10 +15,37 @@
         <div class="content-container">
             <div class="photo-details">
                 <h2>Photo Details:</h2>
-                <a href="{{ photo.shareLink }}" target="_blank" class="enlarged-photo-container">
-                    <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail" class="enlarged-photo">
-                    <div class="dashed-line"></div>
-                </a>
+                
+                <!-- View Toggle Buttons -->
+                <div class="view-toggle-container" style="margin-bottom: 15px;">
+                    <button id="flat-view-btn" class="view-btn active" onclick="togglePhotoView('flat')">Flat View</button>
+                    <button id="360-view-btn" class="view-btn" onclick="togglePhotoView('360')">360° View</button>
+                </div>
+                
+                <!-- Flat View (Original) -->
+                <div id="flat-view-container" class="view-container">
+                    <a href="{{ photo.shareLink }}" target="_blank" class="enlarged-photo-container">
+                        <img src="{{ photo.thumbnailUrl }}" alt="Thumbnail" class="enlarged-photo">
+                        <div class="dashed-line"></div>
+                    </a>
+                </div>
+                
+                <!-- 360° Street View -->
+                <div id="360-view-container" class="view-container" style="display: none;">
+                    <div id="streetview-panorama" style="height: 400px; position: relative; border-radius: 8px; overflow: hidden;">
+                        <!-- Loading message -->
+                        <div id="streetview-loading" class="streetview-loading">
+                            Loading 360° view...
+                        </div>
+                    </div>
+                    
+                    <!-- 360° View Controls -->
+                    <div class="heading-360-controls" style="margin-top: 10px;">
+                        <span class="heading-help" style="font-size: 12px; color: #666;">
+                            Use this 360° view to help set the heading direction.
+                        </span>
+                    </div>
+                </div>
                 <div class="details-grid"> <!-- Start of the new grid container -->
                     <!-- Metadata -->
                     <span class="grid-label">Share Link:</span>
@@ -127,6 +154,12 @@
     let mapInitialized = false; // Flag to prevent double initialization
     let nearbyMarkers = []; // Array to store nearby photo markers
     let showingNearby = false; // Track if nearby photos are being shown
+    
+    // 360° Street View variables
+    let streetViewPanorama;
+    let streetViewInitialized = false;
+    let current360View = 'flat'; // 'flat' or '360'
+    let initialHeading = 0; // Store the original heading for reset
 
     function initializeMap() {
             if (mapInitialized) {
@@ -186,9 +219,33 @@
                     fillOpacity: 1.0,
                     strokeWeight: 1,
                     strokeColor: '#FFFFFF',
-                    rotation: !isNaN(headingValue) ? headingValue : 0 // Initial rotation based on heading
+                    rotation: 0 // Will be set correctly after creation
                 }
             });
+
+            // Ensure the initial arrow rotation is correct
+            if (!isNaN(headingValue)) {
+                // Use the same rotation logic as in updatePolylineAndHeading
+                const currentIcon = headingMarker.getIcon();
+                headingMarker.setIcon({
+                    ...currentIcon,
+                    rotation: headingValue
+                });
+            } else {
+                // If no heading value, calculate it from the current positions
+                let calculatedHeading = google.maps.geometry.spherical.computeHeading(anchorPosition, headingPosition);
+                if (calculatedHeading < 0) {
+                    calculatedHeading += 360;
+                }
+                const roundedHeading = Math.round(calculatedHeading);
+                headingInput.value = roundedHeading;
+                
+                const currentIcon = headingMarker.getIcon();
+                headingMarker.setIcon({
+                    ...currentIcon,
+                    rotation: roundedHeading
+                });
+            }
 
             // Create the initial polyline
             polyline = new google.maps.Polyline({
@@ -202,6 +259,37 @@
 
             google.maps.event.addListener(headingMarker, 'drag', updatePolylineAndHeading);
             google.maps.event.addListener(anchorMarker, 'drag', updateCoordinatesAndPolyline);
+            
+            // Add click listener to map for easy heading setting
+            google.maps.event.addListener(map, 'click', function(event) {
+                // Get the clicked position
+                const clickedPosition = event.latLng;
+                const anchorPosition = anchorMarker.getPosition();
+                
+                // Move the heading marker to the clicked position
+                headingMarker.setPosition(clickedPosition);
+                
+                // Update the heading based on the new position
+                updatePolylineAndHeading();
+                
+                // Visual feedback - briefly highlight the new heading marker
+                const currentIcon = headingMarker.getIcon();
+                headingMarker.setIcon({
+                    ...currentIcon,
+                    scale: 8, // Slightly larger
+                    strokeWeight: 2
+                });
+                
+                // Reset the icon size after a brief moment
+                setTimeout(() => {
+                    headingMarker.setIcon({
+                        ...currentIcon,
+                        scale: 6,
+                        strokeWeight: 1
+                    });
+                }, 300);
+            });
+            
             mapInitialized = true;
         }
         
@@ -762,6 +850,127 @@
         function clearNearbyPhotos() {
             nearbyMarkers.forEach(marker => marker.setMap(null));
             nearbyMarkers = [];
+        }
+        
+        // === 360° STREET VIEW FUNCTIONS ===
+        
+        // Function to toggle between flat and 360° views
+        function togglePhotoView(viewType) {
+            console.log('Toggling photo view to:', viewType);
+            
+            const flatContainer = document.getElementById('flat-view-container');
+            const view360Container = document.getElementById('360-view-container');
+            const flatBtn = document.getElementById('flat-view-btn');
+            const view360Btn = document.getElementById('360-view-btn');
+            
+            // Update button states
+            flatBtn.classList.remove('active');
+            view360Btn.classList.remove('active');
+            
+            if (viewType === '360') {
+                // Show 360° view
+                flatContainer.style.display = 'none';
+                view360Container.style.display = 'block';
+                view360Btn.classList.add('active');
+                current360View = '360';
+                
+                // Initialize Street View if not already done
+                if (!streetViewInitialized) {
+                    initializeStreetView();
+                }
+            } else {
+                // Show flat view
+                flatContainer.style.display = 'block';
+                view360Container.style.display = 'none';
+                flatBtn.classList.add('active');
+                current360View = 'flat';
+            }
+            
+            // Save preference
+            localStorage.setItem('photoViewPreference', current360View);
+        }
+        
+        // Function to initialize Street View panorama
+        function initializeStreetView() {
+            console.log('Initializing Street View...');
+            
+            const photoId = "{{ photo.photoId.id }}";
+            const currentHeading = parseFloat(document.getElementById('heading').value) || 0;
+            initialHeading = currentHeading; // Store for reset functionality
+            const loadingElement = document.getElementById('streetview-loading');
+            
+            // Show loading message
+            loadingElement.style.display = 'flex';
+            
+            try {
+                streetViewPanorama = new google.maps.StreetViewPanorama(
+                    document.getElementById('streetview-panorama'),
+                    {
+                        pano: photoId,
+                        pov: {
+                            heading: currentHeading,
+                            pitch: 0
+                        },
+                        addressControl: false,
+                        enableCloseButton: false,
+                        fullscreenControl: true,
+                        panControl: true,
+                        zoomControl: true,
+                        motionTracking: false,
+                        motionTrackingControl: false,
+                        linksControl: false
+                    }
+                );
+                
+                // Hide loading message when panorama loads
+                streetViewPanorama.addListener('pano_changed', function() {
+                    loadingElement.style.display = 'none';
+                });
+                
+                // Handle cases where panorama fails to load
+                streetViewPanorama.addListener('status_changed', function() {
+                    if (streetViewPanorama.getStatus() !== 'OK') {
+                        loadingElement.innerHTML = '<div style="color: #d32f2f;">360° view not available for this photo</div>';
+                    }
+                });
+                
+                streetViewInitialized = true;
+                console.log('Street View initialized successfully');
+                
+            } catch (error) {
+                console.error('Error initializing Street View:', error);
+                loadingElement.innerHTML = '<div style="color: #d32f2f;">Error loading 360° view</div>';
+            }
+        }
+        
+        // Reset function removed - button functionality was not working properly
+        
+        // Helper function to normalize heading to 0-360 range
+        function normalizeHeading(heading) {
+            while (heading < 0) heading += 360;
+            while (heading >= 360) heading -= 360;
+            return heading;
+        }
+        
+        // Function to update map heading marker from a heading value
+        function updateMapHeadingFromValue(headingValue) {
+            if (!mapInitialized || !anchorMarker) return;
+            
+            const anchorPosition = anchorMarker.getPosition();
+            const newHeadingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 200, headingValue);
+            
+            // Update heading marker position
+            headingMarker.setPosition(newHeadingPosition);
+            
+            // Update polyline
+            polyline.setPath([anchorPosition, newHeadingPosition]);
+            
+            // Update marker icon rotation
+            const currentIcon = headingMarker.getIcon();
+            headingMarker.setIcon({
+                ...currentIcon,
+                rotation: headingValue
+            });
         }
     </script>
 {% endblock %}
