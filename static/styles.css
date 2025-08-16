@@ -736,7 +736,12 @@ input[type="submit"]:hover {
     text-align: center;
 }
 
-#list-view .photo-table thead th:nth-child(8) { /* Actions */
+#list-view .photo-table thead th:nth-child(8) { /* Heading */
+    width: 80px;
+    text-align: center;
+}
+
+#list-view .photo-table thead th:nth-child(9) { /* Actions */
     width: 180px;
     text-align: center;
 }
@@ -774,7 +779,11 @@ input[type="submit"]:hover {
     text-align: center;
 }
 
-#list-view .photo-table td:nth-child(8) { /* Actions */
+#list-view .photo-table td:nth-child(8) { /* Heading */
+    text-align: center;
+}
+
+#list-view .photo-table td:nth-child(9) { /* Actions */
     text-align: center;
 }
 

@@ -181,7 +181,12 @@
                             </div>
                         </form>
                     </th>
-                    <th>Connections</th>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='connection_count', sort_order='asc' if sort_by == 'connection_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Connections</a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='heading', sort_order='asc' if sort_by == 'heading' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Heading</a>
+                    </th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -224,6 +229,13 @@
                     </td>
                     <td>{{ photo.connection_count }}</td>
                     <td>
+                        {% if photo.heading is not none %}
+                            {{ photo.heading }}°
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
                         <select class="action-select" onchange="if(this.value) { if(this.value === 'delete:{{ photo.photo_id }}') { confirmDelete('{{ photo.photo_id }}'); this.value = ''; } else { window.location.href=this.value; } }">
                             <option value="">Select</option>
                             <option value="{{ url_for('edit_photo', photo_id=photo.photo_id) }}">Edit Photo</option>
@@ -260,6 +272,7 @@
                 <p>Capture time: {{ photo.capture_time|replace("T00:00:00Z", "")|replace("T", " ")|replace("Z", "")|default('N/A') }}</p>
                 <p>Upload time: {{ photo.upload_time.split("T")[0]|default('N/A') }}</p>
                 <p>Connections: {{ photo.connection_count }}</p>
+                <p>Heading: {% if photo.heading is not none %}{{ photo.heading }}°{% else %}N/A{% endif %}</p>
                 <div class="button-container">
                     <a href="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" class="grid-button">Edit Photo</a>
                     <a href="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" class="grid-button">Edit Connections</a>
