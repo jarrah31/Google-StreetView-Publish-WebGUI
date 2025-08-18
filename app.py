@@ -1435,7 +1435,7 @@ def upload_photosphere():
             longitude = float(request.form['longitude'])
             placeId = request.form['placeId']
 
-            create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId, capture_time)
+            create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId, capture_time, heading)
             create_photo_response_message = f"Create photo response: {create_photo_response}"
             app.logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
             app.logger.debug(create_photo_response_message)
@@ -1784,7 +1784,7 @@ def upload_photo(token, upload_ref, file_path, heading):
             except OSError as e:
                 app.logger.warning(f"Failed to clean up temporary file: {str(e)}")
 
-def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=None):
+def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=None, heading=None):
     app.logger.debug(f"=== FUNCTION APP: create_photo ===")
     """Create photo with validation and error handling"""
     try:
@@ -1805,6 +1805,17 @@ def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=N
                 },
             },
         }
+        
+        # Add heading to pose if provided (from EXIF XMP metadata extraction)
+        if heading is not None:
+            try:
+                validated_heading = validate_heading(heading)
+                if validated_heading is not None:
+                    body["pose"]["heading"] = validated_heading
+                    app.logger.debug(f"Including heading in API request: {validated_heading}")
+            except ValidationError as e:
+                app.logger.warning(f"Invalid heading value {heading}: {str(e)}")
+        
         if placeId:
             body["places"] = [{"placeId": placeId, "languageCode": "en"}]
         
