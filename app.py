@@ -1004,9 +1004,31 @@ def edit_photo(photo_id):
     app.logger.debug(f"Original captureTime: {response.get('originalCaptureTime', 'N/A')}")
     app.logger.debug(f"Original uploadTime: {response.get('originalUploadTime', 'N/A')}")
 
+    # Get next and previous photo IDs for navigation
+    next_photo_id = None
+    previous_photo_id = None
+    
+    try:
+        if using_db:
+            # Use database functions to get next/previous photos
+            next_photo_id = database.get_next_photo_by_capture_time(photo_id)
+            previous_photo_id = database.get_previous_photo_by_capture_time(photo_id)
+        else:
+            # If not using database, we can't provide navigation
+            app.logger.debug("Not using database, navigation not available")
+            
+    except Exception as e:
+        app.logger.error(f"Error getting navigation photos: {str(e)}")
+    
     # passing the entire response dictionary to the render_template function
     # Render the 'edit_photo.html' template with the photo details.
-    return render_template('edit_photo.html', photo=response, page_token=page_token, page_size=page_size, api_key=client_config['api_key'])
+    return render_template('edit_photo.html',
+                         photo=response,
+                         page_token=page_token,
+                         page_size=page_size,
+                         api_key=client_config['api_key'],
+                         next_photo_id=next_photo_id,
+                         previous_photo_id=previous_photo_id)
 
 @app.route('/edit_connections/<photo_id>', methods=['GET'])
 @token_required
@@ -1379,6 +1401,10 @@ def upload_photosphere():
 
         # Get the heading value from the form
         heading = request.form['heading']
+        
+        # Get the capture time from the form (if provided by JavaScript EXIF extraction)
+        capture_time = request.form.get('captureTime', '')
+        app.logger.debug(f"Received capture time from form: {capture_time}")
 
         # Upload the photo bytes to the Upload URL
         try:
@@ -1409,7 +1435,7 @@ def upload_photosphere():
             longitude = float(request.form['longitude'])
             placeId = request.form['placeId']
 
-            create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId)
+            create_photo_response = create_photo(credentials.token, upload_ref, latitude, longitude, placeId, capture_time)
             create_photo_response_message = f"Create photo response: {create_photo_response}"
             app.logger.debug(f"Metadata - Latitude: {latitude}, Longitude: {longitude}, Place ID: {placeId}")
             app.logger.debug(create_photo_response_message)
@@ -1758,7 +1784,7 @@ def upload_photo(token, upload_ref, file_path, heading):
             except OSError as e:
                 app.logger.warning(f"Failed to clean up temporary file: {str(e)}")
 
-def create_photo(token, upload_ref, latitude, longitude, placeId):
+def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=None):
     app.logger.debug(f"=== FUNCTION APP: create_photo ===")
     """Create photo with validation and error handling"""
     try:
@@ -1781,6 +1807,12 @@ def create_photo(token, upload_ref, latitude, longitude, placeId):
         }
         if placeId:
             body["places"] = [{"placeId": placeId, "languageCode": "en"}]
+        
+        # Add captureTime if provided (from EXIF metadata extraction)
+        if capture_time and capture_time.strip():
+            # Ensure the capture time is in the correct ISO 8601 format
+            body["captureTime"] = capture_time.strip()
+            app.logger.debug(f"Including captureTime in API request: {capture_time}")
 
         app.logger.info(f"Creating photo with coordinates: {validated_lat}, {validated_lng}")
         response = requests.post(url, headers=headers, json=body)

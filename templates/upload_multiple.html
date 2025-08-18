@@ -1102,6 +1102,22 @@ async function uploadSingleFile(fileData) {
     formData.append('heading', fileData.metadata.heading || 0);
     formData.append('placeId', fileData.placeId);
     
+    // ✅ ADD MISSING CAPTURE TIME - Convert EXIF format to ISO 8601 for API
+    if (fileData.metadata && fileData.metadata.dateTimeOriginal) {
+        try {
+            // Convert EXIF date format "YYYY:MM:DD HH:MM:SS" to ISO 8601 format
+            const exifDateStr = fileData.metadata.dateTimeOriginal;
+            const isoDateStr = exifDateStr.replace(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}:\d{2}:\d{2})/, '$1-$2-$3T$4Z');
+            formData.append('captureTime', isoDateStr);
+            console.log(`Sending captureTime for ${fileData.file.name}: ${isoDateStr}`);
+        } catch (error) {
+            console.warn(`Failed to format capture time for ${fileData.file.name}:`, error);
+            formData.append('captureTime', ''); // Send empty string as fallback
+        }
+    } else {
+        formData.append('captureTime', ''); // Send empty string if no capture time available
+    }
+    
     const response = await fetch('{{ url_for("upload_photosphere") }}', {
         method: 'POST',
         body: formData,
