@@ -1199,8 +1199,24 @@ def edit_connections(photo_id):
         for index, photo in enumerate(nearby_photos):
             photo['label'] = str(index + 1)  # Generate labels 1, 2, 3, ...
 
+    # Get next and previous photo IDs for navigation
+    next_photo_id = None
+    previous_photo_id = None
+    
+    try:
+        if using_db:
+            # Use database functions to get next/previous photos
+            next_photo_id = database.get_next_photo_by_capture_time(photo_id)
+            previous_photo_id = database.get_previous_photo_by_capture_time(photo_id)
+        else:
+            # If not using database, we can't provide navigation
+            app.logger.debug("Not using database, navigation not available")
+            
+    except Exception as e:
+        app.logger.error(f"Error getting navigation photos: {str(e)}")
+
     # Render the template with the photo details and nearby photos
-    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'])
+    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'], next_photo_id=next_photo_id, previous_photo_id=previous_photo_id)
 
 @app.route('/get_connections', methods=['POST'])
 def get_connections():

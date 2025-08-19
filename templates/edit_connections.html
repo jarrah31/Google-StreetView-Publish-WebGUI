@@ -10,7 +10,18 @@
 <div class="container_connections">
     <h1>Edit Connections</h1>
     <div class="navigation-buttons">
-        <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}?distance={{ distance }}" class="view-btn" id="edit-photo-link">Edit Photo</a>
+        <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}?distance={{ distance }}" class="view-btn" id="edit-photo-link">Edit Connections</a>
+        {% if previous_photo_id %}
+        <a href="{{ url_for('edit_connections', photo_id=previous_photo_id) }}" class="nav-btn nav-btn--previous">← Previous</a>
+        {% else %}
+        <span class="nav-btn nav-btn--previous nav-btn--disabled">← Previous</span>
+        {% endif %}
+        <span class="nav-separator">|</span>
+        {% if next_photo_id %}
+        <a href="{{ url_for('edit_connections', photo_id=next_photo_id) }}" class="nav-btn nav-btn--next">Next →</a>
+        {% else %}
+        <span class="nav-btn nav-btn--next nav-btn--disabled">Next →</span>
+        {% endif %}
     </div>
     <div class="content-container">
         <div class="photo-details">
