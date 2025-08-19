@@ -56,3 +56,8 @@ userdata/
 # Misc
 .clineignore
 .DS_Store
+.gitattributes
+
+test_*.py
+.kilocode/*
+.kilocode

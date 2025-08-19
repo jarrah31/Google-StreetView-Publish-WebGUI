@@ -28,6 +28,10 @@ venv.bak/
 
 # VS Code
 .vscode/*
+.kilocode/*
+.kilocode
+.clineignore
+.gitattributes
 
 # Credential files
 *creds.data
