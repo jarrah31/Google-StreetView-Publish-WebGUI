@@ -711,3 +711,128 @@ def get_all_photos_with_gps():
     finally:
         if conn:
             conn.close()
+
+def get_next_photo_by_capture_time(current_photo_id):
+    """
+    Get the next photo based on photos.html default sorting (upload_time DESC, photo_id ASC)
+    Next = older in the list (going back chronologically from newest to oldest)
+    
+    Args:
+        current_photo_id: The ID of the current photo
+        
+    Returns:
+        Photo ID of the next photo, or None if this is the last photo in the list
+    """
+    logger.debug(f"=== FUNCTION DB: get_next_photo_by_capture_time ===")
+    conn = None
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # First get the current photo's upload_time and photo_id for comparison
+        cursor.execute("SELECT upload_time, photo_id FROM photos WHERE photo_id = ?", (current_photo_id,))
+        current_row = cursor.fetchone()
+        
+        if not current_row:
+            logger.debug(f"Current photo {current_photo_id} not found")
+            return None
+            
+        current_upload_time = current_row['upload_time']
+        current_photo_id_str = current_row['photo_id']
+        
+        logger.debug(f"Current photo: {current_photo_id_str}, upload_time: {current_upload_time}")
+        
+        # Get the next photo using the same sorting as photos.html (upload_time DESC, photo_id ASC)
+        # For next (older in chronological order), we need:
+        # 1. Photos with upload_time < current_upload_time, OR
+        # 2. Photos with upload_time = current_upload_time AND photo_id > current_photo_id
+        cursor.execute("""
+            SELECT photo_id FROM photos
+            WHERE (
+                upload_time < ? OR
+                (upload_time = ? AND photo_id > ?)
+            ) AND upload_time IS NOT NULL
+            ORDER BY upload_time DESC, photo_id ASC
+            LIMIT 1
+        """, (current_upload_time, current_upload_time, current_photo_id_str))
+        
+        next_row = cursor.fetchone()
+        if next_row:
+            logger.debug(f"Found next photo: {next_row['photo_id']} for current photo: {current_photo_id_str}")
+            return next_row['photo_id']
+        else:
+            logger.debug(f"No next photo found for {current_photo_id_str} - this is the last photo")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Database - Error getting next photo: {str(e)}")
+        return None
+        
+    finally:
+        if conn:
+            conn.close()
+
+def get_previous_photo_by_capture_time(current_photo_id):
+    """
+    Get the previous photo based on photos.html default sorting (upload_time DESC, photo_id ASC)
+    Previous = newer in the list (going forward chronologically from oldest to newest)
+    
+    Args:
+        current_photo_id: The ID of the current photo
+        
+    Returns:
+        Photo ID of the previous photo, or None if this is the first photo in the list
+    """
+    logger.debug(f"=== FUNCTION DB: get_previous_photo_by_capture_time ===")
+    conn = None
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # First get the current photo's upload_time and photo_id for comparison
+        cursor.execute("SELECT upload_time, photo_id FROM photos WHERE photo_id = ?", (current_photo_id,))
+        current_row = cursor.fetchone()
+        
+        if not current_row:
+            logger.debug(f"Current photo {current_photo_id} not found")
+            return None
+            
+        current_upload_time = current_row['upload_time']
+        current_photo_id_str = current_row['photo_id']
+        
+        logger.debug(f"Current photo: {current_photo_id_str}, upload_time: {current_upload_time}")
+        
+        # Get the previous photo using the same sorting as photos.html (upload_time DESC, photo_id ASC)
+        # For previous (newer in chronological order), we need:
+        # 1. Photos with upload_time > current_upload_time, OR
+        # 2. Photos with upload_time = current_upload_time AND photo_id < current_photo_id
+        # Order DESC, ASC but get the last one before current position
+        cursor.execute("""
+            SELECT photo_id FROM photos
+            WHERE (
+                upload_time > ? OR
+                (upload_time = ? AND photo_id < ?)
+            ) AND upload_time IS NOT NULL
+            ORDER BY upload_time ASC, photo_id DESC
+            LIMIT 1
+        """, (current_upload_time, current_upload_time, current_photo_id_str))
+        
+        previous_row = cursor.fetchone()
+        if previous_row:
+            logger.debug(f"Found previous photo: {previous_row['photo_id']} for current photo: {current_photo_id_str}")
+            return previous_row['photo_id']
+        else:
+            logger.debug(f"No previous photo found for {current_photo_id_str} - this is the first photo")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Database - Error getting previous photo: {str(e)}")
+        return None
+        
+    finally:
+        if conn:
+            conn.close()

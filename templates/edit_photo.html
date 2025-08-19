@@ -11,6 +11,32 @@
         <h1>Edit Photo</h1>
         <div class="navigation-buttons">
             <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" id="edit-connections-link" class="view-btn">Edit Connections</a>
+            
+            <!-- Photo Navigation Buttons -->
+            <div class="photo-navigation">
+                {% if previous_photo_id %}
+                    <a href="{{ url_for('edit_photo', photo_id=previous_photo_id) }}" class="nav-btn nav-previous" title="Previous photo (newer in time)">
+                        ← Previous
+                    </a>
+                {% else %}
+                    <span class="nav-btn nav-previous disabled" title="This is the newest photo">
+                        ← Previous
+                    </span>
+                {% endif %}
+                
+                <!-- Visual separator between navigation buttons -->
+                <span class="nav-separator">|</span>
+                
+                {% if next_photo_id %}
+                    <a href="{{ url_for('edit_photo', photo_id=next_photo_id) }}" class="nav-btn nav-next" title="Next photo (older in time)">
+                        Next →
+                    </a>
+                {% else %}
+                    <span class="nav-btn nav-next disabled" title="This is the oldest photo">
+                        Next →
+                    </span>
+                {% endif %}
+            </div>
         </div>
         <div class="content-container">
             <div class="photo-details">

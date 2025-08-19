@@ -681,7 +681,17 @@ input[type="submit"]:hover {
     margin-top: 20px;
     display: flex;
     justify-content: flex-start;
+    align-items: center;
     gap: 10px;
+}
+
+/* Navigation separator styling */
+.nav-separator {
+    font-size: 1.2rem;
+    color: #95a5a6;
+    font-weight: 300;
+    margin: 0 8px;
+    user-select: none;
 }
 
 .photo-table {
@@ -3958,5 +3968,97 @@ input[type="checkbox"]:indeterminate::before {
 #streetview-panorama .gm-fullscreen-control {
     right: 10px !important;
     top: 10px !important;
+}
+
+/* Photo navigation buttons for edit_photo.html */
+.photo-navigation {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid #e9ecef;
+    align-items: center;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid #3498db;
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+.nav-btn:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+    text-decoration: none;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(52, 152, 219, 0.3);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+/* Specific styles for Previous and Next buttons */
+.nav-previous::before {
+    content: "←";
+    font-size: 1.1em;
+}
+
+.nav-next::after {
+    content: "→";
+    font-size: 1.1em;
+}
+
+/* Disabled state for navigation buttons */
+.nav-btn.disabled,
+.photo-navigation .disabled {
+    background-color: #95a5a6;
+    border-color: #95a5a6;
+    color: #ecf0f1;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    box-shadow: 0 1px 2px rgba(149, 165, 166, 0.2);
+}
+
+.nav-btn.disabled:hover,
+.photo-navigation .disabled:hover {
+    background-color: #95a5a6;
+    border-color: #95a5a6;
+    color: #ecf0f1;
+    transform: none;
+    box-shadow: 0 1px 2px rgba(149, 165, 166, 0.2);
+}
+
+/* Navigation button descriptions */
+.nav-btn[title] {
+    position: relative;
+}
+
+/* Mobile responsive navigation buttons */
+@media (max-width: 768px) {
+    .photo-navigation {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .nav-btn {
+        justify-content: center;
+        text-align: center;
+        padding: 10px 16px;
+    }
 }
 }
