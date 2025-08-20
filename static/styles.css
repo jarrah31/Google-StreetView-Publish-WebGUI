@@ -954,6 +954,33 @@ input[type="submit"]:hover {
     max-width: 200px;
 }
 
+/* Clickable row styling for custom tables (edit_connections.html) */
+.custom-table__row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.custom-table__row:hover {
+    background-color: #f0f7fc;
+}
+
+.custom-table__row.selected {
+    background-color: #e3f2fd;
+}
+
+/* Ensure header rows don't have the clickable styling */
+.custom-table__head .custom-table__row {
+    cursor: default;
+}
+
+.custom-table__head .custom-table__row:hover {
+    background-color: #f7fafc;
+}
+
+.custom-table__head .custom-table__row.selected {
+    background-color: #f7fafc;
+}
+
 .button-22 {
     align-items: center;
     appearance: button;

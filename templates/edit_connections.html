@@ -10,7 +10,7 @@
 <div class="container_connections">
     <h1>Edit Connections</h1>
     <div class="navigation-buttons">
-        <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}?distance={{ distance }}" class="view-btn" id="edit-photo-link">Edit Connections</a>
+        <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}?distance={{ distance }}" class="view-btn" id="edit-photo-link">Edit Photo</a>
         {% if previous_photo_id %}
         <a href="{{ url_for('edit_connections', photo_id=previous_photo_id) }}" class="nav-btn nav-btn--previous">← Previous</a>
         {% else %}
@@ -322,6 +322,16 @@
             checkbox.addEventListener('change', function() {
                 console.log('Checkbox state changed');
                 updatePolylines();
+            });
+        });
+
+        // Add row click handlers for table rows
+        document.querySelectorAll('.custom-table__row').forEach(row => {
+            // Skip the header row
+            if (row.closest('thead')) return;
+            
+            row.addEventListener('click', function(e) {
+                handleRowClick(e, row);
             });
         });
 
@@ -740,5 +750,56 @@
             flashContainer.remove();
         }, 5000);
     }
+
+    function handleRowClick(event, row) {
+        // Don't trigger on clicks to interactive elements
+        if (event.target.tagName === 'INPUT' ||
+            event.target.tagName === 'BUTTON' ||
+            event.target.tagName === 'A' ||
+            event.target.closest('button') ||
+            event.target.closest('input') ||
+            event.target.closest('a')) {
+            return;
+        }
+        
+        // Find the checkbox in this row
+        const checkbox = row.querySelector('.photo-checkbox');
+        if (checkbox && !checkbox.disabled) {
+            // Toggle the checkbox
+            checkbox.checked = !checkbox.checked;
+            
+            // Update row visual state
+            updateRowSelectionState(row, checkbox.checked);
+            
+            // Trigger the change event to update polylines
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    }
+
+    function updateRowSelectionState(row, selected) {
+        if (selected) {
+            row.classList.add('selected');
+        } else {
+            row.classList.remove('selected');
+        }
+    }
+
+    // Update row visual states when checkboxes change (for existing checkbox listeners)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for the map to initialize and auto-select existing connections
+        setTimeout(function() {
+            document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+                const row = checkbox.closest('.custom-table__row');
+                if (row) {
+                    updateRowSelectionState(row, checkbox.checked);
+                    
+                    // Add change listener to update row state when checkbox changes
+                    checkbox.addEventListener('change', function() {
+                        updateRowSelectionState(row, checkbox.checked);
+                    });
+                }
+            });
+        }, 1000); // Delay to ensure auto-selection has completed
+    });
 </script>
 {% endblock %}
