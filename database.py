@@ -4,8 +4,8 @@ import json
 import logging
 from datetime import datetime
 
-# Set up logger
-logger = logging.getLogger(__name__)
+# Set up database-specific logger
+logger = logging.getLogger('database')
 
 # Get the base directory of the application
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -538,7 +538,7 @@ def get_connections_by_photo_ids(photo_ids):
         if conn:
             conn.close()
 
-def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
+def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng, center_photo_id=None):
     """
     Get photos that are within a specified bounding box
     
@@ -549,11 +549,15 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
         max_lat: Maximum latitude of bounding box
         min_lng: Minimum longitude of bounding box
         max_lng: Maximum longitude of bounding box
+        center_photo_id: ID of the center photo to exclude from results
         
     Returns:
-        List of photo objects within the bounding box
+        List of photo objects within the bounding box (excluding center photo)
     """
-    logger.debug(f"=== FUNCTION DB: get_nearby_photos ===")
+    logger.debug(f"=== NEARBY PHOTOS DEBUG: Starting get_nearby_photos ===")
+    logger.debug(f"=== NEARBY PHOTOS DEBUG: Center coordinates: ({lat}, {lng}) ===")
+    logger.debug(f"=== NEARBY PHOTOS DEBUG: Bounding box: ({min_lat}, {min_lng}) to ({max_lat}, {max_lng}) ===")
+    logger.debug(f"=== NEARBY PHOTOS DEBUG: Center photo ID to exclude: {center_photo_id} ===")
     conn = None
     try:
         # Connect to the database
@@ -582,7 +586,10 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
             
             # Skip if no coordinates
             if photo_data['latitude'] is None or photo_data['longitude'] is None:
+                logger.debug(f"=== NEARBY PHOTOS DEBUG: Skipping {photo_id} - no coordinates ===")
                 continue
+            
+            logger.debug(f"=== NEARBY PHOTOS DEBUG: Processing photo {photo_id} at ({photo_data['latitude']}, {photo_data['longitude']}) ===")
                 
             # Format data to match API response format
             formatted_photo = {
@@ -633,16 +640,25 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng):
             if places:
                 formatted_photo['places'] = places
             
-            # Check if this is the center photo
-            if abs(photo_data['latitude'] - lat) < 0.0000001 and abs(photo_data['longitude'] - lng) < 0.0000001:
-                center_photo_id = photo_id
-            
             photos.append(formatted_photo)
         
-        # Filter out the center photo from the results
-        if center_photo_id:
-            photos = [p for p in photos if p['photoId']['id'] != center_photo_id]
+        logger.debug(f"=== NEARBY PHOTOS DEBUG: Found {len(photos)} photos before filtering ===")
         
+        # Filter out the center photo from the results if center_photo_id is provided
+        if center_photo_id:
+            original_count = len(photos)
+            photos = [p for p in photos if p['photoId']['id'] != center_photo_id]
+            filtered_count = len(photos)
+            logger.debug(f"=== NEARBY PHOTOS DEBUG: Filtered out center photo {center_photo_id} ===")
+            logger.debug(f"=== NEARBY PHOTOS DEBUG: Photos before filtering: {original_count}, after: {filtered_count} ===")
+            
+            # Log the IDs of remaining photos for debugging
+            remaining_photo_ids = [p['photoId']['id'] for p in photos]
+            logger.debug(f"=== NEARBY PHOTOS DEBUG: Remaining photo IDs: {remaining_photo_ids} ===")
+        else:
+            logger.debug(f"=== NEARBY PHOTOS DEBUG: No center photo ID provided - returning all {len(photos)} photos ===")
+        
+        logger.debug(f"=== NEARBY PHOTOS DEBUG: Final result: {len(photos)} photos ===")
         return photos
         
     except Exception as e:

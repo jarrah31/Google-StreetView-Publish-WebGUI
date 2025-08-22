@@ -768,6 +768,16 @@
             // Toggle the checkbox
             checkbox.checked = !checkbox.checked;
             
+            // Get the photoId for logging
+            const photoId = checkbox.dataset.photoId;
+            
+            // Log the selection/deselection
+            if (checkbox.checked) {
+                console.log(`Photo selected: ${photoId}`);
+            } else {
+                console.log(`Photo deselected: ${photoId}`);
+            }
+            
             // Update row visual state
             updateRowSelectionState(row, checkbox.checked);
             

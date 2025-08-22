@@ -91,6 +91,7 @@ def get_default_config():
         },
         "logging": {
             "level": "INFO",
+            "database_level": "INFO",
             "file": "userdata/logs/streetview.log",
             "max_bytes": 1048576,
             "backup_count": 10,
@@ -137,8 +138,9 @@ def load_config():
                 json.dump(config, config_file, indent=2)
             app.logger.info("Created default configuration in userdata/config.json")
 
-        # Set logging level
+        # Set logging levels
         config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
+        config['logging']['database_level'] = getattr(logging, config['logging']['database_level'].upper())
 
         return config
     except Exception as e:
@@ -236,11 +238,20 @@ def setup_logging(app, config):
     app.logger.addHandler(stream_handler)
     app.logger.setLevel(config['logging']['level'])
     
+    # Configure database module logger with different level
+    database_logger = logging.getLogger('database')
+    database_logger.handlers = []  # Clear existing handlers
+    database_logger.propagate = False  # Don't propagate to root logger
+    database_logger.addHandler(file_handler)
+    database_logger.addHandler(stream_handler)
+    database_logger.setLevel(config['logging']['database_level'])
+    
     # Log startup information
     app.logger.info('StreetView application starting')
     app.logger.info(f"Environment: debug={config['app']['debug']}")
     app.logger.info(f"Uploads directory: {config['uploads']['directory']}")
     app.logger.info(f"Log level: {logging.getLevelName(config['logging']['level'])}")
+    app.logger.info(f"Database log level: {logging.getLevelName(config['logging']['database_level'])}")
     app.logger.info("Logging configured - fixed double logging issue")
 
 def log_error(error_type, error):
@@ -339,7 +350,7 @@ def log_request_info():
 #     return response
 
 def format_capture_time(capture_time):
-    app.logger.debug(f"=== FUNCTION APP: format_capture_time ===")
+    # app.logger.debug(f"=== FUNCTION APP: format_capture_time ===")
     if capture_time is None:
         return "N/A"
     try:
@@ -1134,12 +1145,26 @@ def edit_connections(photo_id):
         # Try to get nearby photos from database first if already using database
         if using_db:
             try:
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Calling get_nearby_photos ===")
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: photo_id (center): {photo_id} ===")
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: latitude: {latitude}, longitude: {longitude} ===")
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: bounding box: ({min_lat}, {min_lng}) to ({max_lat}, {max_lng}) ===")
+                
                 db_nearby_photos = database.get_nearby_photos(
-                    latitude, longitude, min_lat, max_lat, min_lng, max_lng
+                    latitude, longitude, min_lat, max_lat, min_lng, max_lng, photo_id
                 )
-                app.logger.debug(f"Retrieved {len(db_nearby_photos)} nearby photos from database")
+                
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Retrieved {len(db_nearby_photos)} nearby photos from database ===")
+                
+                # Log the photo IDs returned
+                if db_nearby_photos:
+                    returned_photo_ids = [p['photoId']['id'] for p in db_nearby_photos]
+                    app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Returned photo IDs: {returned_photo_ids} ===")
+                else:
+                    app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: No nearby photos returned from database ===")
+                    
             except Exception as e:
-                app.logger.error(f"Error getting nearby photos from database: {str(e)}")
+                app.logger.error(f"=== EDIT CONNECTIONS DEBUG: Error getting nearby photos from database: {str(e)} ===")
                 db_nearby_photos = []
         
         # If database didn't return nearby photos or we're not using db, use API
@@ -1182,18 +1207,43 @@ def edit_connections(photo_id):
                 app.logger.error(f"Error fetching nearby photos from API: {e}")
         else:
             # Process nearby photos from database
+            app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Processing {len(db_nearby_photos)} nearby photos from database ===")
+            
             for nearby_photo in db_nearby_photos:
+                nearby_photo_id = nearby_photo.get('photoId', {}).get('id', 'Unknown')
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Processing nearby photo {nearby_photo_id} ===")
+                
                 if 'pose' in nearby_photo and 'latLngPair' in nearby_photo['pose']:
                     nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
                     nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
                     distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
-                    if distance_to_photo > 0:  # Exclude the source photo
+                    
+                    app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Photo {nearby_photo_id} at ({nearby_lat}, {nearby_lng}), distance: {distance_to_photo}m ===")
+                    
+                    # Exclude the center photo by ID comparison instead of distance
+                    if nearby_photo_id != photo_id:
                         nearby_photo['distance'] = round(distance_to_photo, 2)
                         nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
                         nearby_photos.append(nearby_photo)
+                        app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Added photo {nearby_photo_id} to nearby_photos list ===")
+                    else:
+                        app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Skipped photo {nearby_photo_id} - this is the center photo ===")
+                else:
+                    app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Skipped photo {nearby_photo_id} - no pose/coordinates ===")
         
         # Sort the nearby photos by distance
+        app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Before sorting, found {len(nearby_photos)} nearby photos ===")
         nearby_photos.sort(key=lambda x: x['distance'])
+        
+        # Log final nearby photos for debugging
+        if nearby_photos:
+            app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Final nearby photos list: ===")
+            for i, photo in enumerate(nearby_photos):
+                photo_id = photo.get('photoId', {}).get('id', 'Unknown')
+                distance = photo.get('distance', 'Unknown')
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: {i+1}. Photo {photo_id}, distance: {distance}m ===")
+        else:
+            app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: No nearby photos in final list ===")
         
         # Assign labels after sorting
         for index, photo in enumerate(nearby_photos):
@@ -1851,7 +1901,7 @@ def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=N
         raise APIError("Failed to create photo", response=getattr(e, 'response', None))
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    app.logger.debug(f"=== FUNCTION APP: calculate_distance ===")
+    # app.logger.debug(f"=== FUNCTION APP: calculate_distance ===")
     # approximate radius of earth in km
     R = 6371.0
 
