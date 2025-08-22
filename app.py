@@ -1131,7 +1131,12 @@ def edit_connections(photo_id):
 
     # Get the distance from the query parameters or use a default value
     distance = request.args.get('distance', 200, type=int)
-    app.logger.debug(f"Distance: {distance}")
+    # Preserve the search radius immediately to prevent contamination
+    search_radius = distance
+    app.logger.debug(f"=== DISTANCE DEBUG: Raw query param 'distance': {request.args.get('distance')} ===")
+    app.logger.debug(f"=== DISTANCE DEBUG: Parsed distance value: {distance} ===")
+    app.logger.debug(f"=== DISTANCE DEBUG: Preserved search_radius: {search_radius} ===")
+    app.logger.debug(f"=== DISTANCE DEBUG: Full request args: {dict(request.args)} ===")
 
     nearby_photos = []
     if 'pose' in response and 'latLngPair' in response['pose']:
@@ -1182,7 +1187,7 @@ def edit_connections(photo_id):
                         nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
                         nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
                         distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
-                        if distance_to_photo > 0:  # Exclude the source photo
+                        if distance_to_photo > 0 and distance_to_photo <= search_radius:  # Exclude the source photo and photos beyond search radius
                             nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
                             nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
                             nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
@@ -1198,7 +1203,7 @@ def edit_connections(photo_id):
                             nearby_lat = nearby_photo['pose']['latLngPair']['latitude']
                             nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
                             distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
-                            if distance_to_photo > 0:  # Exclude the source photo
+                            if distance_to_photo > 0 and distance_to_photo <= search_radius:  # Exclude the source photo and photos beyond search radius
                                 nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
                                 nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
                                 nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
@@ -1224,11 +1229,15 @@ def edit_connections(photo_id):
                     
                     # Exclude the center photo by ID comparison instead of distance
                     if nearby_photo_id != photo_id:
-                        nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
-                        nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
-                        nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
-                        nearby_photos.append(nearby_photo)
-                        app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Added photo {nearby_photo_id} to nearby_photos list ===")
+                        # Only include photos within the search radius
+                        if distance_to_photo <= search_radius:
+                            nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
+                            nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
+                            nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
+                            nearby_photos.append(nearby_photo)
+                            app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Added photo {nearby_photo_id} to nearby_photos list (distance: {distance_to_photo}m <= {search_radius}m) ===")
+                        else:
+                            app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Excluded photo {nearby_photo_id} - distance {distance_to_photo}m exceeds search radius {search_radius}m ===")
                     else:
                         app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Skipped photo {nearby_photo_id} - this is the center photo ===")
                 else:
@@ -1268,8 +1277,10 @@ def edit_connections(photo_id):
     except Exception as e:
         app.logger.error(f"Error getting navigation photos: {str(e)}")
 
+    app.logger.debug(f"=== DISTANCE DEBUG: Final search_radius for template: {search_radius} ===")
+    
     # Render the template with the photo details and nearby photos
-    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=distance, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'], next_photo_id=next_photo_id, previous_photo_id=previous_photo_id)
+    return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=search_radius, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'], next_photo_id=next_photo_id, previous_photo_id=previous_photo_id)
 
 @app.route('/get_connections', methods=['POST'])
 def get_connections():

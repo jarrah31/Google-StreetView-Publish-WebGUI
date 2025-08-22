@@ -27,7 +27,7 @@
         <div class="photo-details">
             <!-- Nearby Photos section -->
             <div class="nearby-photos">
-                <h2>Nearby Photos within {{ distance }} meters:</h2>
+                <h2>Nearby Photos within {{ distance|int }} meters:</h2>
                 <form id="distance-form" method="GET" action="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}">
                     <label for="distance">Distance (meters):</label>
                     <input type="number" id="distance" name="distance" value="{{ distance }}" min="1">
@@ -357,10 +357,15 @@
         // Save distance value on form submit
         document.getElementById('distance-form').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent default form submission
-            const distance = document.getElementById('distance').value;
-            localStorage.setItem('distance', distance);
-            // Reload the page with the new distance value
-            window.location.href = `${window.location.pathname}?distance=${distance}`;
+            const inputValue = document.getElementById('distance').value;
+            const distance = parseInt(inputValue); // Ensure integer
+            console.log(`DEBUG: Form submit - Input value: "${inputValue}", Parsed distance: ${distance}`);
+            if (distance && distance > 0) {
+                localStorage.setItem('distance', distance);
+                console.log(`DEBUG: Stored in localStorage: ${distance}`);
+                // Reload the page with the new distance value
+                window.location.href = `${window.location.pathname}?distance=${distance}`;
+            }
         });
 
         // Event listener for toggle connections button
