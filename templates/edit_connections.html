@@ -55,7 +55,7 @@
                                     <input type="checkbox" class="photo-checkbox" data-photo-id="{{ nearby_photo.photoId.id }}" data-lat="{{ nearby_photo.pose.latLngPair.latitude }}" data-lng="{{ nearby_photo.pose.latLngPair.longitude }}">
                                 </td>
                                 <td class="custom-photo-table__label custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.label }}</td>
-                                <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.distance }}</td>
+                                <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.display_distance }}</td>
                                 <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.formattedCaptureTime }}</td>
                                 <td class="custom-table__cell custom-table__cell--no-wrap">{{ nearby_photo.pose.heading }}</td>
                                 <td class="custom-table__cell custom-table__cell--remainder"><a href="{{ nearby_photo.shareLink }}" target="_blank">View</a></td>

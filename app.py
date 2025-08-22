@@ -1183,7 +1183,8 @@ def edit_connections(photo_id):
                         nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
                         distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
                         if distance_to_photo > 0:  # Exclude the source photo
-                            nearby_photo['distance'] = round(distance_to_photo, 2)
+                            nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
+                            nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
                             nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
                             nearby_photos.append(nearby_photo)
                 
@@ -1198,7 +1199,8 @@ def edit_connections(photo_id):
                             nearby_lng = nearby_photo['pose']['latLngPair']['longitude']
                             distance_to_photo = calculate_distance(latitude, longitude, nearby_lat, nearby_lng)
                             if distance_to_photo > 0:  # Exclude the source photo
-                                nearby_photo['distance'] = round(distance_to_photo, 2)
+                                nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
+                                nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
                                 nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
                                 nearby_photos.append(nearby_photo)
                     
@@ -1222,7 +1224,8 @@ def edit_connections(photo_id):
                     
                     # Exclude the center photo by ID comparison instead of distance
                     if nearby_photo_id != photo_id:
-                        nearby_photo['distance'] = round(distance_to_photo, 2)
+                        nearby_photo['distance'] = round(distance_to_photo, 4)  # Keep high precision for sorting
+                        nearby_photo['display_distance'] = round(distance_to_photo, 2)  # 2 decimal places for display
                         nearby_photo['formattedCaptureTime'] = format_capture_time(nearby_photo['captureTime'])
                         nearby_photos.append(nearby_photo)
                         app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Added photo {nearby_photo_id} to nearby_photos list ===")
@@ -1918,8 +1921,8 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
     distance = R * c
 
-    # convert to miles and round to two decimal places
-    distance = round(distance * 0.621371, 2)
+    # convert to meters and round to four decimal places
+    distance = round(distance * 1000, 4)
     return distance
 
 def get_nearby_places(latitude, longitude, radius, api_key):
