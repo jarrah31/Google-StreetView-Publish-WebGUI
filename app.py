@@ -138,9 +138,16 @@ def load_config():
                 json.dump(config, config_file, indent=2)
             app.logger.info("Created default configuration in userdata/config.json")
 
-        # Set logging levels
-        config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
-        config['logging']['database_level'] = getattr(logging, config['logging']['database_level'].upper())
+        # Set logging levels - with defensive programming for missing keys
+        if 'level' in config['logging']:
+            config['logging']['level'] = getattr(logging, config['logging']['level'].upper())
+        else:
+            config['logging']['level'] = logging.INFO
+            
+        if 'database_level' in config['logging']:
+            config['logging']['database_level'] = getattr(logging, config['logging']['database_level'].upper())
+        else:
+            config['logging']['database_level'] = logging.INFO
 
         return config
     except Exception as e:
