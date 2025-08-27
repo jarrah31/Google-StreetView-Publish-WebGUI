@@ -89,8 +89,11 @@
                     <span class="grid-label">Upload Time:</span>
                     <span class="grid-value">{{ photo.uploadTime }}</span>
 
+                    <span class="grid-label">Filename (if known):</span>
+                    <span class="grid-value">{{ photo.filename if photo.filename else 'N/A' }}</span>
+
                     <!-- Form starts here, integrated into the grid -->
-                    <form action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST" class="grid-form">
+                    <form id="edit-form" action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST" class="grid-form">
                         <!-- Hidden fields to store original date formats for database update -->
                         <input type="hidden" id="original-capture-time" value="{{ photo.originalCaptureTime }}">
                         <input type="hidden" id="original-upload-time" value="{{ photo.originalUploadTime }}">
@@ -123,12 +126,14 @@
                             <input type="number" id="heading" name="heading" min="0" max="360" step="1" value="{{ (photo.pose.heading if 'pose' in photo and 'heading' in photo.pose and photo.pose.heading != 'NaN' else '') }}">
                         </div>
 
-                        <!-- Submit Button - Spans both columns -->
-                        <div class="grid-submit">
-                            <button class="button-22" type="submit" id="submit-button">Submit Changes</button>
-                        </div>
                     </form>
                 </div> <!-- End of details-grid -->
+                
+                <!-- Button Container - Outside Grid -->
+                <div class="button-row">
+                    <button class="button-22" type="submit" id="submit-button" form="edit-form">Submit Changes</button>
+                    <button type="button" class="button-22 delete-button" onclick="confirmDelete('{{ photo.photoId.id }}'); return false;" style="background-color: #ff4a4a; border-color: #ff4a4a;">Delete</button>
+                </div>
             </div>
             <div class="map-container">
                 <h2>Photo Heading:</h2>                
@@ -167,7 +172,25 @@
             </div>
         </div>
     </div>
-
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="delete-modal">
+        <div class="delete-modal-content">
+            <div class="delete-modal-header">
+                <h3>Delete Photo</h3>
+                <span class="delete-modal-close">&times;</span>
+            </div>
+            <div class="delete-modal-body">
+                <p>Are you sure you want to delete this photo? This action cannot be undone.</p>
+            </div>
+            <div class="delete-modal-actions">
+                <button class="delete-cancel-btn">Cancel</button>
+                <form id="delete-form" action="{{ url_for('delete_photo') }}" method="POST">
+                    <input type="hidden" name="photo_id" id="delete-photo-id" value="">
+                    <button type="submit" class="delete-confirm-btn">Delete</button>
+                </form>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
@@ -1001,6 +1024,35 @@
                 ...currentIcon,
                 rotation: headingValue
             });
+        }
+        
+        // Delete photo confirmation function
+        function confirmDelete(photoId) {
+            // Set the photo ID in the hidden input field
+            document.getElementById('delete-photo-id').value = photoId;
+            
+            // Show the delete confirmation modal
+            const modal = document.getElementById('delete-modal');
+            modal.style.display = 'block';
+            
+            // Add event listeners for the close button and cancel button
+            const closeBtn = document.querySelector('.delete-modal-close');
+            const cancelBtn = document.querySelector('.delete-cancel-btn');
+            
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+            
+            cancelBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+            
+            // Close the modal when clicking outside of it
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
         }
     </script>
 {% endblock %}

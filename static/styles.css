@@ -475,9 +475,23 @@ a:hover {
 
 /* Style for the submit button container */
 .grid-submit {
-    grid-column: 1 / -1; /* Span across both columns */
     justify-self: start; /* Align button to the start */
     margin-top: 15px; /* Add space above the button */
+}
+
+.grid-delete {
+    justify-self: end; /* Align delete button to the end */
+    margin-top: 15px; /* Add space above the button */
+}
+
+/* Button row container outside of grid */
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
 }
 
 .input-wrapper {
@@ -1569,6 +1583,11 @@ select option {
     background-color: #ff4a4a !important;
     color: #fff !important;
     border-color: #ff4a4a !important;
+}
+
+/* Override for inline styled delete buttons */
+.button-22.delete-button[style*="background-color"] {
+    color: #fff !important;
 }
 
 /* Delete confirmation modal */

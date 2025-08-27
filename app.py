@@ -1022,6 +1022,15 @@ def edit_photo(photo_id):
     app.logger.debug(f"Original captureTime: {response.get('originalCaptureTime', 'N/A')}")
     app.logger.debug(f"Original uploadTime: {response.get('originalUploadTime', 'N/A')}")
 
+    # Get filename from JSON files mapping
+    try:
+        photoId_to_filename = get_filenames(config['uploads']['directory'])
+        response['filename'] = photoId_to_filename.get(photo_id)
+        app.logger.debug(f"Found filename for photo {photo_id}: {response.get('filename', 'Not found')}")
+    except Exception as e:
+        app.logger.error(f"Error getting filename for photo {photo_id}: {str(e)}")
+        response['filename'] = None
+
     # Get next and previous photo IDs for navigation
     next_photo_id = None
     previous_photo_id = None
