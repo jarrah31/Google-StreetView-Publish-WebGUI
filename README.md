@@ -33,15 +33,17 @@ You can set up your Google Developer environment with a different Google account
 
 ![Capto_Capture 2025-04-22_08-01-09_pm](https://github.com/user-attachments/assets/5d698a9d-ac77-46e5-8177-56998cd8074b)
 
-![Capto_Capture 2025-04-18_04-06-48_pm](https://github.com/user-attachments/assets/a4432e1d-0974-489d-86ab-fa1ca47631cc)
 
-![Capto_Capture 2025-04-22_08-11-05_pm](https://github.com/user-attachments/assets/b56c2310-faf1-490d-8823-4f5f2ad526fe)
+<img width="1342" height="767" alt="Capto_Capture 2025-08-15_07-15-48_pm" src="https://github.com/user-attachments/assets/c00378bd-909c-449f-b31f-afa4894e0b62" />
+<img width="1325" height="980" alt="Capto_Capture 2025-08-30_10-58-54_am" src="https://github.com/user-attachments/assets/c1d7ba5e-3844-458e-b5bc-bac11f388a4c" />
 
-![Capto_Capture 2025-04-22_08-05-36_pm](https://github.com/user-attachments/assets/bbd99a57-9095-4d71-95bd-da548e02872a)
+
+
+<img width="1385" height="895" alt="Capto_Capture 2025-08-30_10-55-33_am" src="https://github.com/user-attachments/assets/906840c8-5123-4321-886e-b796d76a9f8c" />
 
 ![Capto_Capture 2025-04-22_08-06-25_pm](https://github.com/user-attachments/assets/fc88185b-cfd9-488b-b3ad-61588a97d684)
 
-![Capto_Capture 2025-02-16_07-52-05_pm](https://github.com/user-attachments/assets/37399be9-8e68-40dd-9126-97ca210e17c0)
+
 
 ![IMG_6ABF6090499C-1](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ab519b4b-2cac-4ac8-8954-1f37625c43fb)
 
