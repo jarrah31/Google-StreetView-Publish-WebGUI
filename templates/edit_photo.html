@@ -138,7 +138,7 @@
             <div class="map-container">
                 <h2>Photo Heading:</h2>                
                 <div id="map" style="height: 600px; width: 100%;"></div>
-                <p class="map-description">Use the marker on the map to set the correct heading for your photo. Drag the marker to point in the direction of the centre of the photo as indicated by the dashed line.</p>
+                <p class="map-description">Click anywhere on the map or drag the arrow to point in the direction of the centre of the photo as indicated by the dashed line. You can also alter the photo's GPS position by dragging the map marker icon.</p>
                 <button class="view-btn" type="button" id="toggle-nearby-photos">Show Nearby Photos</button>
                 <div class="distance-control" style="margin-top: 10px; display: none;">
                     <label for="nearby-distance">Distance (meters):</label>
@@ -253,7 +253,7 @@
             // Calculate the initial heading position if headingValue is available
             let headingPosition;
             if (!isNaN(headingValue)) {
-                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 200, headingValue);
+                headingPosition = google.maps.geometry.spherical.computeOffset(anchorPosition, 50, headingValue);
             } else {
                 headingPosition = { lat: lat + 0.0006, lng: lng + 0.0006 }; // Default position if heading is not set
             }
