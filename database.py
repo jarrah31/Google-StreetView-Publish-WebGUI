@@ -577,8 +577,7 @@ def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng, center_photo
         """, (min_lat, max_lat, min_lng, max_lng))
         
         photos = []
-        center_photo_id = None
-        
+
         # Process results
         for row in cursor.fetchall():
             photo_data = dict(row)

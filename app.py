@@ -790,7 +790,7 @@ def list_photos_table_page():
             
         if upload_date_to:
             # Get the last day of the month for the end date
-            year, month = map.int(upload_date_to.split('-'))
+            year, month = map(int, upload_date_to.split('-'))
             last_day = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day
             where_clauses.append("p.upload_time <= ?")
             query_params.append(f"{upload_date_to}-{last_day}T23:59:59Z")
@@ -855,13 +855,7 @@ def list_photos_table_page():
                 pass
         
         conn.close()
-        
-        # Important: Make sure we're passing the pagination variables to the template
-        # Debug log to confirm what we're passing
-        app.logger.info(f"DEBUG: Final template variables: pagination_start={pagination_start if 'pagination_start' in locals() else None}, pagination_end={pagination_end if 'pagination_end' in locals() else None}, total_records={total_records}")
-        
-        conn.close()
-        
+
         return render_template(
             'photos.html', 
             photos=photos, 
@@ -1584,7 +1578,7 @@ def upload_photosphere():
                                 create_photo_response_message=create_photo_response_message, 
                                 photo_filename=file.filename)
 
-    return render_template('upload.html')
+    return redirect(url_for('upload_multiple_photospheres'))
 
 @app.route('/upload_multiple', methods=['GET'])
 @token_required
@@ -1598,7 +1592,7 @@ def upload_multiple_photospheres():
 def delete_photo():
     app.logger.debug(f"=== FUNCTION APP: delete_photo ===")
     credentials = get_credentials()
-    photo_id = request.form.get("photo_id").strip("{'id': }")
+    photo_id = request.form.get("photo_id", "").strip()
 
     # Call the Street View Publish API to delete the photo
     url = f'https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?photoId={photo_id}'
@@ -1988,7 +1982,7 @@ def get_nearby_places(latitude, longitude, radius, api_key):
                 "place_id": place_id,
                 "icon": place_icon,
                 "name": place_name,
-                "distance": distance  # in miles
+                "distance": distance  # in meters
             })
 
         next_page_token = data.get('next_page_token')
@@ -2186,97 +2180,8 @@ def create_database():
 @app.route('/database_viewer', methods=['GET'])
 @token_required
 def database_viewer():
-    app.logger.debug(f"=== FUNCTION APP: database_viewer ===")
-    """Display all photos from the database in a table format"""
-    try:
-        import database
-        
-        # Check if database exists
-        if not os.path.exists(database.DATABASE_PATH):
-            flash("Database not yet created. Please use the 'Create Database' button on the Photo Database page first.", "error")
-            # Instead of redirecting, still render the database_viewer template but with empty data
-            return render_template(
-                'database_viewer.html',
-                photos=[],
-                total_photos=0,
-                total_places=0,
-                total_connections=0,
-                sort_by='upload_time',
-                sort_order='desc',
-                db_exists=False
-            )
-        
-        # Get sorting parameters
-        sort_by = request.args.get('sort_by', 'upload_time')
-        sort_order = request.args.get('sort_order', 'desc')
-        
-        # Get database connection
-        conn = sqlite3.connect(database.DATABASE_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Get photos with sorting
-        valid_columns = ['photo_id', 'latitude', 'longitude', 'capture_time', 
-                         'upload_time', 'view_count', 'maps_publish_status', 'updated_at']
-        
-        if sort_by not in valid_columns:
-            sort_by = 'upload_time'
-        
-        if sort_order not in ['asc', 'desc']:
-            sort_order = 'desc'
-        
-        query = f"""
-        SELECT p.*, 
-               GROUP_CONCAT(DISTINCT pl.name) as place_names,
-               COUNT(DISTINCT c.target_photo_id) as connection_count
-        FROM photos p
-        LEFT JOIN places pl ON p.photo_id = pl.photo_id
-        LEFT JOIN connections c ON p.photo_id = c.source_photo_id
-        GROUP BY p.photo_id
-        ORDER BY {sort_by} {sort_order}
-        """
-        
-        cursor.execute(query)
-        photos = [dict(row) for row in cursor.fetchall()]
-        
-        # Get total counts for statistics
-        cursor.execute("SELECT COUNT(*) FROM photos")
-        total_photos = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM places")
-        total_places = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM connections")
-        total_connections = cursor.fetchone()[0]
-        
-        conn.close()
-        
-        return render_template(
-            'database_viewer.html', 
-            photos=photos, 
-            total_photos=total_photos,
-            total_places=total_places,
-            total_connections=total_connections,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            db_exists=True
-        )
-        
-    except Exception as e:
-        app.logger.error(f"Error displaying database content: {str(e)}")
-        flash(f"Error retrieving data from database: {str(e)}", "error")
-        # Instead of redirecting, render the database_viewer template with error information
-        return render_template(
-            'database_viewer.html',
-            photos=[],
-            total_photos=0,
-            total_places=0,
-            total_connections=0,
-            sort_by='upload_time',
-            sort_order='desc',
-            db_exists=False,
-            db_error=str(e)
-        )
+    """Redirect to photo database page (database_viewer template not yet implemented)"""
+    return redirect(url_for('photo_database'))
 
 @app.route('/check_auth_status', methods=['GET'])
 def check_auth_status():
