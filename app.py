@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from markupsafe import Markup, escape
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -337,6 +337,13 @@ def handle_validation_error(error):
     log_error("Validation Error", error)
     flash(f"Validation Error: {str(error)}", "error")
     return redirect(request.referrer or url_for('index'))
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    """Handle CSRF validation failures"""
+    log_error("CSRF Error", error)
+    flash("Request rejected: invalid or missing CSRF token. Please try again.", "error")
+    return redirect(request.referrer or url_for('index')), 400
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
