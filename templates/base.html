@@ -6,6 +6,7 @@
     <title>{% block title %}Street View Publish{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons8-menu-96-favicon.png') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -26,7 +27,7 @@
         {% if messages %}
             <div class="flash-messages">
                 {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message | safe }}</div>
+                    <div class="flash-message {{ category }}">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
@@ -39,6 +40,27 @@
     </footer>
     
     <script>
+        // Add CSRF token to all non-GET fetch requests automatically
+        (function() {
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                const method = (options.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD') {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                    if (csrfToken) {
+                        options.headers = options.headers || {};
+                        if (options.headers instanceof Headers) {
+                            options.headers.set('X-CSRFToken', csrfToken);
+                        } else {
+                            options.headers['X-CSRFToken'] = csrfToken;
+                        }
+                    }
+                }
+                return originalFetch.call(this, url, options);
+            };
+        })();
+
         document.addEventListener('DOMContentLoaded', function() {
             let authCheckInterval = null;
             const CHECK_INTERVAL = 300000; // 5 minutes in milliseconds

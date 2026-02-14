@@ -324,6 +324,7 @@
         <div class="delete-modal-actions">
             <button class="delete-cancel-btn">Cancel</button>
             <form id="delete-form" action="{{ url_for('delete_photo') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="photo_id" id="delete-photo-id" value="">
                 <button type="submit" class="delete-confirm-btn">Delete</button>
             </form>

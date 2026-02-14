@@ -15,11 +15,14 @@ from datetime import datetime, timedelta
 from functools import wraps
 from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
+from flask_wtf.csrf import CSRFProtect
+from markupsafe import Markup, escape
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 
 
 # Find the placedID by using this page:
@@ -28,10 +31,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Allow OAuth over HTTP only for local development (disable for production HTTPS deployments)
+if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 # Initialize Flask app
 app = Flask(__name__)
+csrf = CSRFProtect(app)
 
 def migrate_to_userdata_structure():
     app.logger.debug(f"=== FUNCTION APP: migrate_to_userdata_structure ===")
@@ -85,7 +91,7 @@ def get_default_config():
     app.logger.debug(f"=== FUNCTION APP: get_default_config ===")
     return {
         "app": {
-            "debug": True,
+            "debug": False,
             "port": 5001,
             "host": "0.0.0.0"
         },
@@ -1382,7 +1388,7 @@ def create_connections():
 
         main_message = 'Connections created successfully'
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
-        flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
+        flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')
 
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
@@ -1424,7 +1430,7 @@ def update_photo(photo_id):
         # If we get here, the update was successful since update_photo_api would raise an APIError on failure
         main_message = 'Photo updated successfully'
         details = "Please refresh the page after 30 seconds to see the changes."
-        flash(f'{main_message}<br><span class="flash-details">{details}</span>', 'success')
+        flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')
         return redirect(url_for('edit_photo', photo_id=photo_id))
     except APIError as e:
         flash(f'Error updating photo: {str(e)}', 'error')
@@ -1462,6 +1468,22 @@ def upload_photosphere():
         app.logger.debug(f"Accept header: {request.headers.get('Accept')}")
         app.logger.debug(f"Content-Type header: {request.headers.get('Content-Type')}")
 
+        # Validate file is present and has allowed extension
+        file = request.files.get('file')
+        if not file or not file.filename:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": "No file provided"}), 400
+            flash("No file provided", "error")
+            return redirect(url_for('upload_photosphere'))
+
+        allowed = app.config.get('ALLOWED_EXTENSIONS', {'jpg', 'jpeg'})
+        file_ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if file_ext not in allowed:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept', '').startswith('application/json'):
+                return jsonify({"error": f"File type '.{file_ext}' not allowed. Accepted: {', '.join(allowed)}"}), 400
+            flash(f"File type '.{file_ext}' not allowed. Accepted: {', '.join(allowed)}", "error")
+            return redirect(url_for('upload_photosphere'))
+
         credentials = get_credentials()
 
         # Start the upload
@@ -1478,8 +1500,7 @@ def upload_photosphere():
 
         # Save the uploaded file to a temporary location on the server
         try:
-            file = request.files['file']
-            file_path = os.path.join(tempfile.gettempdir(), file.filename)
+            file_path = os.path.join(tempfile.gettempdir(), secure_filename(file.filename))
             file.save(file_path)
             app.logger.debug(f"Saved file to {file_path}")
         except Exception as e:
@@ -1603,7 +1624,7 @@ def delete_photo():
     app.logger.debug(response)
 
     if response.status_code != 200:
-        flash(f'Failed to delete photo. Error: {response.text}', 'error')
+        flash(f'Failed to delete photo. Error: {response.status_code}', 'error')
     else:
         flash('Photo deleted successfully. Remember to update the database.', 'success')
 
@@ -2242,8 +2263,14 @@ def init_app():
         setup_logging(app, config)
 
         # Configure Flask application
+        flask_secret = os.getenv('FLASK_SECRET_KEY')
+        if not flask_secret:
+            # Auto-generate and warn if no dedicated secret key is set
+            import secrets as _secrets
+            flask_secret = _secrets.token_hex(32)
+            app.logger.warning("FLASK_SECRET_KEY not set in .env - using auto-generated key. Sessions will not persist across restarts.")
         app.config.update({
-            'SECRET_KEY': os.getenv('GOOGLE_CLIENT_SECRET'),  # Use the Google Client Secret as the Flask secret key
+            'SECRET_KEY': flask_secret,
             'DEBUG': config['app']['debug'],
             'MAX_CONTENT_LENGTH': config['uploads']['max_file_size'],
             'UPLOAD_FOLDER': config['uploads']['directory'],

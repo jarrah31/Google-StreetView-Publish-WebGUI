@@ -1,4 +1,5 @@
 Flask
+Flask-WTF
 requests
 google-auth-oauthlib
 google-auth

@@ -77,6 +77,7 @@
                 <div class="card-footer">
                     <div class="button-container">
                         <form id="databaseForm" action="{{ url_for('create_database') }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button id="databaseButton" type="submit" class="page-link view-photos-link">
                                 <span id="buttonText">Update Database</span>
                             </button>
@@ -92,6 +93,7 @@
                 <h3>No Database Found</h3>
                 <p>Create a database to start managing your Street View photos.</p>
                 <form id="databaseForm" action="{{ url_for('create_database') }}" method="post" class="db-form-container button-spacing">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button id="databaseButton" type="submit" class="page-link view-photos-link" style="margin: 0 auto; display: block;">
                         <span id="buttonText">Create Database</span>
                     </button>
