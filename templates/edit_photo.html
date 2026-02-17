@@ -757,29 +757,6 @@
                 });
             });
 
-            // Dynamically update the "Back to List" link
-            const backLink = document.querySelector('.back-link');
-            const referrer = document.referrer;
-
-            if (referrer.includes('list_photos_table')) {
-                backLink.href = '{{ url_for("list_photos_table_page") }}';
-                backLink.textContent = 'Return to Table View';
-
-                // Add click event to close the tab if opened in a new tab
-                backLink.addEventListener('click', function(event) {
-                    // Check if the tab was opened programmatically
-                    if (sessionStorage.getItem('openedByScript') === 'true') {
-                        event.preventDefault();  // Prevent the default link behavior
-                        window.close();  // Close the current tab
-                    }
-                });
-            } else if (referrer.includes('list_photos')) {
-                backLink.href = `{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}`;
-                backLink.textContent = 'Return to Grid View';
-            } else {
-                backLink.href = '{{ url_for("list_photos_page") }}';
-                backLink.textContent = 'Back to List';
-            }
         });
 
         // function to handle place selection

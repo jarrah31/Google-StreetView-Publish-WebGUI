@@ -37,6 +37,8 @@ load_dotenv()
 if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
+APP_VERSION = "3.0.6"
+
 # Initialize Flask app
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -46,6 +48,10 @@ limiter = Limiter(
     default_limits=["200 per minute"],
     storage_uri="memory://",
 )
+
+@app.context_processor
+def inject_app_version():
+    return {'app_version': APP_VERSION}
 
 def migrate_to_userdata_structure():
     app.logger.debug(f"=== FUNCTION APP: migrate_to_userdata_structure ===")
