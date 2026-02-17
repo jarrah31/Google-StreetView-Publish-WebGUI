@@ -16,6 +16,8 @@ from functools import wraps
 from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from markupsafe import Markup, escape
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -38,6 +40,12 @@ if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
 # Initialize Flask app
 app = Flask(__name__)
 csrf = CSRFProtect(app)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],
+    storage_uri="memory://",
+)
 
 def migrate_to_userdata_structure():
     app.logger.debug(f"=== FUNCTION APP: migrate_to_userdata_structure ===")
@@ -363,11 +371,24 @@ def log_request_info():
         app.logger.debug(f"Form Data: {request.form}")
         app.logger.debug(f"Files: {request.files}")
 
-# @app.after_request
-# def log_response_info(response):
-#     """Log information about each response"""
-#     app.logger.debug(f"Response: {response.status}")
-#     return response
+@app.after_request
+def set_security_headers(response):
+    """Add security headers to all responses"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(self), camera=(), microphone=()'
+    # CSP allows Google Maps/APIs, inline scripts (needed for templates), and data: URIs (for map markers)
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com; "
+        "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://maps.google.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "connect-src 'self' https://maps.googleapis.com https://streetviewpublish.googleapis.com; "
+        "frame-src https://www.google.com https://maps.google.com;"
+    )
+    return response
 
 def format_capture_time(capture_time):
     # app.logger.debug(f"=== FUNCTION APP: format_capture_time ===")
@@ -408,8 +429,10 @@ def get_credentials():
 
 def save_credentials(credentials):
     app.logger.debug(f"=== FUNCTION APP: save_credentials ===")
-    with open('userdata/creds.data', 'w') as f:
+    creds_path = 'userdata/creds.data'
+    with open(creds_path, 'w') as f:
         f.write(credentials.to_json())
+    os.chmod(creds_path, 0o600)
 
 def token_required(f):
     app.logger.debug(f"=== FUNCTION APP: token_required ===")
@@ -458,6 +481,7 @@ def logout():
     return redirect(url_for('index', _force_check_auth=True))
 
 @app.route('/authorize')
+@limiter.limit("10 per minute")
 def authorize():
     app.logger.debug(f"=== FUNCTION APP: authorize ===")
     redirect_uri = os.getenv('REDIRECT_URI')
@@ -661,16 +685,22 @@ def list_photos_table_page():
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # Get valid columns for sorting
-        valid_columns = ['photo_id', 'latitude', 'longitude', 'capture_time', 
-                         'upload_time', 'view_count', 'maps_publish_status', 'updated_at',
-                         'place_names']
-        
-        if sort_by not in valid_columns:
-            sort_by = 'upload_time'
-        
-        if sort_order not in ['asc', 'desc']:
-            sort_order = 'desc'
+        # Whitelist mapping for safe ORDER BY (prevents SQL injection even if validation is bypassed)
+        VALID_SORT_COLUMNS = {
+            'photo_id': 'p.photo_id',
+            'latitude': 'p.latitude',
+            'longitude': 'p.longitude',
+            'capture_time': 'p.capture_time',
+            'upload_time': 'p.upload_time',
+            'view_count': 'p.view_count',
+            'maps_publish_status': 'p.maps_publish_status',
+            'updated_at': 'p.updated_at',
+            'place_names': 'place_names',
+        }
+        VALID_SORT_ORDERS = {'asc': 'ASC', 'desc': 'DESC'}
+
+        sort_by = VALID_SORT_COLUMNS.get(sort_by, 'p.upload_time')
+        sort_order = VALID_SORT_ORDERS.get(sort_order, 'DESC')
         
         # Fetch all unique maps_publish_status values for filtering
         cursor.execute("SELECT DISTINCT maps_publish_status FROM photos WHERE maps_publish_status IS NOT NULL")
@@ -1306,6 +1336,7 @@ def edit_connections(photo_id):
     return render_template('edit_connections.html', photo=response, nearby_photos=nearby_photos, distance=search_radius, page_token=page_session_token, page_size=page_session_size, api_key=client_config['api_key'], next_photo_id=next_photo_id, previous_photo_id=previous_photo_id)
 
 @app.route('/get_connections', methods=['POST'])
+@token_required
 def get_connections():
     app.logger.debug(f"=== FUNCTION APP: get_connections ===")
     data = request.json
@@ -1447,6 +1478,7 @@ def update_photo(photo_id):
 
 
 @app.route('/nearby_places', methods=['GET'])
+@token_required
 def nearby_places():
     app.logger.debug(f"=== FUNCTION APP: nearby_places ===")
     latitude = request.args.get('latitude')
@@ -1464,6 +1496,7 @@ def nearby_places():
     return jsonify(places_info)
 
 @app.route('/upload', methods=['GET', 'POST'])
+@limiter.limit("30 per minute")
 @token_required
 def upload_photosphere():
     app.logger.debug(f"=== FUNCTION APP: upload_photosphere ===")
@@ -1617,6 +1650,7 @@ def upload_multiple_photospheres():
     return render_template('upload_multiple.html', api_key=client_config['api_key'])
 
 @app.route('/delete_photo', methods=['POST'])
+@limiter.limit("10 per minute")
 @token_required
 def delete_photo():
     app.logger.debug(f"=== FUNCTION APP: delete_photo ===")

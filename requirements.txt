@@ -5,3 +5,4 @@ google-auth-oauthlib==1.2.4
 google-auth==2.48.0
 python-dotenv==1.2.1
 gunicorn==23.0.0
+Flask-Limiter==4.1.1
