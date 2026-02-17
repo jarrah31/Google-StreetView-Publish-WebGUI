@@ -1,6 +1,7 @@
-Flask
-Flask-WTF
-requests
-google-auth-oauthlib
-google-auth
-python-dotenv
+Flask==3.1.2
+Flask-WTF==1.2.2
+requests==2.32.5
+google-auth-oauthlib==1.2.4
+google-auth==2.48.0
+python-dotenv==1.2.1
+gunicorn==23.0.0

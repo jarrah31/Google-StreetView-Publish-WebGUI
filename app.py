@@ -1386,7 +1386,8 @@ def create_connections():
                 'Authorization': f'Bearer {credentials.token}',
                 'Content-Type': 'application/json'
             },
-            json=request_data
+            json=request_data,
+            timeout=30
         )
         response.raise_for_status()
 
@@ -1625,7 +1626,7 @@ def delete_photo():
     # Call the Street View Publish API to delete the photo
     url = f'https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?photoId={photo_id}'
     headers = {'Authorization': f'Bearer {credentials.token}'}
-    response = requests.delete(url, headers=headers)
+    response = requests.delete(url, headers=headers, timeout=30)
     
     app.logger.debug("Delete photo response:")
     app.logger.debug(response)
@@ -1713,7 +1714,7 @@ def list_photos(token, page_size=10, page_token=None, filters=None):
             params["filter"] = filters
         
         app.logger.info(f"Fetching photos with params: {params}")
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=30)
         return handle_api_response(response, "Failed to list photos")
     except Exception as e:
         app.logger.error(f"Error in list_photos: {str(e)}")
@@ -1728,7 +1729,7 @@ def get_photo(token, photo_id):
             "Authorization": f"Bearer {token}",
         }
         app.logger.info(f"Fetching photo with ID: {photo_id}")
-        response = requests.get(url, headers=headers)        
+        response = requests.get(url, headers=headers, timeout=30)
         return handle_api_response(response, f"Failed to get photo {photo_id}")
     except Exception as e:
         app.logger.error(f"Error in get_photo: {str(e)}")
@@ -1774,7 +1775,7 @@ def update_photo_api(token, photo_id, photo):
             "Content-Type": "application/json",
         }
         
-        response = requests.put(url, headers=headers, json=photo)
+        response = requests.put(url, headers=headers, json=photo, timeout=30)
         return handle_api_response(response, f"Failed to update photo {photo_id}")
     except ValidationError:
         raise
@@ -1794,7 +1795,7 @@ def start_upload(token):
             "Content-Type": "application/json",
         }
         app.logger.info("Starting new photo upload")
-        response = requests.post(url, headers=headers)
+        response = requests.post(url, headers=headers, timeout=30)
         return handle_api_response(response, "Failed to start upload")
     except Exception as e:
         app.logger.error(f"Error in start_upload: {str(e)}")
@@ -1886,7 +1887,7 @@ def upload_photo(token, upload_ref, file_path, heading):
         }
 
         app.logger.info("Uploading photo data")
-        response = requests.post(upload_ref["uploadUrl"], data=raw_data, headers=headers)
+        response = requests.post(upload_ref["uploadUrl"], data=raw_data, headers=headers, timeout=120)
         return handle_api_response(response, "Failed to upload photo")
     except Exception as e:
         app.logger.error(f"Error in upload_photo: {str(e)}")
@@ -1944,7 +1945,7 @@ def create_photo(token, upload_ref, latitude, longitude, placeId, capture_time=N
             app.logger.debug(f"Including captureTime in API request: {capture_time}")
 
         app.logger.info(f"Creating photo with coordinates: {validated_lat}, {validated_lng}")
-        response = requests.post(url, headers=headers, json=body)
+        response = requests.post(url, headers=headers, json=body, timeout=30)
         return handle_api_response(response, "Failed to create photo")
     except Exception as e:
         app.logger.error(f"Error in create_photo: {str(e)}")
@@ -1991,7 +1992,7 @@ def get_nearby_places(latitude, longitude, radius, api_key):
         if next_page_token:
             params['pagetoken'] = next_page_token
 
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=30)
         data = response.json()
 
         # debug - print the number of results
@@ -2086,21 +2087,34 @@ def handle_api_response(response, error_message="API request failed"):
 
 def fetch_all_photos(credentials, page_size=100):
     app.logger.debug(f"=== FUNCTION APP: fetch_all_photos ===")
-    """Fetch all photos from the Street View Publish API"""
+    """Fetch all photos from the Street View Publish API with retry logic"""
     photos_list = []
     page_token = None
-    
+    max_retries = 3
+
     while True:
-        try:
-            response = list_photos(credentials.token, page_size=page_size, page_token=page_token)
-            photos = response.get('photos', [])
-            photos_list.extend(photos)
-            
-            page_token = response.get('nextPageToken')
-            if not page_token:
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = list_photos(credentials.token, page_size=page_size, page_token=page_token)
+                photos = response.get('photos', [])
+                photos_list.extend(photos)
+
+                page_token = response.get('nextPageToken')
+                last_error = None
                 break
-        except Exception as e:
-            app.logger.error(f"Error fetching photos: {str(e)}")
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    app.logger.warning(f"Retry {attempt + 1}/{max_retries} fetching photos after {wait_time}s: {str(e)}")
+                    time.sleep(wait_time)
+                else:
+                    app.logger.error(f"Failed to fetch photos after {max_retries} attempts: {str(e)}")
+
+        if last_error is not None:
+            break
+        if not page_token:
             break
     
     app.logger.info(f"Fetched {len(photos_list)} photos total")
