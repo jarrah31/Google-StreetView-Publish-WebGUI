@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set default values for PUID and PGID
 ENV PUID=1000 \

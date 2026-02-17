@@ -1679,8 +1679,18 @@ def update_database():
         app.logger.error(f"Error updating database: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+_filenames_cache = {}
+_filenames_cache_time = 0
+_FILENAMES_CACHE_TTL = 60  # seconds
+
 def get_filenames(directory):
     app.logger.debug(f"=== FUNCTION APP: get_filenames ===")
+    global _filenames_cache, _filenames_cache_time
+    now = time.time()
+    if _filenames_cache and (now - _filenames_cache_time) < _FILENAMES_CACHE_TTL:
+        app.logger.debug("Using cached filenames mapping")
+        return _filenames_cache
+
     mapping = {}
     for filename in os.listdir(directory):
         if filename.endswith(".json"):
@@ -1690,10 +1700,11 @@ def get_filenames(directory):
                     if isinstance(content, dict):
                         photoId = content.get('photoId', {}).get('id')
                         if photoId:
-                            # print(f"Processing file: {filename}")  # Print the filename being processed
                             mapping[photoId] = filename
                 except json.JSONDecodeError:
-                    print(f"Skipping file due to JSONDecodeError: {filename}")
+                    app.logger.warning(f"Skipping file due to JSONDecodeError: {filename}")
+    _filenames_cache = mapping
+    _filenames_cache_time = now
     return mapping
 
 def list_photos(token, page_size=10, page_token=None, filters=None):

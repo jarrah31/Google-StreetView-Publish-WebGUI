@@ -75,7 +75,15 @@ def init_db():
         UNIQUE (source_photo_id, target_photo_id)
     )
     ''')
-    
+
+    # Create indexes for common query patterns
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_photos_lat_lng ON photos (latitude, longitude)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_photos_upload_time ON photos (upload_time)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_photos_maps_publish_status ON photos (maps_publish_status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_places_photo_id ON places (photo_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_connections_source ON connections (source_photo_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_connections_target ON connections (target_photo_id)')
+
     conn.commit()
     conn.close()
     
@@ -310,42 +318,61 @@ def get_photo_from_db(photo_id):
         conn.close()
 
 def get_all_photos_from_db():
-    """Retrieve all photos from the database"""
+    """Retrieve all photos from the database using bulk queries"""
     logger.debug(f"=== FUNCTION DB: get_all_photos_from_db ===")
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     # Enable foreign key constraints
     cursor.execute('PRAGMA foreign_keys = ON')
-    
+
     try:
-        # Get all photo IDs
-        cursor.execute("SELECT photo_id FROM photos")
-        photo_ids = [row['photo_id'] for row in cursor.fetchall()]
-        
-        # DEBUG: Log photo retrieval process
+        # Bulk query 1: Get all photos
+        cursor.execute("SELECT * FROM photos")
+        photo_rows = cursor.fetchall()
         logger.debug(f"=== DATABASE DEBUG: Retrieving all photos from database ===")
-        logger.debug(f"Found {len(photo_ids)} photo IDs in database: {photo_ids}")
-        
-        # Retrieve complete photo data for each ID
-        photos = []
-        for photo_id in photo_ids:
-            photo_data = get_photo_from_db(photo_id)
-            if photo_data:
-                photos.append(photo_data)
-        
+        logger.debug(f"Found {len(photo_rows)} photos in database")
+
+        # Build photo dict keyed by photo_id
+        photos_by_id = {}
+        for row in photo_rows:
+            photo_data = dict(row)
+            photos_by_id[photo_data['photo_id']] = photo_data
+
+        # Bulk query 2: Get all places
+        cursor.execute("SELECT photo_id, place_id, name, language_code FROM places")
+        for row in cursor.fetchall():
+            photo_id = row['photo_id']
+            if photo_id in photos_by_id:
+                photos_by_id[photo_id].setdefault('places', []).append({
+                    'place_id': row['place_id'],
+                    'name': row['name'],
+                    'language_code': row['language_code']
+                })
+
+        # Bulk query 3: Get all connections
+        cursor.execute("SELECT source_photo_id, target_photo_id FROM connections")
+        for row in cursor.fetchall():
+            source_id = row['source_photo_id']
+            if source_id in photos_by_id:
+                photos_by_id[source_id].setdefault('connections', []).append({
+                    'target': {'id': row['target_photo_id']}
+                })
+
+        photos = list(photos_by_id.values())
+
         # DEBUG: Log summary of retrieved photos
         logger.debug(f"=== DATABASE DEBUG: Retrieved {len(photos)} complete photo records ===")
         for i, photo in enumerate(photos):
             logger.debug(f"Photo {i+1}: ID={photo.get('photo_id', 'N/A')}, capture_time={photo.get('capture_time', 'N/A')}, upload_time={photo.get('upload_time', 'N/A')}")
-        
+
         return photos
-    
+
     except Exception as e:
         logger.error(f"Database - Error retrieving all photos: {str(e)}")
         return []
-    
+
     finally:
         conn.close()
 
@@ -502,38 +529,32 @@ def get_connections_by_photo_ids(photo_ids):
         conn = sqlite3.connect(DATABASE_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         # Enable foreign key constraints
         cursor.execute('PRAGMA foreign_keys = ON')
-        
+
+        # Bulk query using WHERE IN instead of N individual queries
+        placeholders = ','.join('?' for _ in photo_ids)
+        cursor.execute(
+            f"SELECT source_photo_id, target_photo_id FROM connections WHERE source_photo_id IN ({placeholders})",
+            photo_ids
+        )
+
         all_connections = []
-        
-        # For each photo ID, fetch its connections
-        for photo_id in photo_ids:
-            logger.debug(f"Database - Fetching connections for photo_id {photo_id} from database")
-            
-            # Query the connections table
-            cursor.execute(
-                "SELECT source_photo_id, target_photo_id FROM connections WHERE source_photo_id = ?",
-                (photo_id,)
-            )
-            
-            # Process the results
-            connections = cursor.fetchall()
-            for conn_row in connections:
-                all_connections.append({
-                    'source': conn_row['source_photo_id'],
-                    'target': conn_row['target_photo_id']
-                })
-            
-            logger.debug(f"Database - Found {len(connections)} database connections for photo_id {photo_id}")
-            
+        for conn_row in cursor.fetchall():
+            all_connections.append({
+                'source': conn_row['source_photo_id'],
+                'target': conn_row['target_photo_id']
+            })
+
+        logger.debug(f"Database - Found {len(all_connections)} connections for {len(photo_ids)} photo IDs")
+
         return all_connections
-    
+
     except Exception as e:
         logger.error(f"Database - Error fetching connections from database: {str(e)}")
         return []
-        
+
     finally:
         if conn:
             conn.close()
