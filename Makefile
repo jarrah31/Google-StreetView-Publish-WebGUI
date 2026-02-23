@@ -28,7 +28,7 @@ TEST_CONTAINER := streetview-smoke-test
 # Default target: show help
 .DEFAULT_GOAL := help
 
-.PHONY: help version check docker-build docker-build-local docker-test docker-push
+.PHONY: help version check docker-build docker-build-local docker-test docker-run docker-stop docker-logs docker-shell docker-push
 
 help:
 	@echo ""
@@ -42,6 +42,10 @@ help:
 	@echo "    make check                List files that would enter the build context"
 	@echo "    make docker-build-local   Build for local arch only, load into daemon"
 	@echo "    make docker-test          Build locally + run /healthz smoke test"
+	@echo "    make docker-run           Build locally + start container for manual testing"
+	@echo "    make docker-stop          Stop and remove the manual test container"
+	@echo "    make docker-logs          Tail logs from the running test container"
+	@echo "    make docker-shell         Open a shell inside the running test container"
 	@echo "    make docker-build         Build multi-arch image (no push)"
 	@echo "    make docker-push          Build multi-arch + push :VERSION and :latest"
 	@echo ""
@@ -116,6 +120,55 @@ docker-test: docker-build-local
 		docker rm  $(TEST_CONTAINER) > /dev/null 2>&1 || true; \
 		exit 1; \
 	fi
+
+## Build locally and start container for manual browser testing (stays running)
+docker-run: docker-build-local
+	@echo "→ Cleaning up any leftover test container…"
+	@docker rm -f $(TEST_CONTAINER) 2>/dev/null || true
+	@echo "→ Starting container on port $(TEST_PORT)…"
+	@docker run -d --name $(TEST_CONTAINER) \
+		-e GOOGLE_CLIENT_ID=smoke-test \
+		-e GOOGLE_CLIENT_SECRET=smoke-test \
+		-e GOOGLE_MAPS_API_KEY=smoke-test \
+		-e REDIRECT_URI=http://localhost:$(TEST_PORT)/oauth2callback \
+		-e FLASK_SECRET_KEY=smoke-test-secret \
+		-p $(TEST_PORT):5001 \
+		$(IMAGE):$(VERSION)
+	@echo "→ Waiting for container to become ready…"
+	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do \
+		if curl -sf http://localhost:$(TEST_PORT)/healthz > /dev/null 2>&1; then \
+			break; \
+		fi; \
+		printf "  (%s/15) not ready yet, retrying in 2 s…\n" "$$i"; \
+		sleep 2; \
+	done
+	@echo ""
+	@echo "  ✓ Container is running"
+	@echo "  → Open in browser : http://localhost:$(TEST_PORT)"
+	@echo ""
+	@echo "  Note: dummy credentials are in use – OAuth login will not work."
+	@echo "        Pages, layout, and static assets can be tested normally."
+	@echo ""
+	@echo "  Useful commands:"
+	@echo "    make docker-logs    tail live container logs (Ctrl-C to stop)"
+	@echo "    make docker-shell   open a shell inside the container"
+	@echo "    make docker-stop    stop and remove the container when done"
+	@echo ""
+
+## Stop and remove the manual test container
+docker-stop:
+	@echo "→ Stopping $(TEST_CONTAINER)…"
+	@docker stop $(TEST_CONTAINER) > /dev/null 2>&1 || true
+	@docker rm   $(TEST_CONTAINER) > /dev/null 2>&1 || true
+	@echo "✓ Container stopped and removed"
+
+## Tail live logs from the running test container (Ctrl-C to exit)
+docker-logs:
+	docker logs -f $(TEST_CONTAINER)
+
+## Open an interactive shell inside the running test container
+docker-shell:
+	docker exec -it $(TEST_CONTAINER) /bin/bash || docker exec -it $(TEST_CONTAINER) /bin/sh
 
 ## Build multi-arch image locally without pushing
 docker-build:
