@@ -28,7 +28,7 @@ TEST_CONTAINER := streetview-smoke-test
 # Default target: show help
 .DEFAULT_GOAL := help
 
-.PHONY: help version check docker-build docker-build-local docker-test docker-run docker-stop docker-logs docker-shell docker-push
+.PHONY: help version check check-image docker-build docker-build-local docker-test docker-run docker-stop docker-logs docker-shell docker-push
 
 help:
 	@echo ""
@@ -39,7 +39,8 @@ help:
 	@echo ""
 	@echo "  All targets:"
 	@echo "    make version              Print the version read from app.py"
-	@echo "    make check                List files that would enter the build context"
+	@echo "    make check                Approximate list of files entering build context"
+	@echo "    make check-image          Verify actual /app contents in the built image"
 	@echo "    make docker-build-local   Build for local arch only, load into daemon"
 	@echo "    make docker-test          Build locally + run /healthz smoke test"
 	@echo "    make docker-run           Build locally + start container for manual testing"
@@ -58,19 +59,31 @@ help:
 version:
 	@echo "$(VERSION)"
 
-## List every file that would be included in the Docker build context.
-## Nothing in this list should be a secret – if something looks wrong,
-## update .dockerignore before running docker-push.
+## Show which files from the repo are NOT covered by a .dockerignore rule.
+## NOTE: uses exact-line matching, so directory patterns like 'tests/' will
+##       not suppress 'tests/foo.py' in this output – even though Docker's
+##       own engine DOES honour them.  Use 'make check-image' to verify the
+##       real image contents when in doubt.
 check:
-	@echo "─── Docker build context (files NOT excluded by .dockerignore) ───"
+	@echo "─── Approximate build context (exact-match against .dockerignore) ───"
+	@echo "    (directory patterns such as 'tests/' are NOT evaluated here)"
+	@echo ""
 	@git ls-files --cached --others --exclude-standard | \
 	  while IFS= read -r f; do \
 	    docker run --rm -v "$(PWD):/src" alpine sh -c \
 	      "cd /src && cat .dockerignore | grep -qxF \"$$f\" || echo $$f" 2>/dev/null || true; \
 	  done
 	@echo ""
-	@echo "Tip: a simpler check – build context size appears at the start of"
-	@echo "     'docker buildx build'. If it looks large, run this target again."
+	@echo "Tip: to verify what Docker actually put in the image, run:"
+	@echo "     make check-image   (requires the image to be built locally first)"
+
+## Verify the real image contents – lists top-level entries under /app.
+## Requires the image to already be built locally (run make docker-build-local first).
+check-image:
+	@echo "─── Top-level contents of /app inside $(IMAGE):$(VERSION) ───"
+	@docker run --rm $(IMAGE):$(VERSION) find /app -maxdepth 2 | sort
+	@echo ""
+	@echo "Run 'make docker-build-local' first if the image is not present."
 
 ## Build single-arch image for the local machine and load it into the Docker daemon
 docker-build-local:
