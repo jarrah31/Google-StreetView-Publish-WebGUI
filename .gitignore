@@ -62,5 +62,6 @@ dist/
 build/
 *.egg-info/
 
-# Test scripts
+# Test scripts (root-level scratch files only; tests/ directory is tracked)
 test_*.py
+!tests/test_*.py
