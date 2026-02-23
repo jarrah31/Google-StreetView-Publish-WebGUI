@@ -99,13 +99,10 @@ def insert_or_update_photo(photo_data):
     
     photo_id = photo_data['photoId']['id']
     
-    # DEBUG: Enhanced logging for database insert/update
-    logger.debug("=========================================================")
     logger.debug(f"=== DATABASE DEBUG: Processing photo {photo_id} ===")
     logger.debug(f"Input captureTime: {photo_data.get('captureTime', 'N/A')}")
     logger.debug(f"Input uploadTime: {photo_data.get('uploadTime', 'N/A')}")
     logger.debug(f"Input viewCount: {photo_data.get('viewCount', 'N/A')}")
-    logger.debug(f"Complete input data: {photo_data}")
     
     # Extract pose data
     latitude = None
@@ -294,19 +291,7 @@ def get_photo_from_db(photo_id):
         if conn_rows:
             photo_data['connections'] = [{'target': {'id': row['target_photo_id']}} for row in conn_rows]
         
-        # DEBUG: Log retrieved photo data from database
-        logger.debug("==================================================================")
-        logger.debug(f"=== DATABASE DEBUG: Final photo data being returned for {photo_id} ===")
-        logger.debug(f"=Returned capture_time: {photo_data.get('capture_time', 'N/A')}")
-        logger.debug(f"=Returned upload_time: {photo_data.get('upload_time', 'N/A')}")
-        logger.debug(f"=Returned view_count: {photo_data.get('view_count', 'N/A')}")
-        logger.debug(f"=Raw database maps_publish_status: {photo_data.get('maps_publish_status', 'N/A')}")
-        logger.debug(f"=Raw database share_link: {photo_data.get('share_link', 'N/A')}")
-        logger.debug(f"=Raw database thumbnail_url: {photo_data.get('thumbnail_url', 'N/A')}")
-        logger.debug(f"=Raw database coordinates: lat={photo_data.get('latitude', 'N/A')}, lng={photo_data.get('longitude', 'N/A')}, heading={photo_data.get('heading', 'N/A')}")
-        logger.debug(f"=Returned places count: {len(photo_data.get('places', []))}")
-        logger.debug(f"=Returned connections count: {len(photo_data.get('connections', []))}")
-        logger.debug(f"=Complete returned photo data: {photo_data}")
+        logger.debug(f"Retrieved photo {photo_id}: places={len(photo_data.get('places', []))}, connections={len(photo_data.get('connections', []))}")
         
         return photo_data
     

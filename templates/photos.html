@@ -3,11 +3,11 @@
 {% block title %}Photos{% endblock %}
 
 {% block head %}
-<!-- Date Range Picker Dependencies -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<!-- Date Range Picker Dependencies (pinned versions to prevent breaking changes) -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/3.7.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/2.30.1/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css" />
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry&callback=initGoogleMaps" async defer></script>
 {% endblock %}
@@ -240,7 +240,7 @@
                             <option value="">Select</option>
                             <option value="{{ url_for('edit_photo', photo_id=photo.photo_id) }}">Edit Photo</option>
                             <option value="{{ url_for('edit_connections', photo_id=photo.photo_id) }}">Edit Connections</option>
-                            <option value="delete:{{ photo.photo_id }}" class="delete-option">Delete Photo</option>
+                            <option value="delete:{{ photo.photo_id }}" class="delete-option" style="color: #c0392b; font-weight: bold;">⚠ Delete Photo</option>
                         </select>
                     </td>
                 </tr>

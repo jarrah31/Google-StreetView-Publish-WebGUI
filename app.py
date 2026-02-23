@@ -9,11 +9,11 @@ import re
 import logging
 import traceback
 import shutil
-import sqlite3  # Add sqlite3 import
+import sqlite3
+import database
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 from functools import wraps
-from pprint import pprint
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
@@ -59,7 +59,6 @@ def migrate_to_userdata_structure():
     Migrate existing files and directories to the userdata structure.
     This ensures compatibility with existing installations.
     """
-    import shutil  # Import once at the top of the function
     
     app.logger.info("Checking userdata directory structure...")
     
@@ -308,18 +307,17 @@ def handle_api_error(error):
 def handle_not_found_error(error):
     """Handle 404 Not Found errors"""
     log_error("Not Found Error", error)
-    
-    # Check if this is a browser request (not an API call or static resource)
-    if request.path.startswith('/static/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        # For static resources or AJAX requests, return regular 404 response
-        flash("The requested page was not found.", "error")
-        return render_template('error.html',
-                         error_type="Not Found Error",
-                         message="The requested URL was not found on the server."), 404
-    
-    # For regular browser requests, redirect to the home page
-    app.logger.info(f"Redirecting 404 for path: {request.path} to home page")
-    return redirect(url_for('index'))
+
+    # For AJAX/API requests return JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.path.startswith('/static/'):
+        return jsonify({"error": "Not found"}), 404
+
+    # For regular browser requests flash a message and show the error page
+    app.logger.info(f"404 for path: {request.path}")
+    flash(f"Page not found: {request.path}", "error")
+    return render_template('error.html',
+                           error_type="Page Not Found",
+                           message=f"The page '{request.path}' does not exist."), 404
 
 @app.errorhandler(AuthenticationError)
 def handle_auth_error(error):
@@ -453,6 +451,11 @@ def token_required(f):
                 return redirect(url_for('authorize'))
         return f(*args, **kwargs)
     return decorated_function
+
+@app.route('/healthz')
+def healthz():
+    """Lightweight health check endpoint for Docker/load balancers"""
+    return jsonify({"status": "ok"}), 200
 
 @app.route('/')
 def index():
@@ -602,7 +605,6 @@ def get_photos_for_map():
     app.logger.debug(f"=== FUNCTION APP: get_photos_for_map ===")
     """Return all photos with GPS coordinates for map display"""
     try:
-        import database
         
         # Check if database exists
         if not os.path.exists(database.DATABASE_PATH):
@@ -627,7 +629,6 @@ def list_photos_table_page():
     app.logger.debug(f"=== FUNCTION APP: list_photos_table_page ===")
     """Display all photos from the database in a table format with pagination"""
     try:
-        import database
         
         # Check if database exists
         if not os.path.exists(database.DATABASE_PATH):
@@ -957,14 +958,13 @@ def list_photos_table_page():
 @token_required
 def edit_photo(photo_id):
     app.logger.debug(f"=== FUNCTION APP: edit_photo ===")
-    print(f"Editing photo with ID: {photo_id}")
+    app.logger.debug(f"Editing photo with ID: {photo_id}")
     
     # Check if database exists and try to get photo from database first
     photo_from_db = None
     using_db = False
     
     try:
-        import database
         if os.path.exists(database.DATABASE_PATH):
             # Try to get the photo from database first
             photo_from_db = database.get_photo_from_db(photo_id)
@@ -1043,9 +1043,7 @@ def edit_photo(photo_id):
     app.logger.debug(f"ShareLink: {response.get('shareLink', 'N/A')}")
     app.logger.debug(f"Complete response object: {response}")
 
-    # Display json result in console
-    print("Photo details:")
-    pprint(response)
+    app.logger.debug(f"Photo details: {response}")
 
     # Store original dates before formatting for database operations
     original_capture_time = response['captureTime']
@@ -1104,7 +1102,7 @@ def edit_photo(photo_id):
 @token_required
 def edit_connections(photo_id):
     app.logger.debug(f"=== FUNCTION APP: edit_connections ===")
-    print(f"Editing connections with ID: {photo_id}")
+    app.logger.debug(f"Editing connections with ID: {photo_id}")
     
     # Check if database exists and try to get photo from database first
     photo_from_db = None
@@ -1112,7 +1110,6 @@ def edit_connections(photo_id):
     using_db = False
     
     try:
-        import database
         if os.path.exists(database.DATABASE_PATH):
             # Try to get the photo from database first
             photo_from_db = database.get_photo_from_db(photo_id)
@@ -1348,7 +1345,6 @@ def get_connections():
     data = request.json
     photo_ids = data.get('photoIds', [])
     
-    import database
     all_connections = []
     
     try:
@@ -1437,7 +1433,7 @@ def create_connections():
 
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
-        print(f"Error creating connections: {e}")
+        app.logger.error(f"Error creating connections: {e}")
         flash('Failed to create connections', 'error')
         return jsonify({'error': 'Failed to create connections'}), 500
 
@@ -1702,7 +1698,6 @@ def update_database():
     app.logger.debug(f"Complete data object: {data}")
     
     try:
-        import database
         if os.path.exists(database.DATABASE_PATH):
             # Update the photo in the database
             success = database.insert_or_update_photo(data)
@@ -2172,7 +2167,6 @@ def fetch_all_photos(credentials, page_size=100):
     
     # Store in SQLite database
     try:
-        import database
         # Initialize database if needed
         database.init_db()
         
@@ -2211,7 +2205,6 @@ def photo_database():
     
     # Get database statistics if database exists
     try:
-        import database
         if os.path.exists(database.DATABASE_PATH):
             stats = database.get_db_stats()
     except Exception as e:
@@ -2260,7 +2253,6 @@ def create_database():
         photos_list = fetch_all_photos(credentials, page_size=100)
         
         # Get database statistics
-        import database
         stats = database.get_db_stats()
         
         flash(f"Successfully created database with {stats['photo_count']} photos", "success")

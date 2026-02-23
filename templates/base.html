@@ -40,6 +40,21 @@
     </footer>
     
     <script>
+        // Auto-dismiss server-rendered flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.flash-message').forEach(function(el) {
+                const isError = el.classList.contains('error') || el.classList.contains('warning');
+                const delay = isError ? 10000 : 5000;
+                setTimeout(function() {
+                    if (el.parentNode) {
+                        el.remove();
+                        const container = document.querySelector('.flash-messages');
+                        if (container && container.children.length === 0) container.remove();
+                    }
+                }, delay);
+            });
+        });
+
         // Add CSRF token to all non-GET fetch requests automatically
         (function() {
             const originalFetch = window.fetch;
@@ -183,7 +198,8 @@
             // Add to container
             flashContainer.appendChild(flashMessage);
             
-            // Auto-remove after 5 seconds
+            // Auto-remove: errors/warnings after 10s, others after 5s
+            const dismissDelay = (category === 'error' || category === 'warning') ? 10000 : 5000;
             setTimeout(() => {
                 if (flashMessage.parentNode) {
                     flashMessage.remove();
@@ -192,7 +208,7 @@
                         flashContainer.remove();
                     }
                 }
-            }, 5000);
+            }, dismissDelay);
             
             // Scroll to top to ensure message is visible
             window.scrollTo({ top: 0, behavior: 'smooth' });

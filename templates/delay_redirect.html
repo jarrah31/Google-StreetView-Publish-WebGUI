@@ -4,7 +4,7 @@
 
 {% block scripts %}
 <script>
-        var count = 20; // Set the initial count
+        var count = 5; // Set the initial count
         var countdownElement = null;
 
         function countdown() {
@@ -17,7 +17,7 @@
 
         setTimeout(function(){
             window.location.href = "{{ redirect_url }}";
-        }, 20000); // Redirect after 20 seconds
+        }, 5000); // Redirect after 5 seconds
 </script>
 {% endblock %}
 
@@ -26,7 +26,7 @@
     <div class="redirecting-message">
         <h1>Update Successful!</h1>
         <a href="{{ url_for('list_photos_page', page_token=page_token, page_size=page_size) }}" class="back-link"><b>Click to go back to the photo list</b></a>, or wait to be redirected to the photo.
-        <p>Redirecting you back in <span id="countdown">20</span> seconds... (waiting for values to update on Google's servers)</p>
+        <p>Redirecting you back in <span id="countdown">5</span> seconds... (waiting for values to update on Google's servers)</p>
     </div>
 </div>
 {% endblock %}
