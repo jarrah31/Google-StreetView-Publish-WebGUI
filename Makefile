@@ -1,12 +1,16 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Docker release targets for Google Street View Publish WebGUI
 #
-# Usage:
-#   make               – show help
+# Recommended release flow:
+#   1. Bump APP_VERSION in app.py
+#   2. make docker-test   ← build for local arch + /healthz smoke test
+#   3. make docker-push   ← build multi-arch + push both tags to Docker Hub
+#
+# Other targets:
+#   make               – show this help
 #   make version       – print the version that will be tagged
-#   make check         – show what files would be sent to the Docker daemon
-#   make docker-build  – build multi-arch image locally (no push)
-#   make docker-push   – build AND push to Docker Hub
+#   make check         – list files that would be sent to the Docker daemon
+#   make docker-build  – build multi-arch image without pushing
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Read the canonical version from app.py – single source of truth
@@ -14,17 +18,32 @@ VERSION   := $(shell grep -m1 'APP_VERSION = ' app.py | sed 's/.*"\(.*\)".*/\1/'
 IMAGE     := jarrah31/streetview-publish-webgui
 PLATFORMS := linux/amd64,linux/arm64
 
+# Detect local CPU architecture for single-platform local test builds
+LOCAL_ARCH := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+
+# Use a different port for smoke tests to avoid clashing with the dev server
+TEST_PORT      := 5099
+TEST_CONTAINER := streetview-smoke-test
+
 # Default target: show help
 .DEFAULT_GOAL := help
 
-.PHONY: help version check docker-build docker-push
+.PHONY: help version check docker-build docker-build-local docker-test docker-push
 
 help:
 	@echo ""
-	@echo "  make version       Print the version read from app.py (APP_VERSION)"
-	@echo "  make check         List files that would be sent to the Docker daemon"
-	@echo "  make docker-build  Build multi-arch image locally (no push)"
-	@echo "  make docker-push   Build multi-arch image and push to Docker Hub"
+	@echo "  Recommended release flow:"
+	@echo "    1. Bump APP_VERSION in app.py"
+	@echo "    2. make docker-test   ← build locally + /healthz smoke test"
+	@echo "    3. make docker-push   ← build multi-arch + push to Docker Hub"
+	@echo ""
+	@echo "  All targets:"
+	@echo "    make version              Print the version read from app.py"
+	@echo "    make check                List files that would enter the build context"
+	@echo "    make docker-build-local   Build for local arch only, load into daemon"
+	@echo "    make docker-test          Build locally + run /healthz smoke test"
+	@echo "    make docker-build         Build multi-arch image (no push)"
+	@echo "    make docker-push          Build multi-arch + push :VERSION and :latest"
 	@echo ""
 	@echo "  Current version : $(VERSION)"
 	@echo "  Image           : $(IMAGE)"
@@ -48,6 +67,55 @@ check:
 	@echo ""
 	@echo "Tip: a simpler check – build context size appears at the start of"
 	@echo "     'docker buildx build'. If it looks large, run this target again."
+
+## Build single-arch image for the local machine and load it into the Docker daemon
+docker-build-local:
+	@echo "→ Building $(IMAGE):$(VERSION) for local arch ($(LOCAL_ARCH))"
+	docker buildx build \
+		--platform linux/$(LOCAL_ARCH) \
+		--load \
+		-t $(IMAGE):$(VERSION) \
+		-t $(IMAGE):latest \
+		.
+	@echo "✓ Image loaded into local Docker daemon"
+
+## Build for local arch, start container, verify /healthz responds, then stop
+docker-test: docker-build-local
+	@echo "→ Cleaning up any leftover test container…"
+	@docker rm -f $(TEST_CONTAINER) 2>/dev/null || true
+	@echo "→ Starting test container on port $(TEST_PORT)…"
+	@docker run -d --name $(TEST_CONTAINER) \
+		-e GOOGLE_CLIENT_ID=smoke-test \
+		-e GOOGLE_CLIENT_SECRET=smoke-test \
+		-e GOOGLE_MAPS_API_KEY=smoke-test \
+		-e REDIRECT_URI=http://localhost:$(TEST_PORT)/oauth2callback \
+		-e FLASK_SECRET_KEY=smoke-test-secret \
+		-p $(TEST_PORT):5001 \
+		$(IMAGE):$(VERSION)
+	@echo "→ Waiting for /healthz to respond (up to 30 s)…"
+	@PASS=0; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do \
+		response=$$(curl -sf http://localhost:$(TEST_PORT)/healthz 2>/dev/null); \
+		if echo "$$response" | grep -q '"ok"'; then \
+			echo "✓ /healthz responded: $$response"; \
+			PASS=1; \
+			break; \
+		fi; \
+		printf "  (%s/15) not ready yet, retrying in 2 s…\n" "$$i"; \
+		sleep 2; \
+	done; \
+	if [ "$$PASS" = "1" ]; then \
+		docker stop $(TEST_CONTAINER) > /dev/null; \
+		docker rm  $(TEST_CONTAINER) > /dev/null 2>&1 || true; \
+		echo "✓ Smoke test passed – safe to run: make docker-push"; \
+	else \
+		echo "✗ Smoke test FAILED – container did not respond within 30 s"; \
+		echo "  Container logs:"; \
+		docker logs $(TEST_CONTAINER); \
+		docker stop $(TEST_CONTAINER) > /dev/null 2>&1 || true; \
+		docker rm  $(TEST_CONTAINER) > /dev/null 2>&1 || true; \
+		exit 1; \
+	fi
 
 ## Build multi-arch image locally without pushing
 docker-build:
