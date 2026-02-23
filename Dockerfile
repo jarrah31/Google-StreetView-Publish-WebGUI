@@ -23,15 +23,12 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=app.py
 
-# Copy application files
+# Copy application files (sensitive paths are excluded via .dockerignore)
 COPY --chown=appuser:appuser . .
 
 # Create necessary directories with proper permissions
 RUN chown -R appuser:appuser /app && \
-    chmod -R 755 /app 
-
-# Clean up
-RUN rm -f /app/userdata/*
+    chmod -R 755 /app
 
 # Switch to non-root user
 USER appuser

@@ -38,6 +38,13 @@ var/
 .coverage
 htmlcov/
 
+# Virtual environment (large; deps are installed fresh inside the image)
+venv/
+
+# Tests (not needed at runtime)
+tests/
+pytest.ini
+
 # Application specific
 logs/
 uploads/
@@ -45,6 +52,9 @@ creds.data
 streetview/
 userdata/
 
+# Local dev / tooling directories
+.claude/
+lancedb/
 
 # Editor directories and files
 .idea
@@ -57,6 +67,7 @@ userdata/
 .clineignore
 .DS_Store
 .gitattributes
+Makefile
 
 test_*.py
 .kilocode/*
