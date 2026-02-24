@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,20 +7,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons8-menu-96-favicon.png') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- Apply saved theme before first paint to avoid flash -->
+    <script>
+        (function() {
+            var t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
     {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="nav-banner">
-        <div class="nav-links">
-            <a href="{{ url_for('index') }}" class="nav-link">Home</a>
-            <a href="{{ url_for('upload_multiple_photospheres') }}" class="nav-link">Upload Photospheres</a>
-            <a href="{{ url_for('photos_page') }}" class="nav-link">Photos</a>
-            <a href="{{ url_for('photo_database') }}" class="nav-link">Database</a>
+        <a href="{{ url_for('index') }}" class="nav-brand">
+            <div class="nav-logo">📷</div>
+            <span>StreetView</span>
+        </a>
+        <div class="nav-links" id="navLinks">
+            <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">🏠 Home</a>
+            <a href="{{ url_for('upload_multiple_photospheres') }}" class="nav-link {% if request.endpoint == 'upload_multiple_photospheres' %}active{% endif %}">📤 Upload</a>
+            <a href="{{ url_for('photos_page') }}" class="nav-link {% if request.endpoint == 'photos_page' %}active{% endif %}">🖼 Photos</a>
+            <a href="{{ url_for('photo_database') }}" class="nav-link {% if request.endpoint == 'photo_database' %}active{% endif %}">🗄 Database</a>
         </div>
-        <div class="auth-status">
-            <span id="login-status" class="login-status">Checking...</span>
-            <a href="{{ url_for('authorize') }}" id="login-button" style="display: none;" class="auth-button login-button">Login</a>
-            <a href="{{ url_for('logout') }}" id="logout-button" style="display: none;" class="auth-button logout-button">Logout</a>
+        <div class="nav-right">
+            <div class="auth-status">
+                <span id="login-status" class="login-status">Checking...</span>
+                <a href="{{ url_for('authorize') }}" id="login-button" style="display: none;" class="auth-button login-button">Login</a>
+                <a href="{{ url_for('logout') }}" id="logout-button" style="display: none;" class="auth-button logout-button">Logout</a>
+            </div>
+            <button class="theme-toggle-btn" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle dark mode">🌙</button>
+            <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </nav>
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -38,7 +57,7 @@
     <footer>
         {% block footer %}{% endblock %}
     </footer>
-    
+
     <script>
         // Auto-dismiss server-rendered flash messages
         document.addEventListener('DOMContentLoaded', function() {
@@ -76,37 +95,73 @@
             };
         })();
 
+        // Dark / light mode toggle
+        (function() {
+            var btn = document.getElementById('themeToggle');
+            function applyTheme(dark) {
+                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+                btn.textContent = dark ? '☀️' : '🌙';
+                btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+                localStorage.setItem('theme', dark ? 'dark' : 'light');
+            }
+            // Sync button icon with current theme on load
+            var saved = localStorage.getItem('theme');
+            var isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            applyTheme(isDark);
+            btn.addEventListener('click', function() {
+                var currentlyDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                applyTheme(!currentlyDark);
+            });
+        })();
+
+        // Hamburger nav toggle
+        (function() {
+            var hamburger = document.getElementById('navHamburger');
+            var navLinks  = document.getElementById('navLinks');
+            hamburger.addEventListener('click', function() {
+                var open = navLinks.classList.toggle('nav-open');
+                hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            // Close nav when a link is clicked (mobile)
+            navLinks.querySelectorAll('.nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    navLinks.classList.remove('nav-open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                });
+            });
+        })();
+
         document.addEventListener('DOMContentLoaded', function() {
             let authCheckInterval = null;
             const CHECK_INTERVAL = 300000; // 5 minutes in milliseconds
             let lastCheckTime = 0;
-            
+
             // Initial auth status check on page load
             checkAuthStatus();
-            
+
             // Check if we should force an immediate auth status check (after logout)
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('_force_check_auth')) {
                 checkAuthStatus();
-                
+
                 // Remove the parameter from the URL without reloading the page
-                const newUrl = window.location.pathname + 
+                const newUrl = window.location.pathname +
                     (urlParams.toString() ? '?' + urlParams.toString().replace(/_force_check_auth(=[^&]*)?(&|$)/g, '') : '');
                 window.history.replaceState({}, document.title, newUrl);
             }
-            
+
             // Handle page visibility changes
             function handleVisibilityChange() {
                 if (document.visibilityState === 'visible') {
                     // Tab is now visible
                     console.log('Tab is visible, checking auth status');
-                    
+
                     // Check if enough time has passed since the last check
                     const now = Date.now();
                     if (now - lastCheckTime > 60000) { // 1 minute minimum between checks
                         checkAuthStatus();
                     }
-                    
+
                     // Start periodic checks when tab is visible
                     if (!authCheckInterval) {
                         authCheckInterval = setInterval(checkAuthStatus, CHECK_INTERVAL);
@@ -120,13 +175,13 @@
                     }
                 }
             }
-            
+
             // Set up event listeners for visibility changes
             document.addEventListener('visibilitychange', handleVisibilityChange);
-            
+
             // Initial visibility check and setup
             handleVisibilityChange();
-            
+
             // Additional checks for window focus/blur events for more reliability
             window.addEventListener('focus', function() {
                 const now = Date.now();
@@ -136,28 +191,28 @@
                 }
             });
         });
-        
+
         function checkAuthStatus() {
             lastCheckTime = Date.now();
-            
+
             fetch('/check_auth_status')
                 .then(response => response.json())
                 .then(data => {
                     const statusElement = document.getElementById('login-status');
                     const loginButton = document.getElementById('login-button');
                     const logoutButton = document.getElementById('logout-button');
-                    
+
                     if (data.authenticated) {
                         statusElement.innerHTML = '<span class="status-dot authenticated"></span>Authenticated';
                         statusElement.className = 'login-status authenticated';
                         loginButton.style.display = 'none';
                         logoutButton.style.display = 'inline-block';
-                        
+
                         // Add expiry info if available
                         if (data.expires_in) {
                             const expiryDate = new Date(data.expires_in);
                             const now = new Date();
-                            
+
                             // Add title with exact expiry date/time
                             statusElement.title = `Credentials expire on ${expiryDate.toLocaleString()}`;
                         }
@@ -166,7 +221,7 @@
                         statusElement.className = 'login-status unauthenticated';
                         loginButton.style.display = 'inline-block';
                         logoutButton.style.display = 'none';
-                        
+
                         // Add message as title
                         statusElement.title = data.message || 'You are not logged in';
                     }
@@ -177,7 +232,7 @@
                     document.getElementById('login-status').className = 'login-status error';
                 });
         }
-        
+
         // Function to show client-side flash messages
         function showFlashMessage(message, category = 'info') {
             // Find or create flash messages container
@@ -189,15 +244,15 @@
                 const nav = document.querySelector('.nav-banner');
                 nav.parentNode.insertBefore(flashContainer, nav.nextSibling);
             }
-            
+
             // Create flash message element
             const flashMessage = document.createElement('div');
             flashMessage.className = `flash-message ${category}`;
             flashMessage.innerHTML = message;
-            
+
             // Add to container
             flashContainer.appendChild(flashMessage);
-            
+
             // Auto-remove: errors/warnings after 10s, others after 5s
             const dismissDelay = (category === 'error' || category === 'warning') ? 10000 : 5000;
             setTimeout(() => {
@@ -209,12 +264,12 @@
                     }
                 }
             }, dismissDelay);
-            
+
             // Scroll to top to ensure message is visible
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
-    
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

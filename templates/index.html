@@ -2,59 +2,52 @@
 
 {% block content %}
 <div class="container">
-    <h1>Street View Publish - Web Interface</h1>
-    
+    <h1>Street View Publish</h1>
+
     <div class="welcome-section">
         <p class="welcome-text">
-            Welcome to the Google Street View Publish WebGUI, a convenient interface for managing your Street View photospheres.
-            This application helps you upload, view, edit, and manage your 360° photos with the Google Street View API.
+            Welcome to the Google Street View Publish WebGUI — upload, manage, and publish your 360° photospheres via the Google Street View API.
         </p>
     </div>
-    
+
     <div class="features-grid">
         <div class="feature-card">
-            <div class="feature-icon">
-                <a href="{{ url_for('upload_multiple_photospheres') }}" class="icon-link">
-                    <img src="{{ url_for('static', filename='icons8-add-image-96-favicon.png') }}" alt="Upload" />
-                </a>
-            </div>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">📤</div>
             <div class="feature-content">
                 <h2>Upload Photos</h2>
-                <p>Upload your 360° photospheres to Google Street View directly from your computer.</p>
-                <a href="{{ url_for('upload_multiple_photospheres') }}" class="feature-link">Upload Photospheres</a>
+                <p>Batch upload 360° photospheres with automatic EXIF extraction and GPS editing before publishing to Google Street View.</p>
+                <div class="sub-links">
+                    <a href="{{ url_for('upload_multiple_photospheres') }}" class="sub-link">Multiple Upload</a>
+                </div>
+                <a href="{{ url_for('upload_multiple_photospheres') }}" class="feature-link">Upload Photospheres →</a>
             </div>
         </div>
-        
+
         <div class="feature-card">
-            <div class="feature-icon">
-                <a href="{{ url_for('photos_page') }}" class="icon-link">
-                    <img src="{{ url_for('static', filename='icons8-image-gallery-96-favicon.png') }}" alt="Photos" />
-                </a>
-            </div>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #fef9c3, #fde68a);">🖼</div>
             <div class="feature-content">
                 <h2>Manage Photos</h2>
-                <p>Browse and manage all your Google Street View photos in one place. View your photos in both grid and list layouts, 
-                access detailed information, edit metadata and photo connections, and organize your 360° photo collection efficiently.</p>
-                <a href="{{ url_for('photos_page') }}" class="feature-link">Manage Photos</a>
+                <p>Browse, edit metadata, adjust GPS coordinates, and create heading connections between photos in your library.</p>
+                <div class="sub-links">
+                    <a href="{{ url_for('photos_page') }}" class="sub-link">All Photos</a>
+                </div>
+                <a href="{{ url_for('photos_page') }}" class="feature-link">Browse Library →</a>
             </div>
         </div>
-        
+
         <div class="feature-card">
-            <div class="feature-icon">
-                <a href="{{ url_for('photo_database') }}" class="icon-link">
-                    <img src="{{ url_for('static', filename='icons8-panorama-96-favicon.png') }}" alt="Database" />
-                </a>
-            </div>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0);">🗄</div>
             <div class="feature-content">
                 <h2>Photo Database</h2>
-                <p>Create or update Streetview photos into a local database for more efficient photo management, and
-                view statistics for your entire photo collection.
-                </p>
-                <a href="{{ url_for('photo_database') }}" class="feature-link">Open Database</a>
+                <p>Sync your Street View library to a local SQLite database for fast offline statistics and efficient photo management.</p>
+                <div class="sub-links">
+                    <a href="{{ url_for('photo_database') }}" class="sub-link">View Stats</a>
+                </div>
+                <a href="{{ url_for('photo_database') }}" class="feature-link">Open Database →</a>
             </div>
         </div>
     </div>
-    
+
     <div class="home-footer">
         <p>Get started by exploring the features above or use the navigation bar to access specific functions.</p>
         <div class="version-info">
