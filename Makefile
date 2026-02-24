@@ -28,7 +28,7 @@ TEST_CONTAINER := streetview-smoke-test
 # Default target: show help
 .DEFAULT_GOAL := help
 
-.PHONY: help version check check-image docker-build docker-build-local docker-test docker-run docker-stop docker-logs docker-shell docker-push
+.PHONY: help version check check-image docker-build docker-build-local docker-test docker-run docker-stop docker-logs docker-shell docker-retag docker-push
 
 help:
 	@echo ""
@@ -48,6 +48,7 @@ help:
 	@echo "    make docker-logs          Tail logs from the running test container"
 	@echo "    make docker-shell         Open a shell inside the running test container"
 	@echo "    make docker-build         Build multi-arch image (no push)"
+	@echo "    make docker-retag         Re-point :latest to a given VERSION on Docker Hub"
 	@echo "    make docker-push          Build multi-arch + push :VERSION and :latest"
 	@echo ""
 	@echo "  Current version : $(VERSION)"
@@ -192,6 +193,16 @@ docker-build:
 		-t $(IMAGE):latest \
 		.
 	@echo "✓ Build complete: $(IMAGE):$(VERSION)"
+
+## Re-point :latest to an existing versioned tag on Docker Hub (multi-arch safe).
+## Usage: make docker-retag VERSION=3.0.5
+docker-retag:
+	@if [ -z "$(VERSION)" ]; then echo "Usage: make docker-retag VERSION=x.y.z"; exit 1; fi
+	@echo "→ Re-pointing $(IMAGE):latest → $(IMAGE):$(VERSION)"
+	docker buildx imagetools create \
+		-t $(IMAGE):latest \
+		$(IMAGE):$(VERSION)
+	@echo "✓ $(IMAGE):latest now points to $(IMAGE):$(VERSION)"
 
 ## Build multi-arch image and push both the versioned tag and :latest
 docker-push:
