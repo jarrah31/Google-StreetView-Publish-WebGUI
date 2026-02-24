@@ -37,7 +37,7 @@ load_dotenv()
 if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-APP_VERSION = "3.0.6"
+APP_VERSION = "3.0.7"
 
 # Initialize Flask app
 app = Flask(__name__)
