@@ -65,23 +65,25 @@ def migrate_to_userdata_structure():
     # Create userdata directory if it doesn't exist
     if not os.path.exists("userdata"):
         app.logger.info("Creating userdata directory")
-        os.makedirs("userdata")
-    
+    os.makedirs("userdata", exist_ok=True)
+
     # Migrate uploads directory
     if os.path.exists("uploads") and not os.path.exists("userdata/uploads"):
         app.logger.info("Moving uploads directory to userdata/")
         shutil.move("uploads", "userdata/uploads")
-    elif not os.path.exists("userdata/uploads"):
-        app.logger.info("Creating userdata/uploads directory")
-        os.makedirs("userdata/uploads")
-    
+    else:
+        if not os.path.exists("userdata/uploads"):
+            app.logger.info("Creating userdata/uploads directory")
+        os.makedirs("userdata/uploads", exist_ok=True)
+
     # Migrate logs directory
     if os.path.exists("logs") and not os.path.exists("userdata/logs"):
         app.logger.info("Moving logs directory to userdata/")
         shutil.move("logs", "userdata/logs")
-    elif not os.path.exists("userdata/logs"):
-        app.logger.info("Creating userdata/logs directory")
-        os.makedirs("userdata/logs")
+    else:
+        if not os.path.exists("userdata/logs"):
+            app.logger.info("Creating userdata/logs directory")
+        os.makedirs("userdata/logs", exist_ok=True)
     
     # Migrate creds.data file
     if os.path.exists("creds.data") and not os.path.exists("userdata/creds.data"):
