@@ -23,26 +23,24 @@ You will need to (full insructions below):
 You can set up your Google Developer environment with a different Google account to what you use for publishing photospheres. 
 
 ## Screenshots
-![Capto_Capture 2025-04-22_07-55-17_pm](https://github.com/user-attachments/assets/0006c7c6-178b-48a6-b65f-8779897d6f96)
+<img width="949" height="877" alt="Capto_Capture 2026-02-26_07-39-48_pm" src="https://github.com/user-attachments/assets/ce3674d1-3072-4c1d-87e5-c721deb57f1b" />
 
-![Capto_Capture 2025-06-09_08-58-24_pm](https://github.com/user-attachments/assets/fa8c07e5-17e5-466b-b359-4c87e7c4c096)
+<img width="951" height="759" alt="Capto_Capture 2026-02-26_07-46-45_pm" src="https://github.com/user-attachments/assets/4a8a1401-0a92-43a3-bc5e-e9704a1f494b" />
 
-![Capto_Capture 2025-06-09_09-01-24_pm](https://github.com/user-attachments/assets/a72fb8d3-3aca-4b05-81f0-240326eb9843)
+<img width="1203" height="600" alt="Capto_Capture 2026-02-26_07-50-18_pm" src="https://github.com/user-attachments/assets/70acee96-151a-4779-b987-8ef989230755" />
 
-![Capto_Capture 2025-06-09_09-03-08_pm](https://github.com/user-attachments/assets/a22592b1-7ef9-456a-a126-ec46283d365f)
+<img width="1205" height="735" alt="Capto_Capture 2026-02-26_07-52-03_pm" src="https://github.com/user-attachments/assets/1f7e5b2d-fd26-4b6b-a589-1ee8cc33d5f2" />
 
-![Capto_Capture 2025-04-22_08-01-09_pm](https://github.com/user-attachments/assets/5d698a9d-ac77-46e5-8177-56998cd8074b)
-
+<img width="630" height="696" alt="Capto_Capture 2026-02-26_07-53-49_pm" src="https://github.com/user-attachments/assets/c2777965-72fb-404c-9cc1-de3797c76bde" />
 
 <img width="1342" height="767" alt="Capto_Capture 2025-08-15_07-15-48_pm" src="https://github.com/user-attachments/assets/c00378bd-909c-449f-b31f-afa4894e0b62" />
-<img width="1325" height="980" alt="Capto_Capture 2025-08-30_10-58-54_am" src="https://github.com/user-attachments/assets/c1d7ba5e-3844-458e-b5bc-bac11f388a4c" />
 
 
+<img width="1519" height="1085" alt="Capto_Capture 2026-02-26_07-56-42_pm" src="https://github.com/user-attachments/assets/bcca7ce8-33eb-4637-bce8-a7e64c2cb2a5" />
 
-<img width="1385" height="895" alt="Capto_Capture 2025-08-30_10-55-33_am" src="https://github.com/user-attachments/assets/906840c8-5123-4321-886e-b796d76a9f8c" />
+<img width="1526" height="905" alt="Capto_Capture 2026-02-26_08-02-20_pm" src="https://github.com/user-attachments/assets/245413f9-2996-474a-a200-a3d5d9f0be54" />
 
-![Capto_Capture 2025-04-22_08-06-25_pm](https://github.com/user-attachments/assets/fc88185b-cfd9-488b-b3ad-61588a97d684)
-
+<img width="908" height="730" alt="Capto_Capture 2026-02-26_08-03-39_pm" src="https://github.com/user-attachments/assets/5d43b2a3-1c5c-4e82-bd4f-c763b54c2125" />
 
 
 ![IMG_6ABF6090499C-1](https://github.com/jarrah31/Google-StreetView-Publish-WebGUI/assets/3072303/ab519b4b-2cac-4ac8-8954-1f37625c43fb)
