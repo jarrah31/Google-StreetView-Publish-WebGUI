@@ -4,8 +4,8 @@
 
 {% block head %}
 <!-- Date Range Picker Dependencies (pinned versions to prevent breaking changes) -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/3.7.1/jquery.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/2.30.1/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.1.0/daterangepicker.css" />
 <!-- Google Maps API -->
@@ -71,17 +71,15 @@
             </div>
             {% endif %}
             
-            {% if status_filter or places_filter or capture_date_from or capture_date_to or upload_date_from or upload_date_to %}
-            <div class="clear-filters-container">
-                <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order) }}" class="clear-filters-btn">Clear All Filters</a>
-            </div>
-            {% endif %}
         </div>
-        
-        <!-- Date Range Picker (moved below pagination) -->
+
+        <!-- Date Range Picker -->
         <div class="date-range-picker-container">
             <label for="date-range" class="sort-label">Date range:</label>
             <input type="text" id="date-range" name="daterange" class="form-control" />
+            {% if status_filter or places_filter or capture_date_from or capture_date_to or upload_date_from or upload_date_to %}
+            <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order) }}" class="clear-filters-btn">× Clear filters</a>
+            {% endif %}
         </div>
     </div>
 
@@ -106,11 +104,11 @@
             <thead>
                 <tr>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='photo_id', sort_order='asc' if sort_by == 'photo_id' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Photo</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='photo_id', sort_order='asc' if sort_by == 'photo_id' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'photo_id' %} class="sort-active"{% endif %}>Photo{% if sort_by == 'photo_id' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th class="filterable-header">
                         <div class="header-content">
-                            <a href="{{ url_for('list_photos_table_page', sort_by='maps_publish_status', sort_order='asc' if sort_by == 'maps_publish_status' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Status</a>
+                            <a href="{{ url_for('list_photos_table_page', sort_by='maps_publish_status', sort_order='asc' if sort_by == 'maps_publish_status' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'maps_publish_status' %} class="sort-active"{% endif %}>Status{% if sort_by == 'maps_publish_status' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                             <button class="filter-toggle" onclick="toggleFilter('status-filter')"><i class="filter-icon">▼</i></button>
                         </div>
                         <form id="status-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
@@ -144,17 +142,17 @@
                         </form>
                     </th>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='view_count', sort_order='asc' if sort_by == 'view_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Views</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='view_count', sort_order='asc' if sort_by == 'view_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'view_count' %} class="sort-active"{% endif %}>Views{% if sort_by == 'view_count' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='capture_time', sort_order='asc' if sort_by == 'capture_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Capture Date</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='capture_time', sort_order='asc' if sort_by == 'capture_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'capture_time' %} class="sort-active"{% endif %}>Capture Date{% if sort_by == 'capture_time' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='upload_time', sort_order='asc' if sort_by == 'upload_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Upload Date</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='upload_time', sort_order='asc' if sort_by == 'upload_time' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'upload_time' %} class="sort-active"{% endif %}>Upload Date{% if sort_by == 'upload_time' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th class="filterable-header">
                         <div class="header-content">
-                            <a href="{{ url_for('list_photos_table_page', sort_by='place_names', sort_order='asc' if sort_by == 'place_names' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Places</a>
+                            <a href="{{ url_for('list_photos_table_page', sort_by='place_names', sort_order='asc' if sort_by == 'place_names' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'place_names' %} class="sort-active"{% endif %}>Places{% if sort_by == 'place_names' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                             <button class="filter-toggle" onclick="toggleFilter('places-filter')"><i class="filter-icon search-icon">🔍</i></button>
                         </div>
                         <form id="places-filter-form" action="{{ url_for('list_photos_table_page') }}" method="GET" class="filter-form">
@@ -182,10 +180,10 @@
                         </form>
                     </th>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='connection_count', sort_order='asc' if sort_by == 'connection_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Connections</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='connection_count', sort_order='asc' if sort_by == 'connection_count' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'connection_count' %} class="sort-active"{% endif %}>Connections{% if sort_by == 'connection_count' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th>
-                        <a href="{{ url_for('list_photos_table_page', sort_by='heading', sort_order='asc' if sort_by == 'heading' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}">Heading</a>
+                        <a href="{{ url_for('list_photos_table_page', sort_by='heading', sort_order='asc' if sort_by == 'heading' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'heading' %} class="sort-active"{% endif %}>Heading{% if sort_by == 'heading' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th>Actions</th>
                 </tr>
@@ -276,7 +274,7 @@
                 <div class="button-container">
                     <a href="{{ url_for('edit_photo', photo_id=photo.photo_id) }}" class="grid-button">Edit Photo</a>
                     <a href="{{ url_for('edit_connections', photo_id=photo.photo_id) }}" class="grid-button">Edit Connections</a>
-                    <a href="#" class="grid-button delete-button" onclick="confirmDelete('{{ photo.photo_id }}'); return false;">Delete</a>
+                    <a href="#" class="grid-button delete-button" onclick="confirmDelete('{{ photo.photo_id }}'); return false;" title="Delete photo">✕</a>
                 </div>
             </div>
         {% endfor %}
@@ -353,22 +351,24 @@
         }
     }
 
-    // Initialize date range picker
-    $(document).ready(function() {
+    // Initialize date range picker (requires jQuery + daterangepicker; wrapped so a
+    // missing jQuery CDN doesn't kill the rest of this script block)
+    try { $(document).ready(function() {
         // Set default dates from URL parameters if they exist
         const urlParams = new URLSearchParams(window.location.search);
         let startDate = null;
         let endDate = null;
         
-        // Check if capture date filters are already set
-        if (urlParams.has('capture_date_from') || urlParams.has('capture_date_to')) {
+        // Check if capture date filters are already set (.get() is falsy for both absent and empty string,
+        // so an empty capture_date_from= in the URL produced by url_for is correctly ignored)
+        if (urlParams.get('capture_date_from') || urlParams.get('capture_date_to')) {
             // Format for capture_date_from is YYYY-MM in URL, but we need YYYY-MM-DD for daterangepicker
-            if (urlParams.has('capture_date_from')) {
+            if (urlParams.get('capture_date_from')) {
                 const fromParam = urlParams.get('capture_date_from');
                 startDate = moment(fromParam + '-01', 'YYYY-MM-DD');
             }
-            
-            if (urlParams.has('capture_date_to')) {
+
+            if (urlParams.get('capture_date_to')) {
                 const toParam = urlParams.get('capture_date_to');
                 // Get the last day of the month for the end date
                 const year = parseInt(toParam.split('-')[0]);
@@ -437,7 +437,7 @@
             currentUrl.searchParams.set('page', '1'); // Reset to first page when changing filter
             window.location.href = currentUrl.toString();
         });
-    });
+    }); } catch(e) { console.warn('Date range picker could not be initialized (jQuery unavailable):', e); }
 
     // Initialize the view based on local storage or default to list view
     document.addEventListener('DOMContentLoaded', function() {
@@ -449,8 +449,8 @@
         // Initialize filters
         initializeFilters();
         
-        // Initialize view from localStorage or default to list view
-        const currentView = localStorage.getItem('photoViewPreference') || 'list';
+        // Initialize view from localStorage or default to grid view
+        const currentView = localStorage.getItem('photoViewPreference') || 'grid';
         switchView(currentView);
     });
     

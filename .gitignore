@@ -65,3 +65,6 @@ build/
 # Test scripts (root-level scratch files only; tests/ directory is tracked)
 test_*.py
 !tests/test_*.py
+
+# UI prototypes (temporary design review files)
+prototypes/

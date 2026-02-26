@@ -12,13 +12,13 @@
     <div class="navigation-buttons">
         <a href="{{ url_for('edit_photo', photo_id=photo.photoId.id) }}?distance={{ distance }}" class="view-btn" id="edit-photo-link">Edit Photo</a>
         {% if previous_photo_id %}
-        <a href="{{ url_for('edit_connections', photo_id=previous_photo_id) }}" class="nav-btn nav-btn--previous">← Previous</a>
+        <a href="{{ url_for('edit_connections', photo_id=previous_photo_id) }}?distance={{ distance }}" class="nav-btn nav-btn--previous">← Previous</a>
         {% else %}
         <span class="nav-btn nav-btn--previous nav-btn--disabled">← Previous</span>
         {% endif %}
         <span class="nav-separator">|</span>
         {% if next_photo_id %}
-        <a href="{{ url_for('edit_connections', photo_id=next_photo_id) }}" class="nav-btn nav-btn--next">Next →</a>
+        <a href="{{ url_for('edit_connections', photo_id=next_photo_id) }}?distance={{ distance }}" class="nav-btn nav-btn--next">Next →</a>
         {% else %}
         <span class="nav-btn nav-btn--next nav-btn--disabled">Next →</span>
         {% endif %}
@@ -335,22 +335,23 @@
             });
         });
 
-        // Load saved distance value and auto-reload if needed
+        // On first visit (no ?distance= in URL), apply the user's saved distance preference.
+        // Normal prev/next navigation always carries ?distance= in the link, so this
+        // redirect only fires on the very first page load, not during navigation.
         const savedDistance = localStorage.getItem('distance');
         const urlParams = new URLSearchParams(window.location.search);
         const urlDistance = urlParams.get('distance');
-        
-        // If we have a saved distance and no distance in URL, use saved distance
+
         if (savedDistance && !urlDistance) {
             document.getElementById('distance').value = savedDistance;
-            // Auto-reload with the saved distance to show nearby photos immediately
             window.location.href = `${window.location.pathname}?distance=${savedDistance}`;
-            return; // Don't continue with initialization since we're reloading
-        } else if (savedDistance && savedDistance !== urlDistance) {
-            // If saved distance differs from URL distance, update the input field
-            document.getElementById('distance').value = savedDistance;
+            return; // page is being replaced; skip remaining init
+        }
+
+        // Keep the input field in sync with whatever distance is in the URL
+        if (urlDistance) {
+            document.getElementById('distance').value = urlDistance;
         } else if (savedDistance) {
-            // Update the input field with saved distance
             document.getElementById('distance').value = savedDistance;
         }
 

@@ -401,7 +401,11 @@ def get_db_stats():
         # Count photos
         cursor.execute("SELECT COUNT(*) FROM photos")
         stats['photo_count'] = cursor.fetchone()[0]
-        
+
+        # Count published photos
+        cursor.execute("SELECT COUNT(*) FROM photos WHERE maps_publish_status = 'PUBLISHED'")
+        stats['published_count'] = cursor.fetchone()[0]
+
         # Count places
         cursor.execute("SELECT COUNT(*) FROM places")
         stats['place_count'] = cursor.fetchone()[0]

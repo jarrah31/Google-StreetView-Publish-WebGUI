@@ -11,32 +11,17 @@
         <h1>Edit Photo</h1>
         <div class="navigation-buttons">
             <a href="{{ url_for('edit_connections', photo_id=photo.photoId.id) }}" id="edit-connections-link" class="view-btn">Edit Connections</a>
-            
-            <!-- Photo Navigation Buttons -->
-            <div class="photo-navigation">
-                {% if previous_photo_id %}
-                    <a href="{{ url_for('edit_photo', photo_id=previous_photo_id) }}" class="nav-btn nav-previous" title="Previous photo (newer in time)">
-                        ← Previous
-                    </a>
-                {% else %}
-                    <span class="nav-btn nav-previous disabled" title="This is the newest photo">
-                        ← Previous
-                    </span>
-                {% endif %}
-                
-                <!-- Visual separator between navigation buttons -->
-                <span class="nav-separator">|</span>
-                
-                {% if next_photo_id %}
-                    <a href="{{ url_for('edit_photo', photo_id=next_photo_id) }}" class="nav-btn nav-next" title="Next photo (older in time)">
-                        Next →
-                    </a>
-                {% else %}
-                    <span class="nav-btn nav-next disabled" title="This is the oldest photo">
-                        Next →
-                    </span>
-                {% endif %}
-            </div>
+            {% if previous_photo_id %}
+            <a href="{{ url_for('edit_photo', photo_id=previous_photo_id) }}" class="nav-btn nav-previous" title="Previous photo (newer in time)">← Previous</a>
+            {% else %}
+            <span class="nav-btn nav-previous disabled" title="This is the newest photo">← Previous</span>
+            {% endif %}
+            <span class="nav-separator">|</span>
+            {% if next_photo_id %}
+            <a href="{{ url_for('edit_photo', photo_id=next_photo_id) }}" class="nav-btn nav-next" title="Next photo (older in time)">Next →</a>
+            {% else %}
+            <span class="nav-btn nav-next disabled" title="This is the oldest photo">Next →</span>
+            {% endif %}
         </div>
         <div class="content-container">
             <div class="photo-details">
@@ -133,7 +118,7 @@
                 <!-- Button Container - Outside Grid -->
                 <div class="button-row">
                     <button class="button-22" type="submit" id="submit-button" form="edit-form">Submit Changes</button>
-                    <button type="button" class="button-22 delete-button" onclick="confirmDelete('{{ photo.photoId.id }}'); return false;" style="background-color: #ff4a4a; border-color: #ff4a4a;">Delete</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete('{{ photo.photoId.id }}'); return false;">Delete</button>
                 </div>
             </div>
             <div class="map-container">
@@ -954,17 +939,23 @@
                     }
                 );
                 
-                // Hide loading message when panorama loads
-                streetViewPanorama.addListener('pano_changed', function() {
-                    loadingElement.style.display = 'none';
-                });
-                
-                // Handle cases where panorama fails to load
-                streetViewPanorama.addListener('status_changed', function() {
-                    if (streetViewPanorama.getStatus() !== 'OK') {
+                // pano_changed / tilesloaded do not fire reliably for Street View Publish API
+                // photo IDs, so we poll the DOM instead: as soon as Google Maps has injected
+                // the .gm-style container with positive height the panorama is rendered.
+                const panoramaContainer = document.getElementById('streetview-panorama');
+                let pollAttempts = 0;
+                const maxAttempts = 50; // 50 × 300ms = 15 seconds max
+                const renderPoll = setInterval(function() {
+                    pollAttempts++;
+                    const gmStyle = panoramaContainer.querySelector('.gm-style');
+                    if (gmStyle && gmStyle.offsetHeight > 0) {
+                        loadingElement.style.display = 'none';
+                        clearInterval(renderPoll);
+                    } else if (pollAttempts >= maxAttempts) {
+                        clearInterval(renderPoll);
                         loadingElement.innerHTML = '<div style="color: #d32f2f;">360° view not available for this photo</div>';
                     }
-                });
+                }, 300);
                 
                 streetViewInitialized = true;
                 console.log('Street View initialized successfully');

@@ -389,7 +389,7 @@ def set_security_headers(response):
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com; "
         "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-        "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://maps.google.com; "
+        "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://*.ggpht.com https://maps.google.com; "
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         "connect-src 'self' https://maps.googleapis.com https://streetviewpublish.googleapis.com; "
         "frame-src https://www.google.com https://maps.google.com;"
@@ -461,7 +461,13 @@ def healthz():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    stats = database.get_db_stats()
+    total_views = stats.get('total_views', 0) or 0
+    if total_views >= 1000:
+        stats['total_views_display'] = f"{total_views / 1000:.1f}k"
+    else:
+        stats['total_views_display'] = str(total_views)
+    return render_template('index.html', stats=stats)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -708,6 +714,10 @@ def list_photos_table_page():
         }
         VALID_SORT_ORDERS = {'asc': 'ASC', 'desc': 'DESC'}
 
+        # Preserve URL-facing values for the template before converting to SQL names
+        sort_by_url = sort_by if sort_by in VALID_SORT_COLUMNS else 'upload_time'
+        sort_order_url = sort_order if sort_order in VALID_SORT_ORDERS else 'desc'
+
         sort_by = VALID_SORT_COLUMNS.get(sort_by, 'p.upload_time')
         sort_order = VALID_SORT_ORDERS.get(sort_order, 'DESC')
         
@@ -915,8 +925,8 @@ def list_photos_table_page():
             total_places=total_places,
             total_connections=total_connections,
             last_updated=last_updated,
-            sort_by=sort_by,
-            sort_order=sort_order,
+            sort_by=sort_by_url,
+            sort_order=sort_order_url,
             db_exists=True,
             page=page,
             per_page=per_page,
@@ -1309,9 +1319,9 @@ def edit_connections(photo_id):
         if nearby_photos:
             app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: Final nearby photos list: ===")
             for i, photo in enumerate(nearby_photos):
-                photo_id = photo.get('photoId', {}).get('id', 'Unknown')
-                distance = photo.get('distance', 'Unknown')
-                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: {i+1}. Photo {photo_id}, distance: {distance}m ===")
+                debug_photo_id = photo.get('photoId', {}).get('id', 'Unknown')
+                debug_distance = photo.get('distance', 'Unknown')
+                app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: {i+1}. Photo {debug_photo_id}, distance: {debug_distance}m ===")
         else:
             app.logger.debug(f"=== EDIT CONNECTIONS DEBUG: No nearby photos in final list ===")
         

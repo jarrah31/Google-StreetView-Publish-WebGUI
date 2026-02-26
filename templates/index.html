@@ -2,57 +2,75 @@
 
 {% block content %}
 <div class="container">
-    <h1>Street View Publish</h1>
 
-    <div class="welcome-section">
-        <p class="welcome-text">
-            Welcome to the Google Street View Publish WebGUI — upload, manage, and publish your 360° photospheres via the Google Street View API.
-        </p>
+    <div class="hero">
+        <h1>Your 360° photos,<br><span class="hero-accent">published everywhere.</span></h1>
+        <p class="hero-subtitle">Upload, edit, and publish photospheres to Google Street View. Manage GPS coordinates, create connections, and track your views — all in one place.</p>
+        <div class="hero-actions">
+            <a href="{{ url_for('upload_multiple_photospheres') }}" class="btn btn-primary">📤 Upload Photospheres</a>
+            <a href="{{ url_for('photos_page') }}" class="btn">🖼 Browse Library</a>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon">📷</div>
+            <div class="stat-label">Total Photos</div>
+            <div class="stat-value">{{ stats.get('photo_count', 0) }}</div>
+            <div class="stat-sub">In your library</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🌍</div>
+            <div class="stat-label">Published</div>
+            <div class="stat-value">{{ stats.get('published_count', 0) }}</div>
+            {% set total = stats.get('photo_count', 0) %}
+            {% set pub = stats.get('published_count', 0) %}
+            <div class="stat-sub">{{ ((pub / total * 100) | int) if total > 0 else 0 }}% of library</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👁</div>
+            <div class="stat-label">Total Views</div>
+            <div class="stat-value">{{ stats.get('total_views_display', '0') }}</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-label">Connections</div>
+            <div class="stat-value">{{ stats.get('connection_count', 0) }}</div>
+            <div class="stat-sub">Across your photos</div>
+        </div>
     </div>
 
     <div class="features-grid">
-        <div class="feature-card">
+        <a href="{{ url_for('upload_multiple_photospheres') }}" class="feature-card">
             <div class="feature-icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">📤</div>
             <div class="feature-content">
-                <h2>Upload Photos</h2>
-                <p>Batch upload 360° photospheres with automatic EXIF extraction and GPS editing before publishing to Google Street View.</p>
-                <div class="sub-links">
-                    <a href="{{ url_for('upload_multiple_photospheres') }}" class="sub-link">Multiple Upload</a>
-                </div>
-                <a href="{{ url_for('upload_multiple_photospheres') }}" class="feature-link">Upload Photospheres →</a>
+                <h2>Upload Photospheres</h2>
+                <p>Drag and drop 360° photos for batch upload with automatic EXIF extraction and GPS editing before publishing to Google Street View.</p>
+                <span class="feature-link">Get started →</span>
             </div>
-        </div>
-
-        <div class="feature-card">
+        </a>
+        <a href="{{ url_for('photos_page') }}" class="feature-card">
             <div class="feature-icon" style="background: linear-gradient(135deg, #fef9c3, #fde68a);">🖼</div>
             <div class="feature-content">
                 <h2>Manage Photos</h2>
-                <p>Browse, edit metadata, adjust GPS coordinates, and create heading connections between photos in your library.</p>
-                <div class="sub-links">
-                    <a href="{{ url_for('photos_page') }}" class="sub-link">All Photos</a>
-                </div>
-                <a href="{{ url_for('photos_page') }}" class="feature-link">Browse Library →</a>
+                <p>Browse, edit metadata, adjust GPS coordinates, and create precise heading connections between photos in your library.</p>
+                <span class="feature-link">Browse library →</span>
             </div>
-        </div>
-
-        <div class="feature-card">
+        </a>
+        <a href="{{ url_for('photo_database') }}" class="feature-card">
             <div class="feature-icon" style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0);">🗄</div>
             <div class="feature-content">
                 <h2>Photo Database</h2>
                 <p>Sync your Street View library to a local SQLite database for fast offline statistics and efficient photo management.</p>
-                <div class="sub-links">
-                    <a href="{{ url_for('photo_database') }}" class="sub-link">View Stats</a>
-                </div>
-                <a href="{{ url_for('photo_database') }}" class="feature-link">Open Database →</a>
+                <span class="feature-link">Open database →</span>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="home-footer">
-        <p>Get started by exploring the features above or use the navigation bar to access specific functions.</p>
-        <div class="version-info">
-            <p>Version: v{{ app_version }}</p>
-        </div>
+        <p class="version-note">v{{ app_version }}</p>
     </div>
+
 </div>
 {% endblock %}
