@@ -1647,6 +1647,46 @@ select option {
 .gps-fix-step-hint { font-size: 0.875rem; color: var(--text-secondary); }
 .gpx-file-input-hidden { position: absolute; width: 0; height: 0; opacity: 0; overflow: hidden; pointer-events: none; }
 
+/* Overview map */
+#overview-map-container {
+    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+#overview-map { height: 380px; }
+#map-resize-handle {
+    height: 8px;
+    cursor: ns-resize;
+    background: var(--border);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#map-resize-handle::after {
+    content: '';
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border-strong);
+}
+#map-resize-handle:hover,
+#map-resize-handle.dragging { background: var(--primary); }
+#map-resize-handle:hover::after,
+#map-resize-handle.dragging::after { background: white; }
+
+/* # column */
+.photo-table .number-column {
+    width: 52px;
+    min-width: 30px;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
 /* Floating hover tooltip */
 #hover-tooltip {
     position: fixed;

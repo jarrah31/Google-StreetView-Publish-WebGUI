@@ -61,6 +61,7 @@
                         <button id="select-all-btn" class="page-link view-photos-link">Select All</button>
                         <button id="select-none-btn" class="page-link view-photos-link">Select None</button>
                         <button id="select-valid-btn" class="page-link view-photos-link">Select Valid Only</button>
+                        <button id="show-map-btn" class="page-link view-photos-link">Show Map</button>
                     </div>
                 </div>
                 <div class="card-content">
@@ -153,6 +154,12 @@
                         </div>
                     </div>
 
+                    <!-- Overview Map -->
+                    <div id="overview-map-container" style="display:none;">
+                        <div id="overview-map"></div>
+                        <div id="map-resize-handle"></div>
+                    </div>
+
                     <!-- Progress Summary -->
                     <div id="progress-summary" class="progress-summary" style="display: none;">
                         <div class="progress-bar-container">
@@ -174,6 +181,7 @@
                                     <th class="checkbox-column">
                                         <input type="checkbox" id="master-checkbox" title="Select/Deselect All">
                                     </th>
+                                    <th class="number-column" data-col="number">#<div class="col-resize-handle"></div></th>
                                     <th class="thumbnail-column" data-col="thumbnail">Thumbnail<div class="col-resize-handle"></div></th>
                                     <th class="metadata-column" data-col="metadata">Metadata<div class="col-resize-handle"></div></th>
                                     <th id="gpx-delta-th" class="gpx-delta-column" data-col="gpx-delta" style="display:none;">GPX Delta<div class="col-resize-handle"></div></th>
@@ -605,6 +613,7 @@ function populateReviewTable() {
     }
     
     updateSelectionCount();
+    updateOverviewMap();
 }
 
 function createFileRow(index, fileData) {
@@ -625,6 +634,7 @@ function createFileRow(index, fileData) {
                    ${fileData.status === UploadStatus.ERROR ? 'disabled' : ''}
                    title="${getCheckboxTooltip(fileData)}">
         </td>
+        <td class="number-column">${index + 1}</td>
         <td class="thumbnail-column">
             <img src="${thumbnailUrl}" alt="Thumbnail" class="file-thumbnail">
         </td>
@@ -2020,6 +2030,143 @@ function closeGpsEditModal() {
 
     currentEditingFileIndex = null;
 }
+
+// ========== OVERVIEW MAP ==========
+
+let overviewMap = null;
+let overviewMarkers = [];
+let mapVisible = false;
+
+function getEffectiveGps(fileData) {
+    if (fileData.editedGPS && fileData.editedGPS.isEdited) {
+        return { lat: fileData.editedGPS.latitude, lng: fileData.editedGPS.longitude };
+    }
+    if (fileData.metadata && fileData.metadata.latitude != null) {
+        return { lat: fileData.metadata.latitude, lng: fileData.metadata.longitude };
+    }
+    return null;
+}
+
+function gpsKey(lat, lng) {
+    return parseFloat(lat).toFixed(5) + ',' + parseFloat(lng).toFixed(5);
+}
+
+function updateOverviewMap() {
+    if (!mapVisible) return;
+    if (!window.google || !window.google.maps) return;
+
+    const mapEl = document.getElementById('overview-map');
+    if (!overviewMap) {
+        overviewMap = new google.maps.Map(mapEl, {
+            mapTypeId: 'hybrid',
+            zoom: 2,
+            center: { lat: 0, lng: 0 }
+        });
+    }
+
+    overviewMarkers.forEach(m => m.setMap(null));
+    overviewMarkers = [];
+
+    // Group photos by GPS position
+    const posMap = new Map(); // key -> { lat, lng, numbers[] }
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fd = filesMetadata[i];
+        if (!fd) continue;
+        const gps = getEffectiveGps(fd);
+        if (!gps) continue;
+        const key = gpsKey(gps.lat, gps.lng);
+        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, numbers: [] });
+        posMap.get(key).numbers.push(i + 1);
+    }
+
+    if (posMap.size === 0) return;
+
+    const bounds = new google.maps.LatLngBounds();
+
+    posMap.forEach(({ lat, lng, numbers }) => {
+        const count = numbers.length;
+        // Single photo: show row number. Multiple: show count to indicate overlap.
+        const labelText = count === 1 ? String(numbers[0]) : String(count);
+        bounds.extend({ lat, lng });
+
+        const marker = new google.maps.Marker({
+            position: { lat, lng },
+            map: overviewMap,
+            label: { text: labelText, color: 'white', fontWeight: 'bold', fontSize: count > 9 ? '9px' : '11px' },
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 14,
+                fillColor: count > 1 ? '#d97706' : '#2563eb',
+                fillOpacity: 1,
+                strokeColor: 'white',
+                strokeWeight: 2
+            },
+            title: count === 1
+                ? 'Photo #' + numbers[0]
+                : count + ' photos at this location (#' + numbers.join(', #') + ')'
+        });
+        if (count > 1) {
+            const infoWindow = new google.maps.InfoWindow({
+                content: '<div style="font-size:0.85rem;line-height:1.6;min-width:120px">'
+                    + '<strong>' + count + ' photos at this location:</strong><br>'
+                    + numbers.map(n => 'Photo #' + n).join('<br>')
+                    + '</div>'
+            });
+            marker.addListener('click', function () {
+                overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
+                infoWindow.open(overviewMap, marker);
+            });
+            marker.infoWindow = infoWindow;
+        }
+
+        overviewMarkers.push(marker);
+    });
+
+    if (posMap.size === 1) {
+        overviewMap.setCenter(bounds.getCenter());
+        overviewMap.setZoom(15);
+    } else {
+        overviewMap.fitBounds(bounds, 50);
+    }
+}
+
+// Map vertical resize
+(function () {
+    const LS_KEY = 'overview_map_height';
+    const mapEl  = document.getElementById('overview-map');
+    const handle = document.getElementById('map-resize-handle');
+    const saved  = parseInt(localStorage.getItem(LS_KEY));
+    if (saved >= 100) mapEl.style.height = saved + 'px';
+
+    handle.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startH = mapEl.offsetHeight;
+        handle.classList.add('dragging');
+
+        function onMove(e) {
+            const newH = Math.max(100, startH + e.clientY - startY);
+            mapEl.style.height = newH + 'px';
+            if (overviewMap) google.maps.event.trigger(overviewMap, 'resize');
+        }
+        function onUp() {
+            handle.classList.remove('dragging');
+            localStorage.setItem(LS_KEY, mapEl.offsetHeight);
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+})();
+
+document.getElementById('show-map-btn').addEventListener('click', function () {
+    const container = document.getElementById('overview-map-container');
+    mapVisible = !mapVisible;
+    container.style.display = mapVisible ? 'block' : 'none';
+    this.textContent = mapVisible ? 'Hide Map' : 'Show Map';
+    if (mapVisible) updateOverviewMap();
+});
 
 // ========== RESIZABLE COLUMNS ==========
 
