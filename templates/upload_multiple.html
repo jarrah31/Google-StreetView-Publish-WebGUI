@@ -2122,11 +2122,15 @@ function openMapPreview360(fileIndex) {
 
 function buildMarkerInfoContent(indices) {
     const count = indices.length;
-    let html = '<div style="font-size:0.82rem;line-height:1.8;min-width:190px;max-width:270px">';
+    let html = '<div style="font-size:0.82rem;line-height:1.8;min-width:220px;max-width:290px">';
     if (count === 1) {
         const idx = indices[0];
         const fd = filesMetadata[idx];
         const ts = formatExifDate(fd?.metadata?.dateTimeOriginal);
+        const thumbUrl = fd?.file ? URL.createObjectURL(fd.file) : '';
+        if (thumbUrl) {
+            html += '<img src="' + thumbUrl + '" style="width:100%;height:100px;object-fit:cover;border-radius:4px;margin-bottom:6px;display:block">';
+        }
         html += '<strong>Photo #' + (idx + 1) + '</strong><br>';
         html += '<span style="color:#64748b;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
         html += '🕐 ' + ts + '<br>';
@@ -2139,12 +2143,19 @@ function buildMarkerInfoContent(indices) {
         indices.forEach(idx => {
             const fd = filesMetadata[idx];
             const ts = formatExifDate(fd?.metadata?.dateTimeOriginal);
+            const thumbUrl = fd?.file ? URL.createObjectURL(fd.file) : '';
             html += '<hr style="margin:5px 0;border:none;border-top:1px solid #e2e8f0">';
+            html += '<div style="display:flex;gap:8px;align-items:flex-start">';
+            if (thumbUrl) {
+                html += '<img src="' + thumbUrl + '" style="width:64px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0">';
+            }
+            html += '<div>';
             html += '<strong>Photo #' + (idx + 1) + '</strong> ';
             html += '<span style="color:#64748b;font-size:0.78rem;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
             html += '🕐 ' + ts + '<br>';
             html += '<a href="#" onclick="openGpsEditModal(' + idx + ');return false;" style="color:#2563eb;margin-right:12px">📍 Edit Location</a>';
             html += '<a href="#" onclick="openMapPreview360(' + idx + ');return false;" style="color:#2563eb">🔭 View 360°</a>';
+            html += '</div></div>';
         });
     }
     html += '</div>';
