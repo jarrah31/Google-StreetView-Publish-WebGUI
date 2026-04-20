@@ -452,11 +452,14 @@ ul li { float: left; margin-right: 10px; }
 }
 
 .action-button:disabled,
-.btn:disabled {
+.btn:disabled,
+.primary-button:disabled,
+.view-photos-link:disabled {
   background: var(--text-muted) !important;
   border-color: var(--text-muted) !important;
   color: #fff !important;
   cursor: not-allowed;
+  opacity: 0.6;
   transform: none;
   opacity: .7;
 }
@@ -1551,20 +1554,15 @@ select option {
 #list-view .photo-table td:nth-child(9) { text-align: center; }
 .photo-table td:first-child { max-width: 100px; text-align: center; }
 
-/* Upload review table column widths */
-.photo-table thead th:nth-child(1) { width: 40px; text-align: center; }
-.photo-table thead th:nth-child(2) { width: 120px; text-align: center; }
-.photo-table thead th:nth-child(3) { width: 80px; text-align: center; }
-.photo-table thead th:nth-child(4) { width: auto; text-align: left; max-width: 150px; }
-.photo-table thead th:nth-child(5) { width: auto; min-width: 180px; }
-.photo-table thead th:nth-child(6) { width: 150px; text-align: center; }
-.photo-table thead th:nth-child(7) { width: 100px; text-align: center; }
-.photo-table .checkbox-column { text-align: center; }
-.photo-table .thumbnail-column { text-align: center; }
-.photo-table .metadata-column { text-align: center; }
-.photo-table .filename-column { text-align: left; white-space: nowrap; padding-left: 10px; }
-.photo-table .status-column { text-align: center; }
-.photo-table .actions-column { text-align: center; }
+/* Upload review table column widths — class-based to avoid nth-child breakage from hidden columns */
+.photo-table .checkbox-column  { width: 40px;  text-align: center; }
+.photo-table .thumbnail-column { width: 110px; text-align: center; }
+.photo-table .metadata-column  { width: 100px; min-width: 30px; text-align: center; overflow: hidden; }
+.photo-table .gpx-delta-column { width: 80px;  min-width: 30px; text-align: center; overflow: hidden; }
+.photo-table .filename-column  { width: 200px; min-width: 30px; text-align: left; white-space: nowrap; padding-left: 10px; overflow: hidden; }
+.photo-table .placeid-column   { width: 240px; min-width: 30px;  text-align: left; overflow: hidden; }
+.photo-table .status-column    { width: 130px; text-align: center; }
+.photo-table .actions-column   { width: 110px; text-align: center; }
 
 /* Table container */
 .custom-table-container {
@@ -1616,9 +1614,89 @@ select option {
 
 /* Metadata status icons */
 .metadata-status { font-size: 1.2rem; display: inline-block; cursor: help; }
-.metadata-status.valid   { color: var(--success); }
-.metadata-status.warning { color: var(--amber); }
-.metadata-status.error   { color: var(--error); }
+.metadata-status.valid         { color: var(--success); }
+.metadata-status.warning       { color: var(--amber); }
+.metadata-status.error         { color: var(--error); }
+.metadata-status.duplicate-gps { color: var(--warning); font-size: 1.3rem; }
+
+/* GPS Fix Banner */
+.gps-fix-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--warning-light);
+    border: 1px solid var(--warning);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.gps-fix-banner-icon { font-size: 1.5rem; color: var(--warning); flex-shrink: 0; line-height: 1.2; }
+.gps-fix-banner-content { flex: 1; min-width: 0; }
+.gps-fix-banner-description { margin: 0 0 6px; font-weight: 600; color: var(--text-primary); }
+.gps-fix-banner-instructions { margin: 0 0 12px; color: var(--text-secondary); font-size: 0.875rem; }
+.gps-fix-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gpx-filename-display { color: var(--text-secondary); font-size: 0.875rem; font-style: italic; }
+.gpx-offset-wrapper { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+.gpx-threshold-wrapper { display: flex; align-items: center; gap: 6px; }
+.gps-fix-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: gps-step; }
+.gps-fix-step { display: flex; align-items: flex-start; gap: 10px; counter-increment: gps-step; }
+.gps-fix-step::before { content: counter(gps-step); min-width: 22px; height: 22px; border-radius: 50%; background: var(--warning); color: #fff; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.gps-fix-step-body { display: flex; align-items: center; gap: 10px; flex: 1; }
+.gps-fix-step-label { font-size: 0.875rem; color: var(--text-secondary); width: 260px; flex-shrink: 0; }
+.gps-fix-step-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gps-fix-step-hint { font-size: 0.875rem; color: var(--text-secondary); }
+.gpx-file-input-hidden { position: absolute; width: 0; height: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+
+/* Floating hover tooltip */
+#hover-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: #1e293b;
+    color: #f9fafb;
+    border: 1px solid #374151;
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    max-width: 280px;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    white-space: normal;
+    line-height: 1.4;
+}
+
+/* Column resize handles */
+.photo-table th { position: relative; }
+.col-resize-handle {
+    position: absolute;
+    right: 0; top: 20%; bottom: 20%;
+    width: 4px;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 1;
+    background: var(--border);
+    border-radius: 2px;
+    opacity: 0.6;
+    transition: opacity 0.15s, background 0.15s;
+}
+.col-resize-handle:hover,
+.col-resize-handle.dragging { background: var(--primary); opacity: 1; }
+@media (max-width: 600px) {
+    .gps-fix-step-body { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .gps-fix-step-label { width: auto; }
+}
+.gpx-offset-label { font-size: 0.875rem; color: var(--text-secondary); white-space: nowrap; }
+.gpx-offset-input { padding: 4px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; width: auto; font-family: inherit; }
+.gpx-offset-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.gpx-threshold-input { width: 56px !important; padding: 4px 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); font-size: 0.875rem; text-align: center; font-family: inherit; }
+.gpx-threshold-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+/* GPX Δt column */
+.gpx-delta-column { text-align: center; white-space: nowrap; font-size: 0.875rem; }
+.gpx-delta-good { color: var(--success); font-weight: 600; }
+.gpx-delta-warn { color: var(--amber);   font-weight: 600; }
+.gpx-delta-bad  { color: var(--warning); font-weight: 600; }
+.gpx-delta-far  { color: var(--error);   font-weight: 600; }
+.gpx-delta-na   { color: var(--text-secondary); }
 
 /* File thumbnails */
 .file-thumbnail {
@@ -2421,6 +2499,10 @@ select option {
 .result-error { font-size: .83rem; color: var(--error); font-style: italic; }
 
 /* Detail toggle / rows */
+.placeID-input-wrapper { display: flex; align-items: center; gap: 4px; padding: 2px 6px; }
+.placeid-input { flex: 1; min-width: 0; max-width: 150px; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.82rem; background: var(--bg-surface); color: var(--text-primary); }
+.placeid-input:focus { outline: none; border-color: var(--primary); }
+
 .detail-toggle-btn {
   background: none;
   border: 1px solid var(--border);

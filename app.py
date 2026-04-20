@@ -14,7 +14,7 @@ import database
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g
+from flask import Flask, render_template, request, redirect, jsonify, url_for, flash, redirect, session, g, Response
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address

@@ -64,6 +64,95 @@
                     </div>
                 </div>
                 <div class="card-content">
+                    <!-- GPS Fix Banner -->
+                    <div id="gps-fix-banner" class="gps-fix-banner" style="display:none;">
+                        <div class="gps-fix-banner-icon">⚠</div>
+                        <div class="gps-fix-banner-content">
+                            <p id="gps-fix-banner-text" class="gps-fix-banner-description"></p>
+                            <ol class="gps-fix-steps">
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Select camera timezone</span>
+                                        <div class="gps-fix-step-control">
+                                            <select id="utc-offset-input" class="gpx-offset-input" title="Select the timezone your camera clock was set to. GPX timestamps are always UTC.">
+                                                <option value="-12">UTC-12</option>
+                                                <option value="-11">UTC-11</option>
+                                                <option value="-10">UTC-10 (HST)</option>
+                                                <option value="-9">UTC-9 (AKST)</option>
+                                                <option value="-8">UTC-8 (PST)</option>
+                                                <option value="-7">UTC-7 (MST/PDT)</option>
+                                                <option value="-6">UTC-6 (CST/MDT)</option>
+                                                <option value="-5">UTC-5 (EST/CDT)</option>
+                                                <option value="-4">UTC-4 (EDT/AST)</option>
+                                                <option value="-3.5">UTC-3:30 (NST)</option>
+                                                <option value="-3">UTC-3 (BRT)</option>
+                                                <option value="-2">UTC-2</option>
+                                                <option value="-1">UTC-1</option>
+                                                <option value="0" selected>UTC+0 (GMT/UTC)</option>
+                                                <option value="1">UTC+1 (BST/CET)</option>
+                                                <option value="2">UTC+2 (CEST/EET)</option>
+                                                <option value="3">UTC+3 (MSK/EAT)</option>
+                                                <option value="3.5">UTC+3:30 (IRST)</option>
+                                                <option value="4">UTC+4 (GST)</option>
+                                                <option value="4.5">UTC+4:30 (AFT)</option>
+                                                <option value="5">UTC+5 (PKT)</option>
+                                                <option value="5.5">UTC+5:30 (IST)</option>
+                                                <option value="5.75">UTC+5:45 (NPT)</option>
+                                                <option value="6">UTC+6 (BDT)</option>
+                                                <option value="6.5">UTC+6:30 (MMT)</option>
+                                                <option value="7">UTC+7 (ICT/WIB)</option>
+                                                <option value="8">UTC+8 (CST/AWST)</option>
+                                                <option value="9">UTC+9 (JST/KST)</option>
+                                                <option value="9.5">UTC+9:30 (ACST)</option>
+                                                <option value="10">UTC+10 (AEST)</option>
+                                                <option value="10.5">UTC+10:30 (LHST)</option>
+                                                <option value="11">UTC+11 (AEDT)</option>
+                                                <option value="12">UTC+12 (NZST)</option>
+                                                <option value="13">UTC+13 (NZDT)</option>
+                                                <option value="14">UTC+14 (LINT)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Choose GPX file</span>
+                                        <div class="gps-fix-step-control">
+                                            <label for="gpx-file-input" class="page-link view-photos-link">Choose GPX File</label>
+                                            <input type="file" id="gpx-file-input" accept=".gpx" class="gpx-file-input-hidden">
+                                            <span id="gpx-filename-display" class="gpx-filename-display">No file selected</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Validate GPX file</span>
+                                        <div class="gps-fix-step-control">
+                                            <button id="validate-gpx-btn" class="page-link view-photos-link" disabled>Validate GPX File</button>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Adjust delta threshold and re-validate if needed</span>
+                                        <div class="gps-fix-step-control">
+                                            <input type="number" id="gpx-threshold-input" class="gpx-threshold-input" value="2" min="1" max="60" step="1" title="Photos within this many seconds of a GPX trackpoint will have their GPS updated.">
+                                            <span class="gps-fix-step-hint">seconds</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Fix GPS</span>
+                                        <div class="gps-fix-step-control">
+                                            <button id="fix-gps-btn" class="page-link view-photos-link primary-button" disabled>Fix GPS</button>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+
                     <!-- Progress Summary -->
                     <div id="progress-summary" class="progress-summary" style="display: none;">
                         <div class="progress-bar-container">
@@ -85,12 +174,13 @@
                                     <th class="checkbox-column">
                                         <input type="checkbox" id="master-checkbox" title="Select/Deselect All">
                                     </th>
-                                    <th>Thumbnail</th>
-                                    <th>Metadata</th>
-                                    <th>Filename</th>
-                                    <th>PlaceID</th>
-                                    <th>Status</th>
-                                    <th>More Info</th>
+                                    <th class="thumbnail-column" data-col="thumbnail">Thumbnail<div class="col-resize-handle"></div></th>
+                                    <th class="metadata-column" data-col="metadata">Metadata<div class="col-resize-handle"></div></th>
+                                    <th id="gpx-delta-th" class="gpx-delta-column" data-col="gpx-delta" style="display:none;">GPX Delta<div class="col-resize-handle"></div></th>
+                                    <th class="filename-column" data-col="filename">Filename<div class="col-resize-handle"></div></th>
+                                    <th class="placeid-column" data-col="placeid">PlaceID<div class="col-resize-handle"></div></th>
+                                    <th class="status-column" data-col="status">Status<div class="col-resize-handle"></div></th>
+                                    <th class="actions-column">More Info</th>
                                 </tr>
                             </thead>
                             <tbody id="review-table-body">
@@ -204,6 +294,9 @@
         </div>
     </div>
 
+    <!-- Floating tooltip -->
+    <div id="hover-tooltip" role="tooltip" style="display:none;"></div>
+
     <!-- Loading overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="loading-spinner"></div>
@@ -221,6 +314,13 @@ let uploadQueue = [];
 let currentUploadIndex = 0;
 let isUploading = false;
 let currentSearchFileIndex = null;
+let gpxProcessed = false;
+let gpxValidated = false;
+let gpxPoints = [];
+
+function getGpxThreshold() {
+    return parseFloat(document.getElementById('gpx-threshold-input')?.value) || 2;
+}
 
 // Upload status enum
 const UploadStatus = {
@@ -277,7 +377,36 @@ function initializeMultipleUpload() {
     
     // Initialize GPS edit modal
     initializeGpsEditModal();
-    
+
+    // GPX file input — enable Validate, reset Fix GPS and prior results
+    document.getElementById('gpx-file-input').addEventListener('change', function() {
+        const display = document.getElementById('gpx-filename-display');
+        const validateBtn = document.getElementById('validate-gpx-btn');
+        const fixBtn = document.getElementById('fix-gps-btn');
+        if (this.files.length > 0) {
+            display.textContent = this.files[0].name;
+            validateBtn.disabled = false;
+        } else {
+            display.textContent = 'No file selected';
+            validateBtn.disabled = true;
+        }
+        // Reset any prior validation whenever the file changes
+        fixBtn.disabled = true;
+        gpxValidated = false;
+        if (gpxProcessed) {
+            for (let i = 0; i < selectedFiles.length; i++) {
+                if (filesMetadata[i]) delete filesMetadata[i].gpxDelta;
+            }
+            gpxProcessed = false;
+            populateReviewTable();
+        }
+    });
+    document.getElementById('validate-gpx-btn').addEventListener('click', runGpxValidate);
+    document.getElementById('fix-gps-btn').addEventListener('click', runGpsFix);
+    document.getElementById('gpx-threshold-input').addEventListener('input', () => {
+        if (gpxProcessed) populateReviewTable();
+    });
+
     // Set initial section visibility (show file selection, hide review)
     updateSectionVisibility();
 }
@@ -405,7 +534,9 @@ async function processFiles(files, addToExisting = false) {
     
     // Update section visibility and populate table
     updateSectionVisibility();
+    detectDuplicateGps();
     populateReviewTable();
+    updateGpsFixBanner();
     updateUploadStatus('active', `${selectedFiles.length} files ready for review`);
     
     // Show duplicate message after processing is complete
@@ -457,9 +588,12 @@ function hasEssentialPanoramaMetadata(metadata) {
 }
 
 function populateReviewTable() {
+    const gpxDeltaTh = document.getElementById('gpx-delta-th');
+    if (gpxDeltaTh) gpxDeltaTh.style.display = gpxProcessed ? '' : 'none';
+
     const tbody = document.getElementById('review-table-body');
     tbody.innerHTML = '';
-    
+
     for (let i = 0; i < selectedFiles.length; i++) {
         const fileData = filesMetadata[i];
         const row = createFileRow(i, fileData);
@@ -496,6 +630,9 @@ function createFileRow(index, fileData) {
         </td>
         <td class="metadata-column">
             ${getMetadataStatusIcon(metadata, fileData)}
+        </td>
+        <td class="gpx-delta-column" style="${gpxProcessed ? '' : 'display:none;'}">
+            ${gpxProcessed ? formatDeltaCell(fileData) : ''}
         </td>
         <td class="filename-column" title="${file.name}">
             ${file.name}
@@ -563,9 +700,21 @@ function createDetailRow(index, fileData) {
     
     const metadata = fileData.metadata;
     const file = fileData.file;
-    
+
+    let gpxSection = '';
+    if (fileData.gpxDelta) {
+        const d = fileData.gpxDelta;
+        const thr = getGpxThreshold();
+        const cls = d.deltaSecs <= thr ? 'gpx-delta-good' : (d.deltaSecs <= thr * 2.5 ? 'gpx-delta-warn' : (d.deltaSecs <= thr * 5 ? 'gpx-delta-bad' : 'gpx-delta-far'));
+        const status = d.deltaSecs <= thr ? '✓ Will be updated' : `✗ Outside ${thr}s threshold`;
+        gpxSection = '<hr style="margin:8px 0;border-color:var(--border)">'
+            + '<p><strong>GPX \u0394t:</strong> <span class="' + cls + '">' + d.deltaSecs.toFixed(1) + 's</span> &mdash; ' + status + '</p>'
+            + (d.photoTimeISO ? '<p><strong>Photo time (UTC):</strong> ' + d.photoTimeISO + '</p>' : '')
+            + (d.nearestTimeISO ? '<p><strong>Nearest GPX point:</strong> ' + d.nearestTimeISO + '</p>' : '');
+    }
+
     const detailsHtml = `
-        <td colspan="7" class="detail-content">
+        <td colspan="${gpxProcessed ? 8 : 7}" class="detail-content">
             <div class="file-details">
                 <!-- <h4>File Details: ${file.name}</h4> -->
                 <div class="file-details-grid">
@@ -595,6 +744,7 @@ function createDetailRow(index, fileData) {
                                 </div>
                             `}
                         ` : '<p>No GPS data found</p>'}
+                        ${gpxSection}
                     </div>
                     <div class="detail-section">
                         <h5>Panorama Metadata</h5>
@@ -634,22 +784,29 @@ function getMetadataStatusIcon(metadata, fileData) {
     if (!metadata) {
         return '<span class="metadata-status error" title="Failed to read metadata - Cannot upload">❌</span>';
     }
-    
+
     const isGpsEdited = fileData && fileData.editedGPS && fileData.editedGPS.isEdited;
     const hasEssentialPanorama = hasEssentialPanoramaMetadata(metadata);
-    
+    const hasDuplicateGps = fileData && fileData.hasDuplicateGps;
+
+    if (hasDuplicateGps) {
+        const dupeCount = (fileData.duplicateWith && fileData.duplicateWith.length) || 0;
+        const tooltip = `Duplicate GPS: identical coordinates shared with ${dupeCount} other photo${dupeCount !== 1 ? 's' : ''} in this batch — use Fix GPS to correct`;
+        return `<span class="metadata-status duplicate-gps" data-tooltip="${tooltip}">⚠</span>`;
+    }
+
     if (metadata.hasGpsData && metadata.hasXmpData && hasEssentialPanorama) {
         if (isGpsEdited) {
-            return '<span class="metadata-status valid" title="Complete photosphere metadata with edited GPS coordinates - Ready to upload">✅📍</span>';
+            return '<span class="metadata-status valid" data-tooltip="Complete photosphere metadata with edited GPS coordinates - Ready to upload">✅📍</span>';
         } else {
-            return '<span class="metadata-status valid" title="Complete photosphere metadata - Ready to upload">✅</span>';
+            return '<span class="metadata-status valid" data-tooltip="Complete photosphere metadata - Ready to upload">✅</span>';
         }
     } else if (!metadata.hasGpsData || !metadata.hasXmpData) {
-        return '<span class="metadata-status error" title="Missing basic GPS or XMP metadata - Cannot upload">❌</span>';
+        return '<span class="metadata-status error" data-tooltip="Missing basic GPS or XMP metadata - Cannot upload">❌</span>';
     } else if (!hasEssentialPanorama) {
-        return '<span class="metadata-status warning" title="Missing essential panorama fields (cropping/dimensions) - Upload with caution">⚠️</span>';
+        return '<span class="metadata-status warning" data-tooltip="Missing essential panorama fields (cropping/dimensions) - Upload with caution">⚠️</span>';
     } else {
-        return '<span class="metadata-status warning" title="Partial metadata - Upload with caution">⚠️</span>';
+        return '<span class="metadata-status warning" data-tooltip="Partial metadata - Upload with caution">⚠️</span>';
     }
 }
 
@@ -1029,6 +1186,17 @@ function startBatchUpload() {
         if (!confirm) return;
     }
     
+    // Warn if any selected photos still have duplicate GPS coordinates
+    const duplicateGpsFiles = filesToUpload.filter(index => filesMetadata[index].hasDuplicateGps);
+    if (duplicateGpsFiles.length > 0) {
+        const dupeConfirm = window.confirm(
+            `${duplicateGpsFiles.length} selected photo${duplicateGpsFiles.length !== 1 ? 's have' : ' has'} GPS coordinates that match another photo in this batch.\n\n` +
+            `Duplicate GPS coordinates may cause issues with Street View photo connections and placement.\n\n` +
+            `Continue with upload anyway?`
+        );
+        if (!dupeConfirm) return;
+    }
+
     // Update the upload queue to only include files that need uploading
     uploadQueue = filesToUpload;
     
@@ -1517,6 +1685,27 @@ function resetToInitialState() {
         flashContainer.innerHTML = '';
     }
     
+    // Reset GPX fix state
+    gpxProcessed = false;
+    gpxValidated = false;
+    gpxPoints = [];
+    const gpxInput = document.getElementById('gpx-file-input');
+    if (gpxInput) gpxInput.value = '';
+    const gpxDisplay = document.getElementById('gpx-filename-display');
+    if (gpxDisplay) gpxDisplay.textContent = 'No file selected';
+    const validateBtn = document.getElementById('validate-gpx-btn');
+    if (validateBtn) validateBtn.disabled = true;
+    const fixBtn = document.getElementById('fix-gps-btn');
+    if (fixBtn) fixBtn.disabled = true;
+    const gpxDeltaTh = document.getElementById('gpx-delta-th');
+    if (gpxDeltaTh) gpxDeltaTh.style.display = 'none';
+    const banner = document.getElementById('gps-fix-banner');
+    if (banner) banner.style.display = 'none';
+    const offsetInput = document.getElementById('utc-offset-input');
+    if (offsetInput) offsetInput.value = '0';
+    const thresholdInput = document.getElementById('gpx-threshold-input');
+    if (thresholdInput) thresholdInput.value = '2';
+
     console.log('Reset to initial state completed');
 }
 
@@ -1730,6 +1919,8 @@ function updateGpsCoordinates(fileIndex, newLat, newLng) {
     // Update the main table metadata icon
     updateMainTableMetadataIcon(fileIndex);
     
+    detectDuplicateGps();
+    updateGpsFixBanner();
     console.log(`Updated GPS for file ${fileIndex}: ${newLat}, ${newLng}`);
 }
 
@@ -1759,6 +1950,8 @@ function resetGpsCoordinates(fileIndex) {
     // Update the main table metadata icon
     updateMainTableMetadataIcon(fileIndex);
     
+    detectDuplicateGps();
+    updateGpsFixBanner();
     console.log(`Reset GPS for file ${fileIndex} to original values`);
 }
 
@@ -1816,7 +2009,7 @@ function updateMainTableMetadataIcon(fileIndex) {
 function closeGpsEditModal() {
     const modal = document.getElementById('gps-edit-modal');
     modal.style.display = 'none';
-    
+
     // Clean up map
     if (gpsEditMap) {
         gpsEditMap = null;
@@ -1824,8 +2017,364 @@ function closeGpsEditModal() {
     if (gpsEditMarker) {
         gpsEditMarker = null;
     }
-    
+
     currentEditingFileIndex = null;
+}
+
+// ========== RESIZABLE COLUMNS ==========
+
+(function initResizableCols() {
+    const LS_KEY = 'upload_table_col_widths';
+
+    function saveWidths() {
+        const widths = {};
+        document.querySelectorAll('.photo-table th[data-col]').forEach(th => {
+            widths[th.dataset.col] = th.offsetWidth;
+        });
+        localStorage.setItem(LS_KEY, JSON.stringify(widths));
+    }
+
+    function restoreWidths() {
+        let saved;
+        try { saved = JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) { return; }
+        if (!saved) return;
+        document.querySelectorAll('.photo-table th[data-col]').forEach(th => {
+            const w = saved[th.dataset.col];
+            if (w) th.style.width = w + 'px';
+        });
+    }
+
+    document.querySelectorAll('.photo-table th[data-col] .col-resize-handle').forEach(handle => {
+        handle.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            const th = handle.closest('th');
+            const startX = e.clientX;
+            const cs = getComputedStyle(th);
+            const startW = th.offsetWidth
+                - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+                - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+            handle.classList.add('dragging');
+
+            function onMove(e) {
+                const newW = Math.max(30, startW + e.clientX - startX);
+                th.style.width = newW + 'px';
+            }
+            function onUp() {
+                handle.classList.remove('dragging');
+                saveWidths();
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    });
+
+    restoreWidths();
+})();
+
+// ========== HOVER TOOLTIP ==========
+
+(function initHoverTooltip() {
+    const tip = document.getElementById('hover-tooltip');
+    let active = null;
+
+    function show(text, x, y) {
+        tip.innerHTML = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g, '<br>');
+        tip.style.display = 'block';
+        position(x, y);
+    }
+
+    function position(x, y) {
+        const pad = 12;
+        tip.style.left = (x + pad) + 'px';
+        tip.style.top  = (y + pad) + 'px';
+        // Flip if off right/bottom edge
+        const r = tip.getBoundingClientRect();
+        if (r.right > window.innerWidth - 8)  tip.style.left = (x - r.width - pad) + 'px';
+        if (r.bottom > window.innerHeight - 8) tip.style.top  = (y - r.height - pad) + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        const target = e.target.closest('.metadata-status, .gpx-delta-cell, .gpx-delta-na');
+        if (!target) return;
+        const text = target.dataset.tooltip || '';
+        if (!text) return;
+        active = target;
+        show(text, e.clientX, e.clientY);
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        if (!active) return;
+        position(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('mouseout', function (e) {
+        const target = e.target.closest('.metadata-status, .gpx-delta-cell, .gpx-delta-na');
+        if (target && target === active) {
+            active = null;
+            tip.style.display = 'none';
+        }
+    });
+})();
+
+// ========== GPS FIX / GPX FUNCTIONS ==========
+
+function detectDuplicateGps() {
+    const coordGroups = {};
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fd = filesMetadata[i];
+        if (!fd || !fd.metadata || !fd.metadata.hasGpsData) continue;
+        const lat = fd.editedGPS.isEdited ? fd.editedGPS.latitude : fd.metadata.latitude;
+        const lng = fd.editedGPS.isEdited ? fd.editedGPS.longitude : fd.metadata.longitude;
+        const key = `${parseFloat(lat).toFixed(5)},${parseFloat(lng).toFixed(5)}`;
+        if (!coordGroups[key]) coordGroups[key] = [];
+        coordGroups[key].push(i);
+    }
+    for (let i = 0; i < selectedFiles.length; i++) {
+        if (filesMetadata[i]) {
+            filesMetadata[i].hasDuplicateGps = false;
+            filesMetadata[i].duplicateWith = [];
+        }
+    }
+    for (const key in coordGroups) {
+        const indices = coordGroups[key];
+        if (indices.length >= 2) {
+            indices.forEach(i => {
+                filesMetadata[i].hasDuplicateGps = true;
+                filesMetadata[i].duplicateWith = indices.filter(j => j !== i);
+            });
+        }
+    }
+}
+
+function updateGpsFixBanner() {
+    const banner = document.getElementById('gps-fix-banner');
+    const bannerText = document.getElementById('gps-fix-banner-text');
+    const bannerInstructions = banner ? banner.querySelector('.gps-fix-banner-instructions') : null;
+    if (!banner || !bannerText) return;
+
+    const totalFiles = Object.values(filesMetadata).filter(fd => fd && fd.metadata).length;
+
+    if (totalFiles === 0) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const missingGpsCount = Object.values(filesMetadata).filter(fd =>
+        fd && fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData
+    ).length;
+    const duplicateGpsCount = Object.values(filesMetadata).filter(fd =>
+        fd && fd.hasDuplicateGps
+    ).length;
+
+    const parts = [];
+    if (missingGpsCount > 0)
+        parts.push(`${missingGpsCount} photo${missingGpsCount !== 1 ? 's are' : ' is'} missing GPS data`);
+    if (duplicateGpsCount > 0)
+        parts.push(`${duplicateGpsCount} photo${duplicateGpsCount !== 1 ? 's have' : ' has'} duplicate GPS coordinates`);
+
+    if (parts.length > 0) {
+        bannerText.textContent = parts.join(', and ') + '.';
+        if (bannerInstructions) bannerInstructions.style.display = '';
+    } else {
+        bannerText.textContent = `${totalFiles} photo${totalFiles !== 1 ? 's' : ''} loaded. Optionally use a GPX track to replace GPS coordinates.`;
+        if (bannerInstructions) bannerInstructions.style.display = 'none';
+    }
+    banner.style.display = 'flex';
+}
+
+function parseGpxFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parser = new DOMParser();
+                const gpx = parser.parseFromString(e.target.result, 'application/xml');
+                const parseError = gpx.querySelector('parsererror');
+                if (parseError) throw new Error('Invalid GPX file');
+                const points = [];
+                gpx.querySelectorAll('trkpt').forEach(pt => {
+                    const lat = parseFloat(pt.getAttribute('lat'));
+                    const lng = parseFloat(pt.getAttribute('lon'));
+                    const timeEl = pt.querySelector('time');
+                    if (!isNaN(lat) && !isNaN(lng) && timeEl) {
+                        const ts = new Date(timeEl.textContent.trim());
+                        if (!isNaN(ts.getTime())) points.push({ timestamp: ts, lat, lng });
+                    }
+                });
+                points.sort((a, b) => a.timestamp - b.timestamp);
+                resolve(points);
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsText(file);
+    });
+}
+
+function exifDateToDate(exifDateStr) {
+    if (!exifDateStr) return null;
+    const m = exifDateStr.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+}
+
+function findNearestGpxPoint(points, photoDate) {
+    if (!points.length) return { matched: false, deltaSecs: Infinity };
+    const t = photoDate.getTime();
+    let lo = 0, hi = points.length - 1;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (points[mid].timestamp.getTime() < t) lo = mid + 1; else hi = mid;
+    }
+    const candidates = [points[lo]];
+    if (lo > 0) candidates.push(points[lo - 1]);
+    let nearest = null, minDelta = Infinity;
+    candidates.forEach(pt => {
+        const d = Math.abs(pt.timestamp.getTime() - t) / 1000;
+        if (d < minDelta) { minDelta = d; nearest = pt; }
+    });
+    return {
+        matched: minDelta <= getGpxThreshold(),
+        deltaSecs: minDelta,
+        lat: nearest.lat,
+        lng: nearest.lng,
+        photoTimeISO: photoDate.toISOString(),
+        nearestTimeISO: nearest.timestamp.toISOString()
+    };
+}
+
+function formatDeltaCell(fileData) {
+    const d = fileData.gpxDelta;
+    if (!d) return '<span class="gpx-delta-na">—</span>';
+    if (d.reason) return `<span class="gpx-delta-na" data-tooltip="${d.reason}">—</span>`;
+    const secs = Math.round(d.deltaSecs);
+    const diagLines = d.photoTimeISO && d.nearestTimeISO
+        ? `\nPhoto:  ${d.photoTimeISO}\nGPX:    ${d.nearestTimeISO}`
+        : '';
+    const threshold = getGpxThreshold();
+    let cls, label;
+    if (secs <= threshold) {
+        cls = 'gpx-delta-good';
+        label = `${secs}s from nearest trackpoint — GPS will be embedded${diagLines}`;
+    } else if (secs <= threshold * 2.5) {
+        cls = 'gpx-delta-warn';
+        label = `${secs}s from nearest trackpoint — outside ${threshold}s threshold, not updated${diagLines}`;
+    } else if (secs <= threshold * 5) {
+        cls = 'gpx-delta-bad';
+        label = `${secs}s from nearest trackpoint — no match${diagLines}`;
+    } else {
+        cls = 'gpx-delta-far';
+        label = `${secs}s from nearest trackpoint — no match${diagLines}`;
+    }
+    return `<span class="${cls} gpx-delta-cell" data-tooltip="${label}">${secs}s</span>`;
+}
+
+
+async function runGpxValidate() {
+    const gpxInput = document.getElementById('gpx-file-input');
+    if (!gpxInput.files.length) {
+        showFlashMessage('Please select a GPX file first.', 'warning');
+        return;
+    }
+
+    const overlay = document.getElementById('loading-overlay');
+    const overlayText = overlay.querySelector('p');
+    overlay.style.display = 'flex';
+    overlayText.textContent = 'Parsing GPX file...';
+
+    try {
+        gpxPoints = await parseGpxFile(gpxInput.files[0]);
+    } catch (err) {
+        overlay.style.display = 'none';
+        showFlashMessage(`Failed to parse GPX file: ${err.message}`, 'error');
+        return;
+    }
+
+    if (gpxPoints.length === 0) {
+        overlay.style.display = 'none';
+        showFlashMessage('No trackpoints found in the GPX file.', 'error');
+        return;
+    }
+
+    overlayText.textContent = 'Matching photo timestamps to GPX track...';
+
+    const offsetMs = -(parseFloat(document.getElementById('utc-offset-input').value) || 0) * 3600 * 1000;
+
+    let matchCount = 0, noMatchCount = 0;
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fd = filesMetadata[i];
+        if (!fd) continue;
+
+        const captureTime = fd.metadata && fd.metadata.dateTimeOriginal;
+        if (!captureTime) {
+            fd.gpxDelta = { reason: 'no capture timestamp in photo' };
+            continue;
+        }
+        const photoDate = exifDateToDate(captureTime);
+        if (!photoDate) {
+            fd.gpxDelta = { reason: 'unrecognised timestamp format' };
+            continue;
+        }
+
+        const adjustedDate = offsetMs !== 0 ? new Date(photoDate.getTime() + offsetMs) : photoDate;
+        fd.gpxDelta = findNearestGpxPoint(gpxPoints, adjustedDate);
+
+        const needsFix = (fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData)
+                      || fd.hasDuplicateGps;
+        if (needsFix) {
+            if (fd.gpxDelta.matched) matchCount++; else noMatchCount++;
+        }
+    }
+
+    gpxProcessed = true;
+    gpxValidated = true;
+    document.getElementById('fix-gps-btn').disabled = matchCount === 0;
+    populateReviewTable();
+    overlay.style.display = 'none';
+
+    const parts = [`${gpxPoints.length} trackpoints loaded`];
+    if (matchCount > 0) parts.push(`${matchCount} photo${matchCount !== 1 ? 's' : ''} can be fixed`);
+    if (noMatchCount > 0) parts.push(`${noMatchCount} outside ${getGpxThreshold()}s threshold`);
+    showFlashMessage(parts.join(', ') + '.', matchCount > 0 ? 'success' : 'warning');
+}
+
+function runGpsFix() {
+    if (!gpxValidated) {
+        showFlashMessage('Please validate the GPX file first.', 'warning');
+        return;
+    }
+
+    let fixedCount = 0, noMatchCount = 0;
+    const threshold = getGpxThreshold();
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fd = filesMetadata[i];
+        if (!fd) continue;
+
+        const needsFix = (fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData)
+                      || fd.hasDuplicateGps;
+        if (!needsFix) continue;
+
+        const match = fd.gpxDelta;
+        if (!match || match.deltaSecs > threshold) { noMatchCount++; continue; }
+
+        fd.editedGPS = { latitude: match.lat, longitude: match.lng, isEdited: true };
+        fd.hasDuplicateGps = false;
+        fd.duplicateWith = [];
+        fd.status = determineInitialStatus(fd.metadata, fd.uploadData || null);
+        fixedCount++;
+    }
+
+    detectDuplicateGps();
+    populateReviewTable();
+    updateGpsFixBanner();
+
+    const parts = [];
+    if (fixedCount > 0) parts.push(`GPS queued for ${fixedCount} photo${fixedCount !== 1 ? 's' : ''} — coordinates will be applied on upload`);
+    if (noMatchCount > 0) parts.push(`${noMatchCount} had no match within ${threshold}s`);
+    showFlashMessage(parts.length ? parts.join('; ') + '.' : 'No changes made.', fixedCount > 0 ? 'success' : 'warning');
 }
 </script>
 {% endblock %}
