@@ -60,6 +60,7 @@
                 <div class="card-header">
                     <h2>Review Selected Photos</h2>
                     <div class="batch-controls">
+                        <button id="remove-selected-btn-top" class="page-link view-photos-link danger-button" disabled>Remove Selected</button>
                         <button id="select-all-btn" class="page-link view-photos-link">Select All</button>
                         <button id="select-none-btn" class="page-link view-photos-link">Select None</button>
                         <button id="select-valid-btn" class="page-link view-photos-link">Select Valid Only</button>
@@ -201,6 +202,7 @@
                 </div>
                 <div class="card-footer">
                     <div class="button-container">
+                        <button id="remove-selected-btn-bottom" class="page-link view-photos-link danger-button" disabled>Remove Selected</button>
                         <button id="cancel-btn" class="page-link view-photos-link">Cancel</button>
                         <button id="select-more-files-btn" class="page-link view-photos-link">Select More Files</button>
                         <button id="upload-selected-btn" class="page-link view-photos-link primary-button" disabled>
@@ -380,6 +382,10 @@ function initializeMultipleUpload() {
     // Select More Files button
     document.getElementById('select-more-files-btn').addEventListener('click', selectMoreFiles);
     
+    // Remove Selected buttons
+    document.getElementById('remove-selected-btn-top').addEventListener('click', removeSelectedFiles);
+    document.getElementById('remove-selected-btn-bottom').addEventListener('click', removeSelectedFiles);
+
     // Cancel button
     document.getElementById('cancel-btn').addEventListener('click', resetToInitialState);
     
@@ -994,10 +1000,14 @@ function updateSelectionCount() {
     const selectedCount = Object.values(filesMetadata).filter(f => f.selected).length;
     const uploadBtn = document.getElementById('upload-selected-btn');
     const btnText = document.getElementById('upload-button-text');
-    
+
     btnText.textContent = `Upload Selected (${selectedCount})`;
     uploadBtn.disabled = selectedCount === 0 || isUploading;
-    
+
+    const removeDisabled = selectedCount === 0 || isUploading;
+    document.getElementById('remove-selected-btn-top').disabled = removeDisabled;
+    document.getElementById('remove-selected-btn-bottom').disabled = removeDisabled;
+
     updateMasterCheckbox();
 }
 
@@ -1692,6 +1702,41 @@ function hideImagePreview() {
             // Don't show error to user as this is a non-critical enhancement
         }
     }
+
+function removeSelectedFiles() {
+    const indicesToRemove = new Set(
+        Object.entries(filesMetadata)
+            .filter(([, fd]) => fd.selected)
+            .map(([i]) => parseInt(i))
+    );
+    if (indicesToRemove.size === 0) return;
+
+    // Rebuild selectedFiles and filesMetadata without the removed entries
+    const newFiles = [];
+    const newMeta = {};
+    for (let i = 0; i < selectedFiles.length; i++) {
+        if (!indicesToRemove.has(i)) {
+            const newIdx = newFiles.length;
+            newFiles.push(selectedFiles[i]);
+            newMeta[newIdx] = { ...filesMetadata[i], selected: false };
+        }
+    }
+    selectedFiles = newFiles;
+    filesMetadata = newMeta;
+
+    if (selectedFiles.length === 0) {
+        resetToInitialState();
+        return;
+    }
+
+    detectDuplicateGps();
+    populateReviewTable();
+    updateGpsFixBanner();
+    updateUploadStatus('active', `${selectedFiles.length} files ready for review`);
+    updateSelectionCount();
+    document.getElementById('file-count').textContent = `${selectedFiles.length} image files selected`;
+    if (mapVisible) updateOverviewMap();
+}
 
 // Reset the page to initial state
 function resetToInitialState() {

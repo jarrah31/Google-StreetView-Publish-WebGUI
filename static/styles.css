@@ -451,6 +451,20 @@ ul li { float: left; margin-right: 10px; }
   text-decoration: none;
 }
 
+.danger-button {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #fff !important;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
 .action-button:disabled,
 .btn:disabled,
 .primary-button:disabled,
