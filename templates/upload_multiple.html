@@ -2112,6 +2112,45 @@ function gpsKey(lat, lng) {
     return parseFloat(lat).toFixed(5) + ',' + parseFloat(lng).toFixed(5);
 }
 
+function openMapPreview360(fileIndex) {
+    overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
+    const fd = filesMetadata[fileIndex];
+    if (!fd) return;
+    const blobUrl = URL.createObjectURL(fd.file);
+    showImagePreview(blobUrl, fd.file.name, fd.file);
+}
+
+function buildMarkerInfoContent(indices) {
+    const count = indices.length;
+    let html = '<div style="font-size:0.82rem;line-height:1.8;min-width:190px;max-width:270px">';
+    if (count === 1) {
+        const idx = indices[0];
+        const fd = filesMetadata[idx];
+        const ts = formatExifDate(fd?.metadata?.dateTimeOriginal);
+        html += '<strong>Photo #' + (idx + 1) + '</strong><br>';
+        html += '<span style="color:#64748b;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
+        html += '🕐 ' + ts + '<br>';
+        html += '<div style="margin-top:6px;display:flex;gap:12px">';
+        html += '<a href="#" onclick="openGpsEditModal(' + idx + ');return false;" style="color:#2563eb">📍 Edit Location</a>';
+        html += '<a href="#" onclick="openMapPreview360(' + idx + ');return false;" style="color:#2563eb">🔭 View 360°</a>';
+        html += '</div>';
+    } else {
+        html += '<strong>' + count + ' photos at this location</strong>';
+        indices.forEach(idx => {
+            const fd = filesMetadata[idx];
+            const ts = formatExifDate(fd?.metadata?.dateTimeOriginal);
+            html += '<hr style="margin:5px 0;border:none;border-top:1px solid #e2e8f0">';
+            html += '<strong>Photo #' + (idx + 1) + '</strong> ';
+            html += '<span style="color:#64748b;font-size:0.78rem;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
+            html += '🕐 ' + ts + '<br>';
+            html += '<a href="#" onclick="openGpsEditModal(' + idx + ');return false;" style="color:#2563eb;margin-right:12px">📍 Edit Location</a>';
+            html += '<a href="#" onclick="openMapPreview360(' + idx + ');return false;" style="color:#2563eb">🔭 View 360°</a>';
+        });
+    }
+    html += '</div>';
+    return html;
+}
+
 function updateOverviewMap() {
     if (!mapVisible) return;
     if (!window.google || !window.google.maps) return;
@@ -2123,31 +2162,33 @@ function updateOverviewMap() {
             zoom: 2,
             center: { lat: 0, lng: 0 }
         });
+        overviewMap.addListener('click', () => {
+            overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
+        });
     }
 
     overviewMarkers.forEach(m => m.setMap(null));
     overviewMarkers = [];
 
-    // Group photos by GPS position
-    const posMap = new Map(); // key -> { lat, lng, numbers[] }
+    // Group photos by GPS position; store 0-based file indices
+    const posMap = new Map();
     for (let i = 0; i < selectedFiles.length; i++) {
         const fd = filesMetadata[i];
         if (!fd) continue;
         const gps = getEffectiveGps(fd);
         if (!gps) continue;
         const key = gpsKey(gps.lat, gps.lng);
-        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, numbers: [] });
-        posMap.get(key).numbers.push(i + 1);
+        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, indices: [] });
+        posMap.get(key).indices.push(i);
     }
 
     if (posMap.size === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
 
-    posMap.forEach(({ lat, lng, numbers }) => {
-        const count = numbers.length;
-        // Single photo: show row number. Multiple: show count to indicate overlap.
-        const labelText = count === 1 ? String(numbers[0]) : String(count);
+    posMap.forEach(({ lat, lng, indices }) => {
+        const count = indices.length;
+        const labelText = count === 1 ? String(indices[0] + 1) : String(count);
         bounds.extend({ lat, lng });
 
         const marker = new google.maps.Marker({
@@ -2163,22 +2204,18 @@ function updateOverviewMap() {
                 strokeWeight: 2
             },
             title: count === 1
-                ? 'Photo #' + numbers[0]
-                : count + ' photos at this location (#' + numbers.join(', #') + ')'
+                ? 'Photo #' + (indices[0] + 1)
+                : count + ' photos at this location'
         });
-        if (count > 1) {
-            const infoWindow = new google.maps.InfoWindow({
-                content: '<div style="font-size:0.85rem;line-height:1.6;min-width:120px">'
-                    + '<strong>' + count + ' photos at this location:</strong><br>'
-                    + numbers.map(n => 'Photo #' + n).join('<br>')
-                    + '</div>'
-            });
-            marker.addListener('click', function () {
-                overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
-                infoWindow.open(overviewMap, marker);
-            });
-            marker.infoWindow = infoWindow;
-        }
+
+        const infoWindow = new google.maps.InfoWindow({
+            content: buildMarkerInfoContent(indices)
+        });
+        marker.addListener('click', function () {
+            overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
+            infoWindow.open(overviewMap, marker);
+        });
+        marker.infoWindow = infoWindow;
 
         overviewMarkers.push(marker);
     });
