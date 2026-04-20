@@ -1,4 +1,5 @@
 import time
+import uuid
 import requests
 import json
 import os
@@ -458,6 +459,38 @@ def token_required(f):
 def healthz():
     """Lightweight health check endpoint for Docker/load balancers"""
     return jsonify({"status": "ok"}), 200
+
+# In-memory store for temporary photo previews (UUID -> bytes).
+# Pannellum sets crossOrigin='anonymous' which blocks blob/data URLs, so we
+# serve files from a normal HTTP URL with CORS headers instead.
+_preview_store: dict = {}
+
+@app.route('/preview_photo', methods=['POST'])
+@token_required
+def preview_photo_upload():
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'no file'}), 400
+    token = str(uuid.uuid4())
+    _preview_store[token] = (file.read(), file.content_type or 'image/jpeg')
+    # Prevent unbounded growth (keep at most 20 pending previews)
+    if len(_preview_store) > 20:
+        oldest = next(iter(_preview_store))
+        del _preview_store[oldest]
+    return jsonify({'url': f'/preview_photo/{token}'})
+
+@app.route('/preview_photo/<token>', methods=['GET'])
+def preview_photo_serve(token):
+    # No token_required: Pannellum uses crossOrigin='anonymous' (no cookies).
+    # The UUID is 128-bit random and the entry is deleted on first access.
+    entry = _preview_store.pop(token, None)
+    if entry is None:
+        return 'Not found', 404
+    data, content_type = entry
+    resp = Response(data, mimetype=content_type)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 @app.route('/')
 def index():

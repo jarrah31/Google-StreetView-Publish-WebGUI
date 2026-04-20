@@ -2160,19 +2160,40 @@ select option {
 /* Image preview modal */
 .image-preview-content {
   position: relative;
-  margin: auto;
-  padding: 20px;
-  width: 90%;
-  max-width: 1200px;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
+.image-preview-toolbar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2001;
+}
+
+.preview-toggle-btn {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#pannellum-viewer {
+  width: 100%;
+  height: 100%;
+}
+
 .image-preview-img {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 90vh;
   object-fit: contain;
   border-radius: var(--radius-sm);
   box-shadow: 0 10px 30px rgba(0,0,0,.5);
@@ -2192,18 +2213,17 @@ select option {
 .image-preview-close:hover { color: var(--primary); text-decoration: none; }
 
 .image-preview-filename {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
   color: #fff;
   background: rgba(0,0,0,.7);
-  padding: 8px 18px;
+  padding: 6px 14px;
   border-radius: 999px;
-  font-size: .95rem;
+  font-size: .85rem;
   text-align: center;
-  max-width: 80%;
+  max-width: 400px;
   word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Places modal */

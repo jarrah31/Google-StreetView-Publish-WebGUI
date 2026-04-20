@@ -6,6 +6,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifreader@3/dist/exif-reader.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry" async defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -261,8 +263,12 @@
     <div id="image-preview-modal" class="image-preview-modal">
         <div class="image-preview-content">
             <span class="image-preview-close">&times;</span>
-            <img id="image-preview-img" class="image-preview-img" src="" alt="Preview">
-            <div id="image-preview-filename" class="image-preview-filename"></div>
+            <div class="image-preview-toolbar">
+                <div id="image-preview-filename" class="image-preview-filename"></div>
+                <button id="preview-toggle-btn" class="page-link view-photos-link preview-toggle-btn">Flat View</button>
+            </div>
+            <div id="pannellum-viewer"></div>
+            <img id="image-preview-img" class="image-preview-img" src="" alt="Preview" style="display:none;">
         </div>
     </div>
 
@@ -690,7 +696,7 @@ function createFileRow(index, fileData) {
     const thumbnail = row.querySelector('.file-thumbnail');
     thumbnail.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent row click
-        showImagePreview(thumbnailUrl, file.name);
+        showImagePreview(thumbnailUrl, file.name, file);
     });
     
     // Add row click handler
@@ -1525,61 +1531,116 @@ function selectPlace(event, element) {
 }
 
 // Image preview modal functionality
+let pannellumViewer = null;
+let previewFlatMode = false;
+let previewCurrentUrl = null;
+let previewCurrentFile = null;
+
 function initializeImagePreviewModal() {
     const modal = document.getElementById('image-preview-modal');
     const closeBtn = modal.querySelector('.image-preview-close');
-    
-    // Close button handler
+
     closeBtn.addEventListener('click', hideImagePreview);
-    
-    // Click outside to close
+
     modal.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            hideImagePreview();
-        }
+        if (event.target === modal) hideImagePreview();
     });
-    
-    // Escape key to close
+
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && modal.style.display === 'flex') {
-            hideImagePreview();
-        }
+        if (event.key === 'Escape' && modal.style.display === 'flex') hideImagePreview();
+    });
+
+    document.getElementById('preview-toggle-btn').addEventListener('click', () => {
+        previewFlatMode = !previewFlatMode;
+        applyPreviewMode();
     });
 }
 
-function showImagePreview(imageUrl, filename) {
-    const modal = document.getElementById('image-preview-modal');
+// Pannellum sets crossOrigin='anonymous' which blocks blob: and data: URLs.
+// Fix: upload the file to a temporary in-memory Flask endpoint that serves it
+// back as a normal HTTP URL with CORS headers. localhost = no real network cost.
+async function getPreviewUrl(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/preview_photo', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!res.ok) throw new Error('Preview upload failed');
+    const { url } = await res.json();
+    return url;
+}
+
+async function applyPreviewMode() {
     const img = document.getElementById('image-preview-img');
-    const filenameDiv = document.getElementById('image-preview-filename');
-    
-    // Set image source and filename
-    img.src = imageUrl;
-    filenameDiv.textContent = filename;
-    
-    // Show modal and prevent body scroll
+    const viewer = document.getElementById('pannellum-viewer');
+    const toggleBtn = document.getElementById('preview-toggle-btn');
+
+    if (previewFlatMode) {
+        if (pannellumViewer) { pannellumViewer.destroy(); pannellumViewer = null; }
+        viewer.style.display = 'none';
+        img.src = previewCurrentUrl;
+        img.style.display = '';
+        toggleBtn.textContent = '360° View';
+    } else {
+        img.style.display = 'none';
+        img.src = '';
+        viewer.style.display = '';
+        if (pannellumViewer) { pannellumViewer.destroy(); pannellumViewer = null; }
+
+        try {
+            const panoramaUrl = previewCurrentFile
+                ? await getPreviewUrl(previewCurrentFile)
+                : previewCurrentUrl;
+
+            pannellumViewer = pannellum.viewer('pannellum-viewer', {
+                type: 'equirectangular',
+                panorama: panoramaUrl,
+                autoLoad: true,
+                showControls: true,
+                mouseZoom: true,
+                compass: false
+            });
+            toggleBtn.textContent = 'Flat View';
+        } catch (err) {
+            showFlashMessage('Failed to load 360° viewer: ' + err.message, 'error');
+            previewFlatMode = true;
+            applyPreviewMode();
+        }
+    }
+}
+
+function showImagePreview(imageUrl, filename, file = null) {
+    const modal = document.getElementById('image-preview-modal');
+    previewCurrentUrl = imageUrl;
+    previewCurrentFile = file;
+    previewFlatMode = false;
+
+    document.getElementById('image-preview-filename').textContent = filename;
+
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-    
-    // Add fade-in animation
+
     setTimeout(() => {
         modal.classList.add('show');
+        applyPreviewMode();
     }, 10);
 }
 
 function hideImagePreview() {
     const modal = document.getElementById('image-preview-modal');
-    const img = document.getElementById('image-preview-img');
-    
-    // Add fade-out animation
     modal.classList.remove('show');
-    
-    // Hide modal after animation and restore body scroll
+
     setTimeout(() => {
         modal.style.display = 'none';
         document.body.style.overflow = '';
-        img.src = ''; // Clean up image source
+        if (pannellumViewer) { pannellumViewer.destroy(); pannellumViewer = null; }
+        document.getElementById('image-preview-img').src = '';
+        previewCurrentUrl = null;
+        previewCurrentFile = null;
     }, 300);
-    }
+}
     
     // Check upload status for selected files
     async function checkUploadStatusForFiles() {
