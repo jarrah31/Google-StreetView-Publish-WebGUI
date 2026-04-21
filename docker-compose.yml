@@ -1,6 +1,6 @@
 services:
   streetview-app:
-    image: jarrah31/streetview-publish-webgui:latest  
+    image: ghcr.io/jarrah31/gsv-publish-webgui:latest
     container_name: streetview-app
     restart: unless-stopped
     ports:

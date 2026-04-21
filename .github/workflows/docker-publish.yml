@@ -1,0 +1,69 @@
+name: Build and Push Docker Image
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/jarrah31/gsv-publish-webgui
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate APP_VERSION matches release tag
+        run: |
+          APP_VERSION=$(grep -m1 'APP_VERSION = ' app.py | sed 's/.*"\(.*\)".*/\1/')
+          RELEASE_TAG="${{ github.ref_name }}"
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+          if [ "$APP_VERSION" != "$RELEASE_VERSION" ]; then
+            echo "❌ APP_VERSION in app.py ($APP_VERSION) does not match release tag ($RELEASE_TAG)"
+            exit 1
+          fi
+          echo "✓ APP_VERSION ($APP_VERSION) matches release tag ($RELEASE_TAG)"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Google StreetView Publish WebGUI
+            org.opencontainers.image.description=Web GUI for publishing and managing Google Street View photospheres
+            org.opencontainers.image.url=https://github.com/jarrah31/Google-StreetView-Publish-WebGUI
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

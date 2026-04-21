@@ -4,7 +4,12 @@
 # Recommended release flow:
 #   1. Bump APP_VERSION in app.py
 #   2. make docker-test   ← build for local arch + /healthz smoke test
-#   3. make docker-push   ← build multi-arch + push both tags to Docker Hub
+#   3. Create a GitHub Release tagged vX.Y.Z → CI builds and pushes automatically
+#
+# Manual push (emergency / CI bypass):
+#   Requires: docker login ghcr.io -u <github-username> --password <PAT>
+#   (PAT needs write:packages scope)
+#   make docker-push
 #
 # Other targets:
 #   make               – show this help
@@ -15,7 +20,7 @@
 
 # Read the canonical version from app.py – single source of truth
 VERSION   := $(shell grep -m1 'APP_VERSION = ' app.py | sed 's/.*"\(.*\)".*/\1/')
-IMAGE     := jarrah31/streetview-publish-webgui
+IMAGE     := ghcr.io/jarrah31/gsv-publish-webgui
 PLATFORMS := linux/amd64,linux/arm64
 
 # Detect local CPU architecture for single-platform local test builds
@@ -34,8 +39,11 @@ help:
 	@echo ""
 	@echo "  Recommended release flow:"
 	@echo "    1. Bump APP_VERSION in app.py"
-	@echo "    2. make docker-test   ← build locally + /healthz smoke test"
-	@echo "    3. make docker-push   ← build multi-arch + push to Docker Hub"
+	@echo "    2. make docker-test               ← build locally + /healthz smoke test"
+	@echo "    3. Create a GitHub Release vX.Y.Z ← CI builds + pushes to ghcr.io"
+	@echo ""
+	@echo "  Manual push (requires: docker login ghcr.io -u <user> --password <PAT>):"
+	@echo "    make docker-push"
 	@echo ""
 	@echo "  All targets:"
 	@echo "    make version              Print the version read from app.py"

@@ -14,7 +14,9 @@ Features include:
 - Delete your 360 photos
 - Add and edit connections between photospheres for navigating between images
 
-You will need to (full insructions below):
+Docker image: `ghcr.io/jarrah31/gsv-publish-webgui` — built automatically on each GitHub Release.
+
+You will need to (full instructions below):
 - Run the application within a Docker container
 - Create a Google Cloud Developer Project
 - Create an API Key and OAuth 2.0 Client ID
