@@ -548,6 +548,29 @@ def get_connections_by_photo_ids(photo_ids):
         if conn:
             conn.close()
 
+def add_connection(source_photo_id, target_photo_id):
+    """Add a single connection row if it doesn't already exist. Non-fatal if either photo is missing."""
+    logger.debug(f"=== FUNCTION DB: add_connection ===")
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute(
+            'INSERT OR IGNORE INTO connections (source_photo_id, target_photo_id) VALUES (?, ?)',
+            (source_photo_id, target_photo_id)
+        )
+        conn.commit()
+        added = cursor.rowcount > 0
+        logger.debug(f"Database - add_connection {source_photo_id} -> {target_photo_id}: {'added' if added else 'already exists'}")
+        return added
+    except Exception as e:
+        logger.error(f"Database - Error adding connection {source_photo_id} -> {target_photo_id}: {str(e)}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def get_nearby_photos(lat, lng, min_lat, max_lat, min_lng, max_lng, center_photo_id=None):
     """
     Get photos that are within a specified bounding box

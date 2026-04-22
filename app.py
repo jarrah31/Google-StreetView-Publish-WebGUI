@@ -38,7 +38,7 @@ load_dotenv()
 if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-APP_VERSION = "3.2.0"
+APP_VERSION = "3.2.1"
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -1451,13 +1451,14 @@ def get_connections():
 def create_connections():
     app.logger.debug(f"=== FUNCTION APP: create_connections ===")
     request_data = request.get_json()
+    reciprocal = request_data.pop('reciprocal', False)
     credentials = get_credentials()
 
     app.logger.debug("Connections Request Data:")
     app.logger.debug(request_data)
 
     try:
-        # Make API call to create connections
+        # Make API call to create source → destination connections
         response = requests.post(
             'https://streetviewpublish.googleapis.com/v1/photos:batchUpdate',
             headers={
@@ -1472,9 +1473,71 @@ def create_connections():
         app.logger.debug("Connections Response:")
         app.logger.debug(response.json())
 
-        main_message = 'Connections created successfully'
+        reciprocal_added = 0
+        reciprocal_errors = []
+
+        if reciprocal and request_data.get('updatePhotoRequests'):
+            first_req = request_data['updatePhotoRequests'][0]
+            source_id = first_req['photo']['photoId']['id']
+            dest_ids = [c['target']['id'] for c in first_req['photo'].get('connections', [])]
+
+            # For each destination, fetch its current connections, add source if missing
+            reciprocal_requests = []
+            db_updates = []
+            for dest_id in dest_ids:
+                try:
+                    dest_photo = get_photo(credentials.token, dest_id)
+                    existing = dest_photo.get('connections', [])
+                    existing_target_ids = {c['target']['id'] for c in existing}
+                    if source_id not in existing_target_ids:
+                        new_conns = existing + [{'target': {'id': source_id}}]
+                        reciprocal_requests.append({
+                            'updateMask': 'connections',
+                            'photo': {
+                                'photoId': {'id': dest_id},
+                                'connections': new_conns
+                            }
+                        })
+                        db_updates.append(dest_id)
+                except Exception as e:
+                    app.logger.error(f"Error fetching connections for {dest_id}: {e}")
+                    reciprocal_errors.append(dest_id)
+
+            # Send reciprocal updates in batches of 20 (API limit)
+            for i in range(0, len(reciprocal_requests), 20):
+                batch = reciprocal_requests[i:i + 20]
+                try:
+                    rec_resp = requests.post(
+                        'https://streetviewpublish.googleapis.com/v1/photos:batchUpdate',
+                        headers={
+                            'Authorization': f'Bearer {credentials.token}',
+                            'Content-Type': 'application/json'
+                        },
+                        json={'updatePhotoRequests': batch},
+                        timeout=30
+                    )
+                    rec_resp.raise_for_status()
+                    for req in batch:
+                        dest_id = req['photo']['photoId']['id']
+                        database.add_connection(dest_id, source_id)
+                        reciprocal_added += 1
+                except Exception as e:
+                    app.logger.error(f"Error creating reciprocal connections batch: {e}")
+                    for req in batch:
+                        reciprocal_errors.append(req['photo']['photoId']['id'])
+
         details = "Please allow up to 10 mins for the new connections to be visible on this page. It will take several hours to appear on the photosphere itself."
-        flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')
+        if reciprocal:
+            if reciprocal_errors:
+                main_message = f'Connections created. Reciprocal links added for {reciprocal_added} photo(s); failed for {len(reciprocal_errors)}.'
+                flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'warning')
+            else:
+                suffix = f' including {reciprocal_added} reciprocal link(s)' if reciprocal_added else ' (destination photos already had reciprocal links)'
+                main_message = f'Connections created successfully{suffix}'
+                flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')
+        else:
+            main_message = 'Connections created successfully'
+            flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')
 
         return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:

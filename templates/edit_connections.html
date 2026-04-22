@@ -105,7 +105,13 @@
             <div id="map" style="height: 600px; width: 100%;"></div>
             <p class="map-description">Use the tick boxes on the left to select the photos that you wish to establish connections to from the main photo, then press "Create Connections" button to submit your request.</p>
             <p class="map-description">You can also select the map markers to load the Edit Connections page for that photo.</p>
-            <button class="button-22 button-spacing" type="button" id="create-connections">Create Connections</button>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                <button class="button-22 button-spacing" type="button" id="create-connections">Create Connections</button>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;" title="Also add a link back from each selected destination photo to this photo">
+                    <input type="checkbox" id="reciprocal-connections" style="cursor:pointer;">
+                    Reciprocal connections
+                </label>
+            </div>
             <button class="view-btn" type="button" id="toggle-connections">Toggle All Visible Connections</button>
             <!-- Removed the manual database update reminder since we now auto-update the database -->
         </div>
@@ -312,6 +318,13 @@
     document.addEventListener('DOMContentLoaded', function() {
         retryInitializeMap();
 
+        // Restore reciprocal checkbox preference
+        const reciprocalCheckbox = document.getElementById('reciprocal-connections');
+        reciprocalCheckbox.checked = localStorage.getItem('reciprocalConnections') === 'true';
+        reciprocalCheckbox.addEventListener('change', function() {
+            localStorage.setItem('reciprocalConnections', this.checked);
+        });
+
         // Event listener for create connections button
         document.getElementById('create-connections').addEventListener('click', function() {
             createConnections();
@@ -426,7 +439,8 @@
     async function createConnections() {
         const createButton = document.getElementById('create-connections');
         const originalButtonText = createButton.textContent;
-        createButton.textContent = 'Please Wait...';
+        const reciprocal = document.getElementById('reciprocal-connections').checked;
+        createButton.textContent = reciprocal ? 'Please Wait... (adding reciprocal links)' : 'Please Wait...';
         createButton.disabled = true;
 
         const sourcePhotoId = document.getElementById('source-photo-id').value;
@@ -488,6 +502,7 @@
         };
 
         const requestBody = {
+            reciprocal: reciprocal,
             updatePhotoRequests: [
                 {
                     updateMask: "connections",
