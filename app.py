@@ -1796,7 +1796,7 @@ def delete_photo():
     return redirect(url_for('photos_page'))
 
 @app.route('/delete_photos_bulk', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("200 per minute")
 @token_required
 def delete_photos_bulk():
     app.logger.debug(f"=== FUNCTION APP: delete_photos_bulk ===")
