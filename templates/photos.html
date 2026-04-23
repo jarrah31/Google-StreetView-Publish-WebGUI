@@ -696,6 +696,7 @@
     // ========== INLINE PAGE MAP ==========
     let pageMap = null;
     let pageMapMarkers = [];
+    let pageMapMarkerByPhotoId = {};
     let pageMapVisible = false;
     const PAGE_MAP_LS_KEY = 'photos_page_map_open';
 
@@ -725,6 +726,7 @@
         }
         pageMapMarkers.forEach(m => m.setMap(null));
         pageMapMarkers = [];
+        pageMapMarkerByPhotoId = {};
 
         const photos = getPagePhotos();
         if (!photos.length) return;
@@ -751,7 +753,9 @@
             });
             marker.addListener('click', () => { pageMapMarkers.forEach(m => m.iw && m.iw.close()); iw.open(pageMap, marker); });
             marker.iw = iw;
+            marker.photoId = p.photoId;
             pageMapMarkers.push(marker);
+            pageMapMarkerByPhotoId[p.photoId] = marker;
         });
 
         if (photos.length === 1) { pageMap.setCenter(bounds.getCenter()); pageMap.setZoom(15); }
@@ -806,6 +810,11 @@
         const selectAll = document.getElementById('select-all-delete');
         selectAll.checked = all.length > 0 && checked.length === all.length;
         selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+        const checkedIds = new Set([...checked].map(cb => cb.dataset.photoId));
+        Object.entries(pageMapMarkerByPhotoId).forEach(([photoId, marker]) => {
+            const isChecked = checkedIds.has(photoId);
+            marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: isChecked ? '#dc2626' : '#2563eb', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 });
+        });
     }
 
     function toggleSelectAll(cb) {
