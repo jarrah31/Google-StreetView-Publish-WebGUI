@@ -1988,6 +1988,7 @@ select option {
 
 #show-page-map-btn { margin-left: auto; }
 #bulk-delete-btn { }
+.row-num-col { width: 36px; text-align: center; color: var(--text-secondary); font-size: 0.82rem; }
 .delete-col-header { width: 64px; text-align: center; font-size: 0.78rem; }
 .delete-col-header > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .delete-col { width: 64px; text-align: center; }
