@@ -1779,6 +1779,18 @@ def delete_photo():
         flash(f'Failed to delete photo. Error: {response.status_code}', 'error')
     else:
         database.delete_photo(photo_id)
+        # Remove the upload JSON so the file can be re-uploaded without
+        # showing as "Already Uploaded"
+        uploads_dir = config['uploads']['directory']
+        json_filename = get_filenames(uploads_dir).get(photo_id)
+        if json_filename:
+            try:
+                os.remove(os.path.join(uploads_dir, json_filename))
+                global _filenames_cache_time
+                _filenames_cache_time = 0  # invalidate cache
+                app.logger.info(f"Deleted upload JSON {json_filename} for photo {photo_id}")
+            except OSError as e:
+                app.logger.warning(f"Could not delete upload JSON {json_filename}: {e}")
         flash('Photo deleted successfully.', 'success')
 
     return redirect(url_for('photos_page'))
