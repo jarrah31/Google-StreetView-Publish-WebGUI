@@ -353,6 +353,18 @@
     </div>
 </div>
 
+<!-- Bulk Delete Progress Modal -->
+<div id="bulk-delete-progress-modal" class="bulk-delete-modal">
+    <div class="bulk-delete-modal-content">
+        <h3>Deleting Photos&hellip;</h3>
+        <p id="bulk-delete-progress-text" style="margin:0 0 12px;"></p>
+        <div class="bulk-progress-track">
+            <div id="bulk-progress-bar" class="bulk-progress-fill"></div>
+        </div>
+        <p id="bulk-delete-progress-status" style="margin:10px 0 0; font-size:0.82rem; color:var(--text-secondary); min-height:1.2em;"></p>
+    </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div id="delete-modal" class="delete-modal">
     <div class="delete-modal-content">
@@ -838,36 +850,56 @@
         if (e.target === this) closeBulkDeleteModal();
     });
 
+    function showBulkProgress(done, total, statusMsg) {
+        const modal = document.getElementById('bulk-delete-progress-modal');
+        modal.classList.add('open');
+        document.getElementById('bulk-delete-progress-text').textContent = `Deleting ${done} of ${total}…`;
+        document.getElementById('bulk-progress-bar').style.width = `${Math.round((done / total) * 100)}%`;
+        document.getElementById('bulk-delete-progress-status').textContent = statusMsg || '';
+    }
+
+    function hideBulkProgress() {
+        document.getElementById('bulk-delete-progress-modal').classList.remove('open');
+    }
+
     async function executeBulkDelete() {
         closeBulkDeleteModal();
         const checked = [...document.querySelectorAll('.delete-checkbox:checked')];
         const photoIds = checked.map(cb => cb.dataset.photoId);
         if (!photoIds.length) return;
 
-        const btn = document.getElementById('bulk-delete-btn');
-        btn.disabled = true;
-        btn.textContent = 'Deleting…';
+        const total = photoIds.length;
+        let deletedCount = 0;
+        const failed = [];
 
-        try {
-            const resp = await fetch('/delete_photos_bulk', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-                body: JSON.stringify({ photo_ids: photoIds })
-            });
-            const result = await resp.json();
+        showBulkProgress(0, total, '');
 
-            if (result.deleted) {
-                result.deleted.forEach(photoId => {
+        for (let i = 0; i < photoIds.length; i++) {
+            const photoId = photoIds[i];
+            showBulkProgress(i + 1, total, photoId);
+            try {
+                const resp = await fetch('/delete_photos_bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                    body: JSON.stringify({ photo_ids: [photoId] })
+                });
+                const result = await resp.json();
+                if (result.deleted && result.deleted.includes(photoId)) {
                     const cb = document.querySelector(`.delete-checkbox[data-photo-id="${photoId}"]`);
                     if (cb) cb.closest('tr').remove();
-                });
+                    deletedCount++;
+                } else {
+                    failed.push(photoId);
+                }
+            } catch (err) {
+                failed.push(photoId);
             }
+        }
 
-            if (result.failed && result.failed.length > 0) {
-                alert(`Deleted ${result.deleted.length} photo(s).\nFailed to delete ${result.failed.length} photo(s): ${result.failed.map(f => f.photo_id).join(', ')}`);
-            }
-        } catch (err) {
-            alert('An error occurred during bulk delete. Please refresh and try again.');
+        hideBulkProgress();
+
+        if (failed.length > 0) {
+            alert(`Deleted ${deletedCount} photo(s).\nFailed to delete ${failed.length} photo(s).`);
         }
 
         updateBulkDeleteBtn();

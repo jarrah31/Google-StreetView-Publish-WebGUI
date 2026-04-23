@@ -1998,6 +1998,8 @@ select option {
 .bulk-delete-modal-content h3 { margin: 0 0 12px; color: var(--error); }
 .bulk-delete-modal-content p { margin: 0 0 20px; color: var(--text-secondary); }
 .bulk-delete-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.bulk-progress-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.bulk-progress-fill { height: 100%; width: 0%; background: var(--error); border-radius: 5px; transition: width 0.25s ease; }
 
 /* DateRangePicker overrides */
 .daterangepicker {
