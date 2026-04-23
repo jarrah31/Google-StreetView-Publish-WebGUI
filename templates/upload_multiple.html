@@ -140,8 +140,25 @@
                                     <div class="gps-fix-step-body">
                                         <span class="gps-fix-step-label">Adjust delta threshold and re-validate if needed</span>
                                         <div class="gps-fix-step-control">
-                                            <input type="number" id="gpx-threshold-input" class="gpx-threshold-input" value="2" min="1" max="60" step="1" title="Photos within this many seconds of a GPX trackpoint will have their GPS updated.">
+                                            <div class="num-stepper">
+                                                <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="-1">−</button>
+                                                <input type="number" id="gpx-threshold-input" class="gpx-threshold-input" value="2" min="1" max="60" step="1" title="Photos within this many seconds of a GPX trackpoint will have their GPS updated.">
+                                                <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="1">+</button>
+                                            </div>
                                             <span class="gps-fix-step-hint">seconds</span>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="gps-fix-step">
+                                    <div class="gps-fix-step-body">
+                                        <span class="gps-fix-step-label">Adjust time skew <span class="gps-fix-step-hint">(use Show Map to see changes)</span></span>
+                                        <div class="gps-fix-step-control">
+                                            <div class="num-stepper">
+                                                <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="-1">−</button>
+                                                <input type="number" id="gpx-skew-input" class="gpx-threshold-input" value="0" min="-3600" max="3600" step="1" title="Shift photo timestamps by this many seconds to correct camera clock drift. Negative = camera ran fast (photos timestamped ahead of GPS); positive = camera ran slow. Map markers update live.">
+                                                <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="1">+</button>
+                                            </div>
+                                            <span class="gps-fix-step-hint">seconds (live)</span>
                                         </div>
                                     </div>
                                 </li>
@@ -161,6 +178,11 @@
                     <div id="overview-map-container" style="display:none;">
                         <div id="overview-map"></div>
                         <div id="map-resize-handle"></div>
+                        <div id="map-legend" class="map-legend" style="display:none;">
+                            <span class="legend-item"><span class="legend-dot" style="background:#2563eb"></span>Original GPS</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>GPX preview</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#d97706"></span>Multiple photos</span>
+                        </div>
                     </div>
 
                     <!-- Progress Summary -->
@@ -426,6 +448,27 @@ function initializeMultipleUpload() {
     document.getElementById('gpx-threshold-input').addEventListener('input', () => {
         if (gpxProcessed) populateReviewTable();
     });
+    document.querySelectorAll('.stepper-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = document.getElementById(btn.dataset.target);
+            const step = parseFloat(input.step) || 1;
+            const min  = input.min !== '' ? parseFloat(input.min) : -Infinity;
+            const max  = input.max !== '' ? parseFloat(input.max) :  Infinity;
+            const next = Math.min(max, Math.max(min, (parseFloat(input.value) || 0) + parseFloat(btn.dataset.delta) * step));
+            input.value = next;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+
+    let gpxSkewTimer = null;
+    document.getElementById('gpx-skew-input').addEventListener('input', () => {
+        if (!gpxValidated) return;
+        clearTimeout(gpxSkewTimer);
+        gpxSkewTimer = setTimeout(rerunGpxMatching, 300);
+    });
+    document.getElementById('utc-offset-input').addEventListener('change', () => {
+        if (gpxValidated) rerunGpxMatching();
+    });
 
     // Set initial section visibility (show file selection, hide review)
     updateSectionVisibility();
@@ -607,7 +650,7 @@ function hasEssentialPanoramaMetadata(metadata) {
     );
 }
 
-function populateReviewTable() {
+function populateReviewTable(preserveMapView = false) {
     const gpxDeltaTh = document.getElementById('gpx-delta-th');
     if (gpxDeltaTh) gpxDeltaTh.style.display = gpxProcessed ? '' : 'none';
 
@@ -625,7 +668,7 @@ function populateReviewTable() {
     }
     
     updateSelectionCount();
-    updateOverviewMap();
+    updateOverviewMap(preserveMapView);
 }
 
 function createFileRow(index, fileData) {
@@ -1821,6 +1864,10 @@ function resetToInitialState() {
     if (offsetInput) offsetInput.value = '0';
     const thresholdInput = document.getElementById('gpx-threshold-input');
     if (thresholdInput) thresholdInput.value = '2';
+    const skewInput = document.getElementById('gpx-skew-input');
+    if (skewInput) skewInput.value = '0';
+    const mapLegend = document.getElementById('map-legend');
+    if (mapLegend) mapLegend.style.display = 'none';
 
     console.log('Reset to initial state completed');
 }
@@ -2145,10 +2192,17 @@ let mapVisible = false;
 
 function getEffectiveGps(fileData) {
     if (fileData.editedGPS && fileData.editedGPS.isEdited) {
-        return { lat: fileData.editedGPS.latitude, lng: fileData.editedGPS.longitude };
+        return { lat: fileData.editedGPS.latitude, lng: fileData.editedGPS.longitude, source: 'fixed' };
+    }
+    if (gpxValidated && fileData.gpxDelta && fileData.gpxDelta.matched) {
+        const needsFix = (fileData.metadata && !fileData.metadata.hasGpsData && fileData.metadata.hasXmpData)
+                      || fileData.hasDuplicateGps;
+        if (needsFix) {
+            return { lat: fileData.gpxDelta.lat, lng: fileData.gpxDelta.lng, source: 'gpx-preview' };
+        }
     }
     if (fileData.metadata && fileData.metadata.latitude != null) {
-        return { lat: fileData.metadata.latitude, lng: fileData.metadata.longitude };
+        return { lat: fileData.metadata.latitude, lng: fileData.metadata.longitude, source: 'original' };
     }
     return null;
 }
@@ -2207,7 +2261,7 @@ function buildMarkerInfoContent(indices) {
     return html;
 }
 
-function updateOverviewMap() {
+function updateOverviewMap(preserveView = false) {
     if (!mapVisible) return;
     if (!window.google || !window.google.maps) return;
 
@@ -2234,18 +2288,29 @@ function updateOverviewMap() {
         const gps = getEffectiveGps(fd);
         if (!gps) continue;
         const key = gpsKey(gps.lat, gps.lng);
-        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, indices: [] });
-        posMap.get(key).indices.push(i);
+        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, indices: [], hasPreview: false });
+        const entry = posMap.get(key);
+        entry.indices.push(i);
+        if (gps.source === 'gpx-preview') entry.hasPreview = true;
     }
 
     if (posMap.size === 0) return;
 
+    const anyPreview = [...posMap.values()].some(e => e.hasPreview);
+    const mapLegend = document.getElementById('map-legend');
+    if (mapLegend) mapLegend.style.display = anyPreview ? '' : 'none';
+
     const bounds = new google.maps.LatLngBounds();
 
-    posMap.forEach(({ lat, lng, indices }) => {
+    posMap.forEach(({ lat, lng, indices, hasPreview }) => {
         const count = indices.length;
         const labelText = count === 1 ? String(indices[0] + 1) : String(count);
         bounds.extend({ lat, lng });
+
+        const fillColor = hasPreview ? '#f97316' : (count > 1 ? '#d97706' : '#2563eb');
+        const markerTitle = hasPreview
+            ? `GPX preview — Photo #${indices[0] + 1}` + (count > 1 ? ` (+${count - 1} more)` : '')
+            : (count === 1 ? 'Photo #' + (indices[0] + 1) : count + ' photos at this location');
 
         const marker = new google.maps.Marker({
             position: { lat, lng },
@@ -2254,14 +2319,12 @@ function updateOverviewMap() {
             icon: {
                 path: google.maps.SymbolPath.CIRCLE,
                 scale: 14,
-                fillColor: count > 1 ? '#d97706' : '#2563eb',
+                fillColor,
                 fillOpacity: 1,
                 strokeColor: 'white',
                 strokeWeight: 2
             },
-            title: count === 1
-                ? 'Photo #' + (indices[0] + 1)
-                : count + ' photos at this location'
+            title: markerTitle
         });
 
         const infoWindow = new google.maps.InfoWindow({
@@ -2276,11 +2339,13 @@ function updateOverviewMap() {
         overviewMarkers.push(marker);
     });
 
-    if (posMap.size === 1) {
-        overviewMap.setCenter(bounds.getCenter());
-        overviewMap.setZoom(15);
-    } else {
-        overviewMap.fitBounds(bounds, 50);
+    if (!preserveView) {
+        if (posMap.size === 1) {
+            overviewMap.setCenter(bounds.getCenter());
+            overviewMap.setZoom(15);
+        } else {
+            overviewMap.fitBounds(bounds, 50);
+        }
     }
 }
 
@@ -2572,6 +2637,37 @@ function formatDeltaCell(fileData) {
 }
 
 
+function getGpxSkewMs() {
+    return (parseFloat(document.getElementById('gpx-skew-input')?.value) || 0) * 1000;
+}
+
+function rerunGpxMatching() {
+    if (!gpxValidated || gpxPoints.length === 0) return;
+
+    const offsetMs = -(parseFloat(document.getElementById('utc-offset-input').value) || 0) * 3600 * 1000;
+    const totalOffsetMs = offsetMs + getGpxSkewMs();
+    let matchCount = 0;
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const fd = filesMetadata[i];
+        if (!fd) continue;
+
+        const captureTime = fd.metadata && fd.metadata.dateTimeOriginal;
+        if (!captureTime) { fd.gpxDelta = { reason: 'no capture timestamp in photo' }; continue; }
+        const photoDate = exifDateToDate(captureTime);
+        if (!photoDate) { fd.gpxDelta = { reason: 'unrecognised timestamp format' }; continue; }
+
+        const adjustedDate = totalOffsetMs !== 0 ? new Date(photoDate.getTime() + totalOffsetMs) : photoDate;
+        fd.gpxDelta = findNearestGpxPoint(gpxPoints, adjustedDate);
+
+        const needsFix = (fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData) || fd.hasDuplicateGps;
+        if (needsFix && fd.gpxDelta.matched) matchCount++;
+    }
+
+    document.getElementById('fix-gps-btn').disabled = matchCount === 0;
+    populateReviewTable(true);
+}
+
 async function runGpxValidate() {
     const gpxInput = document.getElementById('gpx-file-input');
     if (!gpxInput.files.length) {
@@ -2601,6 +2697,7 @@ async function runGpxValidate() {
     overlayText.textContent = 'Matching photo timestamps to GPX track...';
 
     const offsetMs = -(parseFloat(document.getElementById('utc-offset-input').value) || 0) * 3600 * 1000;
+    const totalOffsetMs = offsetMs + getGpxSkewMs();
 
     let matchCount = 0, noMatchCount = 0;
 
@@ -2619,7 +2716,7 @@ async function runGpxValidate() {
             continue;
         }
 
-        const adjustedDate = offsetMs !== 0 ? new Date(photoDate.getTime() + offsetMs) : photoDate;
+        const adjustedDate = totalOffsetMs !== 0 ? new Date(photoDate.getTime() + totalOffsetMs) : photoDate;
         fd.gpxDelta = findNearestGpxPoint(gpxPoints, adjustedDate);
 
         const needsFix = (fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData)

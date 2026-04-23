@@ -1778,7 +1778,8 @@ def delete_photo():
     if response.status_code != 200:
         flash(f'Failed to delete photo. Error: {response.status_code}', 'error')
     else:
-        flash('Photo deleted successfully. Remember to update the database.', 'success')
+        database.delete_photo(photo_id)
+        flash('Photo deleted successfully.', 'success')
 
     return redirect(url_for('photos_page'))
 

@@ -498,6 +498,27 @@ def clean_deleted_photos(existing_photo_ids):
     finally:
         conn.close()
 
+def delete_photo(photo_id):
+    """Remove a single photo and its related records from the database."""
+    logger.debug(f"=== FUNCTION DB: delete_photo === photo_id={photo_id}")
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM places WHERE photo_id = ?", (photo_id,))
+        cursor.execute("DELETE FROM connections WHERE source_photo_id = ? OR target_photo_id = ?",
+                       (photo_id, photo_id))
+        cursor.execute("DELETE FROM photos WHERE photo_id = ?", (photo_id,))
+        conn.commit()
+        logger.info(f"Database - Deleted photo {photo_id} and related records")
+        return True
+    except Exception as e:
+        logger.error(f"Database - Error deleting photo {photo_id}: {str(e)}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 def get_connections_by_photo_ids(photo_ids):
     """
     Fetch all connections for a list of photo IDs from the database
