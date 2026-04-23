@@ -1795,6 +1795,46 @@ def delete_photo():
 
     return redirect(url_for('photos_page'))
 
+@app.route('/delete_photos_bulk', methods=['POST'])
+@limiter.limit("10 per minute")
+@token_required
+def delete_photos_bulk():
+    app.logger.debug(f"=== FUNCTION APP: delete_photos_bulk ===")
+    data = request.get_json()
+    if not data or not data.get('photo_ids'):
+        return jsonify({'success': False, 'error': 'No photo IDs provided'}), 400
+
+    photo_ids = [str(pid).strip() for pid in data['photo_ids'] if pid]
+    credentials = get_credentials()
+    uploads_dir = config['uploads']['directory']
+    deleted, failed = [], []
+
+    for photo_id in photo_ids:
+        url = f'https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?photoId={photo_id}'
+        headers = {'Authorization': f'Bearer {credentials.token}'}
+        try:
+            resp = requests.delete(url, headers=headers, timeout=30)
+            if resp.status_code == 200:
+                database.delete_photo(photo_id)
+                json_filename = get_filenames(uploads_dir).get(photo_id)
+                if json_filename:
+                    try:
+                        os.remove(os.path.join(uploads_dir, json_filename))
+                    except OSError:
+                        pass
+                deleted.append(photo_id)
+                app.logger.info(f"Bulk delete: removed photo {photo_id}")
+            else:
+                failed.append({'photo_id': photo_id, 'error': f'API error {resp.status_code}'})
+        except Exception as e:
+            failed.append({'photo_id': photo_id, 'error': str(e)})
+
+    # Invalidate filename cache once after all deletions
+    global _filenames_cache_time
+    _filenames_cache_time = 0
+
+    return jsonify({'success': True, 'deleted': deleted, 'failed': failed})
+
 @app.route('/update_db', methods=['POST'])
 @token_required
 def update_database():

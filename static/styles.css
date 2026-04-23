@@ -1955,6 +1955,16 @@ select option {
   margin-top: 10px;
   margin-bottom: 5px;
 }
+#bulk-delete-btn { margin-left: auto; }
+.delete-col-header { width: 64px; text-align: center; font-size: 0.78rem; }
+.delete-col { width: 64px; text-align: center; }
+.delete-col input[type="checkbox"], .delete-col-header input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--error); }
+.bulk-delete-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; }
+.bulk-delete-modal.open { display: flex; }
+.bulk-delete-modal-content { background: var(--bg-surface); border-radius: var(--radius); padding: 24px; max-width: 420px; width: 90%; box-shadow: var(--shadow-md); }
+.bulk-delete-modal-content h3 { margin: 0 0 12px; color: var(--error); }
+.bulk-delete-modal-content p { margin: 0 0 20px; color: var(--text-secondary); }
+.bulk-delete-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* DateRangePicker overrides */
 .daterangepicker {

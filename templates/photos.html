@@ -3,6 +3,7 @@
 {% block title %}Photos{% endblock %}
 
 {% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <!-- Date Range Picker Dependencies (pinned versions to prevent breaking changes) -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js"></script>
@@ -80,6 +81,7 @@
             {% if status_filter or places_filter or capture_date_from or capture_date_to or upload_date_from or upload_date_to %}
             <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order) }}" class="clear-filters-btn">× Clear filters</a>
             {% endif %}
+            <button id="bulk-delete-btn" class="page-link danger-button" style="display:none;" onclick="openBulkDeleteModal()">Delete Selected (<span id="bulk-delete-count">0</span>)</button>
         </div>
     </div>
 
@@ -186,6 +188,10 @@
                         <a href="{{ url_for('list_photos_table_page', sort_by='heading', sort_order='asc' if sort_by == 'heading' and sort_order == 'desc' else 'desc', per_page=per_page, page=page, status_filter=status_filter, places_filter=places_filter, capture_date_from=capture_date_from, capture_date_to=capture_date_to, upload_date_from=upload_date_from, upload_date_to=upload_date_to) }}"{% if sort_by == 'heading' %} class="sort-active"{% endif %}>Heading{% if sort_by == 'heading' %} <span class="sort-arrow">{% if sort_order == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</a>
                     </th>
                     <th>Actions</th>
+                    <th class="delete-col-header">
+                        <input type="checkbox" id="select-all-delete" title="Select / deselect all" onchange="toggleSelectAll(this)">
+                        <div>Delete</div>
+                    </th>
                 </tr>
             </thead>
             <tbody id="photo-table-body">
@@ -240,6 +246,9 @@
                             <option value="{{ url_for('edit_connections', photo_id=photo.photo_id) }}">Edit Connections</option>
                             <option value="delete:{{ photo.photo_id }}" class="delete-option" style="color: #c0392b; font-weight: bold;">⚠ Delete Photo</option>
                         </select>
+                    </td>
+                    <td class="delete-col">
+                        <input type="checkbox" class="delete-checkbox" data-photo-id="{{ photo.photo_id }}">
                     </td>
                 </tr>
                 {% endfor %}
@@ -307,6 +316,18 @@
         </div>
     </div>
     {% endif %}
+</div>
+
+<!-- Bulk Delete Modal -->
+<div id="bulk-delete-modal" class="bulk-delete-modal">
+    <div class="bulk-delete-modal-content">
+        <h3>Delete Photos</h3>
+        <p>Delete <strong><span id="bulk-delete-count-modal">0</span> photo(s)</strong> from Google Street View? This cannot be undone.</p>
+        <div class="bulk-delete-modal-actions">
+            <button class="page-link" onclick="closeBulkDeleteModal()">Cancel</button>
+            <button class="page-link danger-button" onclick="executeBulkDelete()">Delete</button>
+        </div>
+    </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
@@ -644,6 +665,76 @@
         window.location.href = currentUrl.toString();
     }
     
+    // ========== BULK DELETE ==========
+    const csrfToken = () => document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    function updateBulkDeleteBtn() {
+        const checked = document.querySelectorAll('.delete-checkbox:checked');
+        document.getElementById('bulk-delete-count').textContent = checked.length;
+        document.getElementById('bulk-delete-btn').style.display = checked.length > 0 ? '' : 'none';
+        const all = document.querySelectorAll('.delete-checkbox');
+        const selectAll = document.getElementById('select-all-delete');
+        selectAll.checked = all.length > 0 && checked.length === all.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+
+    function toggleSelectAll(cb) {
+        document.querySelectorAll('.delete-checkbox').forEach(el => el.checked = cb.checked);
+        updateBulkDeleteBtn();
+    }
+
+    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.addEventListener('change', updateBulkDeleteBtn));
+
+    function openBulkDeleteModal() {
+        const count = document.querySelectorAll('.delete-checkbox:checked').length;
+        document.getElementById('bulk-delete-count-modal').textContent = count;
+        document.getElementById('bulk-delete-modal').classList.add('open');
+    }
+
+    function closeBulkDeleteModal() {
+        document.getElementById('bulk-delete-modal').classList.remove('open');
+    }
+
+    document.getElementById('bulk-delete-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeBulkDeleteModal();
+    });
+
+    async function executeBulkDelete() {
+        closeBulkDeleteModal();
+        const checked = [...document.querySelectorAll('.delete-checkbox:checked')];
+        const photoIds = checked.map(cb => cb.dataset.photoId);
+        if (!photoIds.length) return;
+
+        const btn = document.getElementById('bulk-delete-btn');
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+
+        try {
+            const resp = await fetch('/delete_photos_bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                body: JSON.stringify({ photo_ids: photoIds })
+            });
+            const result = await resp.json();
+
+            if (result.deleted) {
+                result.deleted.forEach(photoId => {
+                    const cb = document.querySelector(`.delete-checkbox[data-photo-id="${photoId}"]`);
+                    if (cb) cb.closest('tr').remove();
+                });
+            }
+
+            if (result.failed && result.failed.length > 0) {
+                alert(`Deleted ${result.deleted.length} photo(s).\nFailed to delete ${result.failed.length} photo(s): ${result.failed.map(f => f.photo_id).join(', ')}`);
+            }
+        } catch (err) {
+            alert('An error occurred during bulk delete. Please refresh and try again.');
+        }
+
+        updateBulkDeleteBtn();
+    }
+    // ========== END BULK DELETE ==========
+
     // Delete photo confirmation functions
     function confirmDelete(photoId) {
         // Set the photo ID in the hidden input field
