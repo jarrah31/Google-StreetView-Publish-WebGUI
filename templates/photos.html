@@ -81,6 +81,7 @@
             {% if status_filter or places_filter or capture_date_from or capture_date_to or upload_date_from or upload_date_to %}
             <a href="{{ url_for('list_photos_table_page', page=1, per_page=per_page, sort_by=sort_by, sort_order=sort_order) }}" class="clear-filters-btn">× Clear filters</a>
             {% endif %}
+            <button id="show-page-map-btn" class="page-link" onclick="togglePageMap()">Show Map</button>
             <button id="bulk-delete-btn" class="page-link danger-button" style="display:none;" onclick="openBulkDeleteModal()">Delete Selected (<span id="bulk-delete-count">0</span>)</button>
         </div>
     </div>
@@ -98,6 +99,12 @@
         <a href="#" id="sort-direction-btn" onclick="toggleSortDirection(); return false;" class="page-link" data-sort-order="{{ sort_order }}">
             {% if sort_order == 'desc' %}Descending{% else %}Ascending{% endif %}
         </a>
+    </div>
+
+    <!-- Inline Page Map -->
+    <div id="page-map-container" style="display:none;">
+        <div id="page-map"></div>
+        <div id="page-map-resize-handle"></div>
     </div>
 
     <!-- Photos Table View -->
@@ -198,7 +205,14 @@
             </thead>
             <tbody id="photo-table-body">
                 {% for photo in photos %}
-                <tr class="photo-row">
+                <tr class="photo-row"
+                    data-lat="{{ photo.latitude if photo.latitude is not none else '' }}"
+                    data-lng="{{ photo.longitude if photo.longitude is not none else '' }}"
+                    data-num="{{ loop.index }}"
+                    data-photo-id="{{ photo.photo_id }}"
+                    data-share-link="{{ photo.share_link or '' }}"
+                    data-status="{{ photo.maps_publish_status or '' }}"
+                    data-capture="{{ photo.capture_time or '' }}">
                     <td>
                         <a href="{{ photo.share_link }}" target="_blank" title="View on Google Maps">
                             View
@@ -261,7 +275,14 @@
     <!-- Photos Grid View -->
     <div id="grid-view" class="main-container" style="display: none;">
         {% for photo in photos %}
-            <div class="photo-container grid-item">
+            <div class="photo-container grid-item"
+                data-lat="{{ photo.latitude if photo.latitude is not none else '' }}"
+                data-lng="{{ photo.longitude if photo.longitude is not none else '' }}"
+                data-num="{{ loop.index }}"
+                data-photo-id="{{ photo.photo_id }}"
+                data-share-link="{{ photo.share_link or '' }}"
+                data-status="{{ photo.maps_publish_status or '' }}"
+                data-capture="{{ photo.capture_time or '' }}">
                 <a href="{{ photo.share_link }}" target="_blank">
                     {% if photo.thumbnail_url %}
                         <img src="{{ photo.thumbnail_url }}" alt="Photo thumbnail" class="grid-thumbnail-image">
@@ -363,6 +384,9 @@
     function initGoogleMaps() {
         googleMapsLoaded = true;
         console.log('Google Maps API loaded successfully');
+        if (localStorage.getItem('photos_page_map_open') === '1') {
+            setTimeout(togglePageMap, 150);
+        }
     }
     
     // Global error handler for Google Maps
@@ -498,29 +522,31 @@
         gridBtn.classList.remove('active');
         mapBtn.classList.remove('active');
         
+        const pageMapContainer = document.getElementById('page-map-container');
+        const showMapBtn = document.getElementById('show-page-map-btn');
+
         if (viewType === 'grid') {
             gridView.style.display = 'flex';
             gridBtn.classList.add('active');
             sortControls.style.display = 'flex';
-            paginationContainers.forEach(container => {
-                container.style.display = 'flex';
-            });
+            paginationContainers.forEach(container => { container.style.display = 'flex'; });
+            if (showMapBtn) showMapBtn.style.display = '';
+            if (pageMapContainer && pageMapVisible) pageMapContainer.style.display = 'block';
         } else if (viewType === 'map') {
             mapView.style.display = 'block';
             mapBtn.classList.add('active');
             sortControls.style.display = 'none';
-            paginationContainers.forEach(container => {
-                container.style.display = 'none';
-            });
-            // Initialize the map when switching to map view
+            paginationContainers.forEach(container => { container.style.display = 'none'; });
+            if (showMapBtn) showMapBtn.style.display = 'none';
+            if (pageMapContainer) pageMapContainer.style.display = 'none';
             setTimeout(initializePhotosMap, 100);
         } else {
             listView.style.display = 'block';
             listBtn.classList.add('active');
             sortControls.style.display = 'none';
-            paginationContainers.forEach(container => {
-                container.style.display = 'flex';
-            });
+            paginationContainers.forEach(container => { container.style.display = 'flex'; });
+            if (showMapBtn) showMapBtn.style.display = '';
+            if (pageMapContainer && pageMapVisible) pageMapContainer.style.display = 'block';
         }
         
         // Save preference
@@ -667,6 +693,108 @@
         window.location.href = currentUrl.toString();
     }
     
+    // ========== INLINE PAGE MAP ==========
+    let pageMap = null;
+    let pageMapMarkers = [];
+    let pageMapVisible = false;
+    const PAGE_MAP_LS_KEY = 'photos_page_map_open';
+
+    function getPagePhotos() {
+        const photos = [];
+        const activeView = document.getElementById('grid-view').style.display !== 'none' ? 'grid' : 'list';
+        const selector = activeView === 'grid'
+            ? '#grid-view .grid-item[data-lat]'
+            : '#photo-table-body tr.photo-row[data-lat]';
+        document.querySelectorAll(selector).forEach(el => {
+            const lat = parseFloat(el.dataset.lat);
+            const lng = parseFloat(el.dataset.lng);
+            if (isNaN(lat) || isNaN(lng) || (!lat && !lng)) return;
+            photos.push({ num: el.dataset.num, lat, lng,
+                photoId: el.dataset.photoId, shareLink: el.dataset.shareLink,
+                status: el.dataset.status, capture: el.dataset.capture });
+        });
+        return photos;
+    }
+
+    function buildPageMap() {
+        if (!pageMapVisible || !window.google || !window.google.maps) return;
+        const mapEl = document.getElementById('page-map');
+        if (!pageMap) {
+            pageMap = new google.maps.Map(mapEl, { mapTypeId: 'hybrid', zoom: 2, center: { lat: 0, lng: 0 } });
+            pageMap.addListener('click', () => pageMapMarkers.forEach(m => m.iw && m.iw.close()));
+        }
+        pageMapMarkers.forEach(m => m.setMap(null));
+        pageMapMarkers = [];
+
+        const photos = getPagePhotos();
+        if (!photos.length) return;
+        const bounds = new google.maps.LatLngBounds();
+
+        photos.forEach(p => {
+            bounds.extend({ lat: p.lat, lng: p.lng });
+            const numStr = String(p.num);
+            const marker = new google.maps.Marker({
+                position: { lat: p.lat, lng: p.lng },
+                map: pageMap,
+                label: { text: numStr, color: 'white', fontWeight: 'bold', fontSize: numStr.length > 2 ? '9px' : '11px' },
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: '#2563eb', fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 },
+                title: 'Photo #' + p.num
+            });
+            const captureStr = p.capture ? p.capture.split('T')[0] : 'N/A';
+            const iw = new google.maps.InfoWindow({ content:
+                `<div style="font-size:0.82rem;line-height:1.8;min-width:190px">
+                    <strong>Photo #${p.num}</strong><br>
+                    <span style="color:#64748b">${captureStr}</span><br>
+                    <span style="color:#64748b">${p.status || ''}</span><br>
+                    <div style="margin-top:4px"><a href="${p.shareLink}" target="_blank" style="color:#2563eb">View on Google Maps ↗</a></div>
+                </div>`
+            });
+            marker.addListener('click', () => { pageMapMarkers.forEach(m => m.iw && m.iw.close()); iw.open(pageMap, marker); });
+            marker.iw = iw;
+            pageMapMarkers.push(marker);
+        });
+
+        if (photos.length === 1) { pageMap.setCenter(bounds.getCenter()); pageMap.setZoom(15); }
+        else { pageMap.fitBounds(bounds, 50); }
+    }
+
+    function togglePageMap() {
+        pageMapVisible = !pageMapVisible;
+        const container = document.getElementById('page-map-container');
+        const btn = document.getElementById('show-page-map-btn');
+        container.style.display = pageMapVisible ? 'block' : 'none';
+        btn.textContent = pageMapVisible ? 'Hide Map' : 'Show Map';
+        localStorage.setItem(PAGE_MAP_LS_KEY, pageMapVisible ? '1' : '0');
+        if (pageMapVisible) {
+            if (googleMapsLoaded) { buildPageMap(); setTimeout(() => google.maps.event.trigger(pageMap, 'resize'), 50); }
+        }
+    }
+
+    // Vertical resize handle
+    (function() {
+        const LS_KEY = 'photos_page_map_height';
+        const mapEl = document.getElementById('page-map');
+        const handle = document.getElementById('page-map-resize-handle');
+        const saved = parseInt(localStorage.getItem(LS_KEY));
+        if (saved >= 100) mapEl.style.height = saved + 'px';
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            const startY = e.clientY, startH = mapEl.offsetHeight;
+            handle.classList.add('dragging');
+            function onMove(e) { const h = Math.max(100, startH + e.clientY - startY); mapEl.style.height = h + 'px'; }
+            function onUp() {
+                handle.classList.remove('dragging');
+                localStorage.setItem(LS_KEY, mapEl.offsetHeight);
+                if (pageMap) google.maps.event.trigger(pageMap, 'resize');
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    })();
+    // ========== END INLINE PAGE MAP ==========
+
     // ========== BULK DELETE ==========
     const csrfToken = () => document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 

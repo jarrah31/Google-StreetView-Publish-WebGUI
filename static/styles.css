@@ -1956,7 +1956,38 @@ select option {
   margin-bottom: 5px;
   width: 100%;
 }
-#bulk-delete-btn { margin-left: auto; }
+/* Page map (Photos list/grid inline map) */
+#page-map-container {
+    margin-bottom: 16px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+#page-map { height: 380px; }
+#page-map-resize-handle {
+    height: 8px;
+    cursor: ns-resize;
+    background: var(--border);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#page-map-resize-handle::after {
+    content: '';
+    width: 32px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border-strong);
+}
+#page-map-resize-handle:hover,
+#page-map-resize-handle.dragging { background: var(--primary); }
+#page-map-resize-handle:hover::after,
+#page-map-resize-handle.dragging::after { background: white; }
+
+#show-page-map-btn { margin-left: auto; }
+#bulk-delete-btn { }
 .delete-col-header { width: 64px; text-align: center; font-size: 0.78rem; }
 .delete-col-header > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .delete-col { width: 64px; text-align: center; }
