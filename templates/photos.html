@@ -850,12 +850,10 @@
         if (e.target === this) closeBulkDeleteModal();
     });
 
-    function showBulkProgress(done, total, statusMsg) {
-        const modal = document.getElementById('bulk-delete-progress-modal');
-        modal.classList.add('open');
-        document.getElementById('bulk-delete-progress-text').textContent = `Deleting ${done} of ${total}…`;
-        document.getElementById('bulk-progress-bar').style.width = `${Math.round((done / total) * 100)}%`;
-        document.getElementById('bulk-delete-progress-status').textContent = statusMsg || '';
+    function showBulkProgress(total) {
+        document.getElementById('bulk-delete-progress-modal').classList.add('open');
+        document.getElementById('bulk-delete-progress-text').textContent = `Deleting ${total} photo${total !== 1 ? 's' : ''}…`;
+        document.getElementById('bulk-delete-progress-status').textContent = '';
     }
 
     function hideBulkProgress() {
@@ -868,38 +866,35 @@
         const photoIds = checked.map(cb => cb.dataset.photoId);
         if (!photoIds.length) return;
 
-        const total = photoIds.length;
-        let deletedCount = 0;
-        const failed = [];
+        showBulkProgress(photoIds.length);
 
-        showBulkProgress(0, total, '');
+        try {
+            const resp = await fetch('/delete_photos_bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+                body: JSON.stringify({ photo_ids: photoIds })
+            });
+            const result = await resp.json();
 
-        for (let i = 0; i < photoIds.length; i++) {
-            const photoId = photoIds[i];
-            showBulkProgress(i + 1, total, photoId);
-            try {
-                const resp = await fetch('/delete_photos_bulk', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
-                    body: JSON.stringify({ photo_ids: [photoId] })
-                });
-                const result = await resp.json();
-                if (result.deleted && result.deleted.includes(photoId)) {
-                    const cb = document.querySelector(`.delete-checkbox[data-photo-id="${photoId}"]`);
-                    if (cb) cb.closest('tr').remove();
-                    deletedCount++;
-                } else {
-                    failed.push(photoId);
-                }
-            } catch (err) {
-                failed.push(photoId);
+            if (!result.success && !result.deleted) {
+                hideBulkProgress();
+                alert('Delete failed: ' + (result.error || 'Unknown error'));
+                return;
             }
-        }
 
-        hideBulkProgress();
+            (result.deleted || []).forEach(photoId => {
+                const cb = document.querySelector(`.delete-checkbox[data-photo-id="${photoId}"]`);
+                if (cb) cb.closest('tr').remove();
+            });
 
-        if (failed.length > 0) {
-            alert(`Deleted ${deletedCount} photo(s).\nFailed to delete ${failed.length} photo(s).`);
+            hideBulkProgress();
+
+            if (result.failed && result.failed.length > 0) {
+                alert(`Deleted ${result.deleted.length} photo(s).\nFailed to delete ${result.failed.length} photo(s).`);
+            }
+        } catch (err) {
+            hideBulkProgress();
+            alert('An error occurred during bulk delete. Please refresh and try again.');
         }
 
         updateBulkDeleteBtn();

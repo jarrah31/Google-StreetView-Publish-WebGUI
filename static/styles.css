@@ -1999,7 +1999,11 @@ select option {
 .bulk-delete-modal-content p { margin: 0 0 20px; color: var(--text-secondary); }
 .bulk-delete-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .bulk-progress-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
-.bulk-progress-fill { height: 100%; width: 0%; background: var(--error); border-radius: 5px; transition: width 0.25s ease; }
+.bulk-progress-fill { height: 100%; width: 40%; background: var(--error); border-radius: 5px; animation: bulk-progress-sweep 1.2s ease-in-out infinite; }
+@keyframes bulk-progress-sweep {
+    0%   { margin-left: -40%; }
+    100% { margin-left: 100%; }
+}
 
 /* DateRangePicker overrides */
 .daterangepicker {

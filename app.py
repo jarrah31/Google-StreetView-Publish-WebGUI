@@ -1809,12 +1809,17 @@ def delete_photos_bulk():
     uploads_dir = config['uploads']['directory']
     deleted, failed = [], []
 
-    for photo_id in photo_ids:
-        url = f'https://streetviewpublish.googleapis.com/v1/photo/{photo_id}?photoId={photo_id}'
+    try:
+        url = 'https://streetviewpublish.googleapis.com/v1/photos:batchDelete'
         headers = {'Authorization': f'Bearer {credentials.token}'}
-        try:
-            resp = requests.delete(url, headers=headers, timeout=30)
-            if resp.status_code == 200:
+        resp = requests.post(url, json={'photoIds': photo_ids}, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            return jsonify({'success': False, 'error': f'API error {resp.status_code}'}), 502
+
+        statuses = resp.json().get('status', [])
+        for i, photo_id in enumerate(photo_ids):
+            status = statuses[i] if i < len(statuses) else {}
+            if status.get('code', 0) == 0:
                 database.delete_photo(photo_id)
                 json_filename = get_filenames(uploads_dir).get(photo_id)
                 if json_filename:
@@ -1825,9 +1830,9 @@ def delete_photos_bulk():
                 deleted.append(photo_id)
                 app.logger.info(f"Bulk delete: removed photo {photo_id}")
             else:
-                failed.append({'photo_id': photo_id, 'error': f'API error {resp.status_code}'})
-        except Exception as e:
-            failed.append({'photo_id': photo_id, 'error': str(e)})
+                failed.append({'photo_id': photo_id, 'error': status.get('message', 'Unknown error')})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
     # Invalidate filename cache once after all deletions
     global _filenames_cache_time
