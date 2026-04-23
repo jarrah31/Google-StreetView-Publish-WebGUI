@@ -1954,9 +1954,11 @@ select option {
   gap: 8px;
   margin-top: 10px;
   margin-bottom: 5px;
+  width: 100%;
 }
 #bulk-delete-btn { margin-left: auto; }
 .delete-col-header { width: 64px; text-align: center; font-size: 0.78rem; }
+.delete-col-header > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .delete-col { width: 64px; text-align: center; }
 .delete-col input[type="checkbox"], .delete-col-header input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--error); }
 .bulk-delete-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; }
