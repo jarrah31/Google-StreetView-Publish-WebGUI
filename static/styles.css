@@ -1987,6 +1987,7 @@ select option {
 #page-map-resize-handle.dragging::after { background: white; }
 
 #show-page-map-btn { margin-left: auto; }
+#page-map-container .gm-ui-hover-effect { display: none !important; }
 #bulk-delete-btn { }
 .row-num-col { width: 36px; text-align: center; color: var(--text-secondary); font-size: 0.82rem; }
 .delete-col-header { width: 64px; text-align: center; font-size: 0.78rem; }

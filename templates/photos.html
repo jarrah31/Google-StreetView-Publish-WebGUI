@@ -213,7 +213,8 @@
                     data-photo-id="{{ photo.photo_id }}"
                     data-share-link="{{ photo.share_link or '' }}"
                     data-status="{{ photo.maps_publish_status or '' }}"
-                    data-capture="{{ photo.capture_time or '' }}">
+                    data-capture="{{ photo.capture_time or '' }}"
+                    data-thumb="{{ photo.thumbnail_url or '' }}">
                     <td class="row-num-col">{{ loop.index }}</td>
                     <td>
                         <a href="{{ photo.share_link }}" target="_blank" title="View on Google Maps">
@@ -284,7 +285,8 @@
                 data-photo-id="{{ photo.photo_id }}"
                 data-share-link="{{ photo.share_link or '' }}"
                 data-status="{{ photo.maps_publish_status or '' }}"
-                data-capture="{{ photo.capture_time or '' }}">
+                data-capture="{{ photo.capture_time or '' }}"
+                data-thumb="{{ photo.thumbnail_url or '' }}">
                 <a href="{{ photo.share_link }}" target="_blank">
                     {% if photo.thumbnail_url %}
                         <img src="{{ photo.thumbnail_url }}" alt="Photo thumbnail" class="grid-thumbnail-image">
@@ -726,7 +728,8 @@
             if (isNaN(lat) || isNaN(lng) || (!lat && !lng)) return;
             photos.push({ num: el.dataset.num, lat, lng,
                 photoId: el.dataset.photoId, shareLink: el.dataset.shareLink,
-                status: el.dataset.status, capture: el.dataset.capture });
+                status: el.dataset.status, capture: el.dataset.capture,
+                thumb: el.dataset.thumb || '' });
         });
         return photos;
     }
@@ -758,15 +761,23 @@
             });
             const captureStr = p.capture ? p.capture.split('T')[0] : 'N/A';
             const encId = encodeURIComponent(p.photoId);
+            const thumbHtml = p.thumb
+                ? `<img src="${p.thumb}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;margin-bottom:6px;display:block">`
+                : '';
             const iw = new google.maps.InfoWindow({ content:
-                `<div style="font-size:0.82rem;line-height:1.8;min-width:190px">
-                    <strong>Photo #${p.num}</strong><br>
-                    <span style="color:#64748b">${captureStr}</span><br>
-                    <span style="color:#64748b">${p.status || ''}</span><br>
-                    <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
-                        <a href="${p.shareLink}" target="_blank" style="color:#2563eb">View on Google Maps ↗</a>
-                        <a href="/edit_photo?photo_id=${encId}" style="color:#2563eb">Edit Photo</a>
-                        <a href="/edit_connections?photo_id=${encId}" style="color:#2563eb">Edit Connections</a>
+                `<div style="font-size:0.82rem;min-width:220px">
+                    ${thumbHtml}
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-top:4px">
+                        <div style="line-height:1.7">
+                            <strong>Photo #${p.num}</strong><br>
+                            <span style="color:#64748b">${captureStr}</span><br>
+                            <span style="color:#64748b">${p.status || ''}</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:3px;text-align:right;white-space:nowrap">
+                            <a href="${p.shareLink}" target="_blank" style="color:#2563eb">Google Maps ↗</a>
+                            <a href="/edit_photo?photo_id=${encId}" style="color:#2563eb">Edit Photo</a>
+                            <a href="/edit_connections?photo_id=${encId}" style="color:#2563eb">Edit Connections</a>
+                        </div>
                     </div>
                 </div>`
             });
