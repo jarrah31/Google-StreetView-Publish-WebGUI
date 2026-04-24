@@ -172,7 +172,7 @@
                                 </li>
                             </ol>
                         </div>
-                        <button id="gps-fix-toggle" class="gps-fix-toggle" onclick="toggleGpsFixBanner()" title="Collapse / expand">&#8963;</button>
+                        <button id="gps-fix-toggle" class="gps-fix-toggle" onclick="toggleGpsFixBanner()">Hide</button>
                     </div>
 
                     <!-- Overview Map -->
@@ -2605,7 +2605,7 @@ function toggleGpsFixBanner() {
     const toggle = document.getElementById('gps-fix-toggle');
     if (!banner) return;
     const collapsed = banner.classList.toggle('collapsed');
-    if (toggle) toggle.textContent = collapsed ? '▽' : '△';
+    if (toggle) toggle.textContent = collapsed ? 'Show' : 'Hide';
     localStorage.setItem('gps_fix_collapsed', collapsed ? '1' : '0');
 }
 
@@ -2645,7 +2645,7 @@ function updateGpsFixBanner() {
     const collapsed = localStorage.getItem('gps_fix_collapsed') === '1';
     banner.classList.toggle('collapsed', collapsed);
     const toggle = document.getElementById('gps-fix-toggle');
-    if (toggle) toggle.textContent = collapsed ? '▽' : '△';
+    if (toggle) toggle.textContent = collapsed ? 'Show' : 'Hide';
     banner.style.display = 'flex';
 }
 
