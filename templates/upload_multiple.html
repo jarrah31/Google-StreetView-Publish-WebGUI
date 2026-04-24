@@ -232,8 +232,10 @@
                 <div class="card-footer">
                     <div class="button-container">
                         <button id="remove-selected-btn-bottom" class="page-link view-photos-link danger-button" disabled>Remove Selected</button>
-                        <button id="cancel-btn" class="page-link view-photos-link">Cancel</button>
-                        <button id="select-more-files-btn" class="page-link view-photos-link">Select More Files</button>
+                        <button id="select-all-btn-bottom" class="page-link view-photos-link">Select All</button>
+                        <button id="select-none-btn-bottom" class="page-link view-photos-link">Select None</button>
+                        <button id="select-valid-btn-bottom" class="page-link view-photos-link">Select Valid Only</button>
+                        <button id="select-more-files-btn" class="page-link view-photos-link">Add More Files</button>
                         <button id="upload-selected-btn" class="page-link view-photos-link primary-button" disabled>
                             <span id="upload-button-text">Upload Selected (0)</span>
                         </button>
@@ -410,13 +412,13 @@ function initializeMultipleUpload() {
     
     // Select More Files button
     document.getElementById('select-more-files-btn').addEventListener('click', selectMoreFiles);
-    
+    document.getElementById('select-all-btn-bottom').addEventListener('click', () => selectFiles('all'));
+    document.getElementById('select-none-btn-bottom').addEventListener('click', () => selectFiles('none'));
+    document.getElementById('select-valid-btn-bottom').addEventListener('click', () => selectFiles('valid'));
+
     // Remove Selected buttons
     document.getElementById('remove-selected-btn-top').addEventListener('click', removeSelectedFiles);
     document.getElementById('remove-selected-btn-bottom').addEventListener('click', removeSelectedFiles);
-
-    // Cancel button
-    document.getElementById('cancel-btn').addEventListener('click', resetToInitialState);
     
     // Place search modal handlers
     initializePlaceSearchModal();
