@@ -2836,6 +2836,8 @@ function runGpsFix() {
         const fd = filesMetadata[i];
         if (!fd) continue;
 
+        if (fd.editedGPS && fd.editedGPS.isEdited) continue;
+
         const needsFix = (fd.metadata && !fd.metadata.hasGpsData && fd.metadata.hasXmpData)
                       || fd.hasDuplicateGps;
         if (!needsFix) continue;
