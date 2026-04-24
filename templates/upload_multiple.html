@@ -73,7 +73,7 @@
                         <div class="gps-fix-banner-icon">⚠</div>
                         <div class="gps-fix-banner-content">
                             <p id="gps-fix-banner-text" class="gps-fix-banner-description"></p>
-                            <ol class="gps-fix-steps">
+                            <ol class="gps-fix-steps" id="gps-fix-steps">
                                 <li class="gps-fix-step">
                                     <div class="gps-fix-step-body">
                                         <span class="gps-fix-step-label">Select camera timezone</span>
@@ -172,6 +172,7 @@
                                 </li>
                             </ol>
                         </div>
+                        <button id="gps-fix-toggle" class="gps-fix-toggle" onclick="toggleGpsFixBanner()" title="Collapse / expand">&#8963;</button>
                     </div>
 
                     <!-- Overview Map -->
@@ -2599,6 +2600,15 @@ function detectDuplicateGps() {
     }
 }
 
+function toggleGpsFixBanner() {
+    const banner = document.getElementById('gps-fix-banner');
+    const toggle = document.getElementById('gps-fix-toggle');
+    if (!banner) return;
+    const collapsed = banner.classList.toggle('collapsed');
+    if (toggle) toggle.textContent = collapsed ? '▽' : '△';
+    localStorage.setItem('gps_fix_collapsed', collapsed ? '1' : '0');
+}
+
 function updateGpsFixBanner() {
     const banner = document.getElementById('gps-fix-banner');
     const bannerText = document.getElementById('gps-fix-banner-text');
@@ -2632,6 +2642,10 @@ function updateGpsFixBanner() {
         bannerText.textContent = `${totalFiles} photo${totalFiles !== 1 ? 's' : ''} loaded. Optionally use a GPX track to replace GPS coordinates.`;
         if (bannerInstructions) bannerInstructions.style.display = 'none';
     }
+    const collapsed = localStorage.getItem('gps_fix_collapsed') === '1';
+    banner.classList.toggle('collapsed', collapsed);
+    const toggle = document.getElementById('gps-fix-toggle');
+    if (toggle) toggle.textContent = collapsed ? '▽' : '△';
     banner.style.display = 'flex';
 }
 

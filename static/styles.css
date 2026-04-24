@@ -1653,6 +1653,21 @@ select option {
 .gpx-filename-display { color: var(--text-secondary); font-size: 0.875rem; font-style: italic; }
 .gpx-offset-wrapper { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
 .gpx-threshold-wrapper { display: flex; align-items: center; gap: 6px; }
+.gps-fix-toggle {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    line-height: 1;
+    align-self: flex-start;
+    transition: background 0.15s, border-color 0.15s;
+}
+.gps-fix-toggle:hover { background: rgba(0,0,0,0.06); border-color: var(--border); }
+.gps-fix-banner.collapsed .gps-fix-steps { display: none; }
 .gps-fix-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: gps-step; }
 .gps-fix-step { display: flex; align-items: flex-start; gap: 10px; counter-increment: gps-step; }
 .gps-fix-step::before { content: counter(gps-step); min-width: 22px; height: 22px; border-radius: 50%; background: var(--warning); color: #fff; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
