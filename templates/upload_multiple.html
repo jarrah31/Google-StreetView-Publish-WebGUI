@@ -630,7 +630,7 @@ async function processFiles(files, addToExisting = false) {
     }
 }
 
-function determineInitialStatus(metadata, uploadData = null) {
+function determineInitialStatus(metadata, uploadData = null, editedGPS = null) {
     // If already uploaded, show as complete
     if (uploadData && uploadData.uploaded) {
         if (uploadData.status === 'PUBLISHED') {
@@ -639,17 +639,20 @@ function determineInitialStatus(metadata, uploadData = null) {
             return UploadStatus.WARNING; // Uploaded but not published
         }
     }
-    
+
+    // editedGPS counts as providing GPS data
+    const hasGps = (metadata && metadata.hasGpsData) || (editedGPS && editedGPS.isEdited);
+
     // For new files, check metadata
-    if (!metadata || !metadata.hasGpsData || !metadata.hasXmpData) {
+    if (!metadata || !hasGps || !metadata.hasXmpData) {
         return UploadStatus.ERROR; // Missing basic metadata
     }
-    
+
     // Check if essential panorama fields are present
     if (!hasEssentialPanoramaMetadata(metadata)) {
         return UploadStatus.WARNING; // Has basic metadata but missing panorama fields
     }
-    
+
     return UploadStatus.READY;
 }
 
@@ -870,6 +873,7 @@ function getMetadataStatusIcon(metadata, fileData) {
     }
 
     const isGpsEdited = fileData && fileData.editedGPS && fileData.editedGPS.isEdited;
+    const effectiveHasGps = metadata.hasGpsData || isGpsEdited;
     const hasEssentialPanorama = hasEssentialPanoramaMetadata(metadata);
     const hasDuplicateGps = fileData && fileData.hasDuplicateGps;
 
@@ -879,13 +883,13 @@ function getMetadataStatusIcon(metadata, fileData) {
         return `<span class="metadata-status duplicate-gps" data-tooltip="${tooltip}">⚠</span>`;
     }
 
-    if (metadata.hasGpsData && metadata.hasXmpData && hasEssentialPanorama) {
+    if (effectiveHasGps && metadata.hasXmpData && hasEssentialPanorama) {
         if (isGpsEdited) {
             return '<span class="metadata-status valid" data-tooltip="Complete photosphere metadata with edited GPS coordinates - Ready to upload">✅📍</span>';
         } else {
             return '<span class="metadata-status valid" data-tooltip="Complete photosphere metadata - Ready to upload">✅</span>';
         }
-    } else if (!metadata.hasGpsData || !metadata.hasXmpData) {
+    } else if (!effectiveHasGps || !metadata.hasXmpData) {
         return '<span class="metadata-status error" data-tooltip="Missing basic GPS or XMP metadata - Cannot upload">❌</span>';
     } else if (!hasEssentialPanorama) {
         return '<span class="metadata-status warning" data-tooltip="Missing essential panorama fields (cropping/dimensions) - Upload with caution">⚠️</span>';
@@ -1024,7 +1028,9 @@ function selectFiles(type) {
                 break;
             case 'valid':
                 const metadata = filesMetadata[index].metadata;
-                shouldSelect = metadata && metadata.hasGpsData && metadata.hasXmpData && hasEssentialPanoramaMetadata(metadata);
+                const editedGps = filesMetadata[index].editedGPS;
+                const effectiveHasGps = (metadata && metadata.hasGpsData) || (editedGps && editedGps.isEdited);
+                shouldSelect = metadata && effectiveHasGps && metadata.hasXmpData && hasEssentialPanoramaMetadata(metadata);
                 break;
         }
         
@@ -2866,7 +2872,7 @@ function runGpsFix() {
         fd.editedGPS = { latitude: match.lat, longitude: match.lng, isEdited: true };
         fd.hasDuplicateGps = false;
         fd.duplicateWith = [];
-        fd.status = determineInitialStatus(fd.metadata, fd.uploadData || null);
+        fd.status = determineInitialStatus(fd.metadata, fd.uploadData || null, fd.editedGPS);
         fixedCount++;
     }
 
