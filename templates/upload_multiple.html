@@ -2615,7 +2615,6 @@ function toggleGpsFixBanner() {
     if (!banner) return;
     const collapsed = banner.classList.toggle('collapsed');
     if (toggle) toggle.textContent = collapsed ? 'Show' : 'Hide';
-    localStorage.setItem('gps_fix_collapsed', collapsed ? '1' : '0');
 }
 
 function updateGpsFixBanner() {
@@ -2651,10 +2650,6 @@ function updateGpsFixBanner() {
         bannerText.textContent = `${totalFiles} photo${totalFiles !== 1 ? 's' : ''} loaded. Optionally use a GPX track to replace GPS coordinates.`;
         if (bannerInstructions) bannerInstructions.style.display = 'none';
     }
-    const collapsed = localStorage.getItem('gps_fix_collapsed') === '1';
-    banner.classList.toggle('collapsed', collapsed);
-    const toggle = document.getElementById('gps-fix-toggle');
-    if (toggle) toggle.textContent = collapsed ? 'Show' : 'Hide';
     banner.style.display = 'flex';
 }
 
