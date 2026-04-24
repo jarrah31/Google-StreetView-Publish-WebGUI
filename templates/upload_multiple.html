@@ -60,11 +60,16 @@
                 <div class="card-header">
                     <h2>Review Selected Photos</h2>
                     <div class="batch-controls">
+                        <button id="cancel-btn-top" class="page-link view-photos-link">Cancel</button>
                         <button id="remove-selected-btn-top" class="page-link view-photos-link danger-button" disabled>Remove Selected</button>
                         <button id="select-all-btn" class="page-link view-photos-link">Select All</button>
                         <button id="select-none-btn" class="page-link view-photos-link">Select None</button>
                         <button id="select-valid-btn" class="page-link view-photos-link">Select Valid Only</button>
+                        <button id="select-more-files-btn-top" class="page-link view-photos-link">Add More Files</button>
                         <button id="show-map-btn" class="page-link view-photos-link">Show Map</button>
+                        <button id="upload-selected-btn-top" class="page-link view-photos-link primary-button upload-selected-btn" disabled>
+                            <span class="upload-button-text">Upload Selected (0)</span>
+                        </button>
                     </div>
                 </div>
                 <div class="card-content">
@@ -231,13 +236,14 @@
                 </div>
                 <div class="card-footer">
                     <div class="button-container">
+                        <button id="cancel-btn" class="page-link view-photos-link">Cancel</button>
                         <button id="remove-selected-btn-bottom" class="page-link view-photos-link danger-button" disabled>Remove Selected</button>
                         <button id="select-all-btn-bottom" class="page-link view-photos-link">Select All</button>
                         <button id="select-none-btn-bottom" class="page-link view-photos-link">Select None</button>
                         <button id="select-valid-btn-bottom" class="page-link view-photos-link">Select Valid Only</button>
                         <button id="select-more-files-btn" class="page-link view-photos-link">Add More Files</button>
-                        <button id="upload-selected-btn" class="page-link view-photos-link primary-button" disabled>
-                            <span id="upload-button-text">Upload Selected (0)</span>
+                        <button id="upload-selected-btn" class="page-link view-photos-link primary-button upload-selected-btn" disabled>
+                            <span class="upload-button-text">Upload Selected (0)</span>
                         </button>
                     </div>
                 </div>
@@ -412,9 +418,13 @@ function initializeMultipleUpload() {
     
     // Select More Files button
     document.getElementById('select-more-files-btn').addEventListener('click', selectMoreFiles);
+    document.getElementById('select-more-files-btn-top').addEventListener('click', selectMoreFiles);
     document.getElementById('select-all-btn-bottom').addEventListener('click', () => selectFiles('all'));
     document.getElementById('select-none-btn-bottom').addEventListener('click', () => selectFiles('none'));
     document.getElementById('select-valid-btn-bottom').addEventListener('click', () => selectFiles('valid'));
+    document.getElementById('cancel-btn-top').addEventListener('click', resetToInitialState);
+    document.getElementById('cancel-btn').addEventListener('click', resetToInitialState);
+    document.getElementById('upload-selected-btn-top').addEventListener('click', startBatchUpload);
 
     // Remove Selected buttons
     document.getElementById('remove-selected-btn-top').addEventListener('click', removeSelectedFiles);
@@ -1050,11 +1060,12 @@ function updateMasterCheckbox() {
 
 function updateSelectionCount() {
     const selectedCount = Object.values(filesMetadata).filter(f => f.selected).length;
-    const uploadBtn = document.getElementById('upload-selected-btn');
-    const btnText = document.getElementById('upload-button-text');
-
-    btnText.textContent = `Upload Selected (${selectedCount})`;
-    uploadBtn.disabled = selectedCount === 0 || isUploading;
+    document.querySelectorAll('.upload-selected-btn').forEach(btn => {
+        btn.disabled = selectedCount === 0 || isUploading;
+    });
+    document.querySelectorAll('.upload-button-text').forEach(el => {
+        el.textContent = `Upload Selected (${selectedCount})`;
+    });
 
     const removeDisabled = selectedCount === 0 || isUploading;
     document.getElementById('remove-selected-btn-top').disabled = removeDisabled;
@@ -1408,18 +1419,14 @@ function updateProgressBar() {
 }
 
 function updateUploadButton(enabled) {
-    const uploadBtn = document.getElementById('upload-selected-btn');
-    const btnText = document.getElementById('upload-button-text');
-    
-    if (enabled) {
-        uploadBtn.disabled = false;
-        uploadBtn.classList.remove('loading');
-        btnText.textContent = `Upload Selected (${Object.values(filesMetadata).filter(f => f.selected).length})`;
-    } else {
-        uploadBtn.disabled = true;
-        uploadBtn.classList.add('loading');
-        btnText.textContent = 'Uploading...';
-    }
+    const selectedCount = Object.values(filesMetadata).filter(f => f.selected).length;
+    document.querySelectorAll('.upload-selected-btn').forEach(btn => {
+        btn.disabled = !enabled;
+        btn.classList.toggle('loading', !enabled);
+    });
+    document.querySelectorAll('.upload-button-text').forEach(el => {
+        el.textContent = enabled ? `Upload Selected (${selectedCount})` : 'Uploading...';
+    });
 }
 
 function completeUploads() {
@@ -1836,13 +1843,13 @@ function resetToInitialState() {
     }
     
     // Reset upload button
-    const uploadBtn = document.getElementById('upload-selected-btn');
-    const btnText = document.getElementById('upload-button-text');
-    if (uploadBtn && btnText) {
-        uploadBtn.disabled = true;
-        uploadBtn.classList.remove('loading');
-        btnText.textContent = 'Upload Selected (0)';
-    }
+    document.querySelectorAll('.upload-selected-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('loading');
+    });
+    document.querySelectorAll('.upload-button-text').forEach(el => {
+        el.textContent = 'Upload Selected (0)';
+    });
     
     // Reset section visibility to show file selection
     updateSectionVisibility();
