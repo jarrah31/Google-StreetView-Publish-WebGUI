@@ -176,10 +176,16 @@
 
                     <!-- Overview Map -->
                     <div id="overview-map-container" style="display:none;">
+                        <div id="map-edit-bar" style="display:none;">
+                            <span id="map-edit-bar-label"></span>
+                            <button class="map-edit-done-btn" onclick="finishMarkerEdit()">&#10003; Done</button>
+                            <button class="map-edit-cancel-btn" onclick="cancelMarkerEdit()">&#10005; Cancel</button>
+                        </div>
                         <div id="overview-map"></div>
                         <div id="map-resize-handle"></div>
                         <div id="map-legend" class="map-legend" style="display:none;">
                             <span class="legend-item"><span class="legend-dot" style="background:#2563eb"></span>Original GPS</span>
+                            <span class="legend-item"><span class="legend-dot" style="background:#16a34a"></span>Edited</span>
                             <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>GPX preview</span>
                             <span class="legend-item"><span class="legend-dot" style="background:#d97706"></span>Multiple photos</span>
                         </div>
@@ -2189,6 +2195,78 @@ function closeGpsEditModal() {
 let overviewMap = null;
 let overviewMarkers = [];
 let mapVisible = false;
+let mapEditMode = { active: false, fileIndex: null, editMarker: null };
+
+function startMarkerEdit(photoIdx) {
+    if (!overviewMap || !mapVisible) return;
+    overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
+    if (mapEditMode.active) cancelMarkerEdit();
+
+    const fd = filesMetadata[photoIdx];
+    if (!fd) return;
+    const gps = getEffectiveGps(fd);
+    if (!gps) {
+        showFlashMessage('No GPS position available to edit on the map.', 'warning');
+        return;
+    }
+
+    mapEditMode.active = true;
+    mapEditMode.fileIndex = photoIdx;
+
+    overviewMarkers.forEach(m => m.setOptions({ clickable: false, opacity: 0.3 }));
+
+    const svgPin = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">' +
+        '<path d="M14 0C7.4 0 2 5.4 2 12c0 9 12 28 12 28S26 21 26 12 20.6 0 14 0z" fill="#16a34a" stroke="white" stroke-width="1.5"/>' +
+        '<circle cx="14" cy="12" r="5" fill="white"/>' +
+        '</svg>';
+
+    const editMarker = new google.maps.Marker({
+        position: { lat: gps.lat, lng: gps.lng },
+        map: overviewMap,
+        draggable: true,
+        zIndex: 1000,
+        title: 'Drag to set new GPS position',
+        icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgPin),
+            size: new google.maps.Size(28, 40),
+            anchor: new google.maps.Point(14, 40)
+        }
+    });
+
+    mapEditMode.editMarker = editMarker;
+    overviewMap.panTo({ lat: gps.lat, lng: gps.lng });
+
+    const bar = document.getElementById('map-edit-bar');
+    if (bar) {
+        document.getElementById('map-edit-bar-label').textContent =
+            'Editing Photo #' + (photoIdx + 1) + ': ' + (fd.file?.name || '') + ' — drag the green pin to the correct position';
+        bar.style.display = 'flex';
+    }
+}
+
+function finishMarkerEdit() {
+    if (!mapEditMode.active || !mapEditMode.editMarker) return;
+    const pos = mapEditMode.editMarker.getPosition();
+    const newLat = pos.lat();
+    const newLng = pos.lng();
+    const fileIndex = mapEditMode.fileIndex;
+    cancelMarkerEdit();
+    updateGpsCoordinates(fileIndex, newLat, newLng);
+    updateOverviewMap(true);
+    showFlashMessage('GPS position updated for Photo #' + (fileIndex + 1) + '.', 'success');
+}
+
+function cancelMarkerEdit() {
+    if (mapEditMode.editMarker) {
+        mapEditMode.editMarker.setMap(null);
+        mapEditMode.editMarker = null;
+    }
+    overviewMarkers.forEach(m => m.setOptions({ clickable: true, opacity: 1.0 }));
+    const bar = document.getElementById('map-edit-bar');
+    if (bar) bar.style.display = 'none';
+    mapEditMode.active = false;
+    mapEditMode.fileIndex = null;
+}
 
 function getEffectiveGps(fileData) {
     if (fileData.editedGPS && fileData.editedGPS.isEdited) {
@@ -2234,7 +2312,7 @@ function buildMarkerInfoContent(indices) {
         html += '<span style="color:#64748b;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
         html += '🕐 ' + ts + '<br>';
         html += '<div style="margin-top:6px;display:flex;gap:12px">';
-        html += '<a href="#" onclick="openGpsEditModal(' + idx + ');return false;" style="color:#2563eb">📍 Edit Location</a>';
+        html += '<a href="#" onclick="startMarkerEdit(' + idx + ');return false;" style="color:#2563eb">📍 Edit Location</a>';
         html += '<a href="#" onclick="openMapPreview360(' + idx + ');return false;" style="color:#2563eb">🔭 View 360°</a>';
         html += '</div>';
     } else {
@@ -2252,7 +2330,7 @@ function buildMarkerInfoContent(indices) {
             html += '<strong>Photo #' + (idx + 1) + '</strong> ';
             html += '<span style="color:#64748b;font-size:0.78rem;word-break:break-all">' + (fd?.file?.name || '') + '</span><br>';
             html += '🕐 ' + ts + '<br>';
-            html += '<a href="#" onclick="openGpsEditModal(' + idx + ');return false;" style="color:#2563eb;margin-right:12px">📍 Edit Location</a>';
+            html += '<a href="#" onclick="startMarkerEdit(' + idx + ');return false;" style="color:#2563eb;margin-right:12px">📍 Edit Location</a>';
             html += '<a href="#" onclick="openMapPreview360(' + idx + ');return false;" style="color:#2563eb">🔭 View 360°</a>';
             html += '</div></div>';
         });
@@ -2262,6 +2340,7 @@ function buildMarkerInfoContent(indices) {
 }
 
 function updateOverviewMap(preserveView = false) {
+    if (mapEditMode.active) return;
     if (!mapVisible) return;
     if (!window.google || !window.google.maps) return;
 
@@ -2288,27 +2367,31 @@ function updateOverviewMap(preserveView = false) {
         const gps = getEffectiveGps(fd);
         if (!gps) continue;
         const key = gpsKey(gps.lat, gps.lng);
-        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, indices: [], hasPreview: false });
+        if (!posMap.has(key)) posMap.set(key, { lat: gps.lat, lng: gps.lng, indices: [], hasPreview: false, hasEdited: false });
         const entry = posMap.get(key);
         entry.indices.push(i);
         if (gps.source === 'gpx-preview') entry.hasPreview = true;
+        if (gps.source === 'fixed') entry.hasEdited = true;
     }
 
     if (posMap.size === 0) return;
 
     const anyPreview = [...posMap.values()].some(e => e.hasPreview);
+    const anyEdited = [...posMap.values()].some(e => e.hasEdited);
     const mapLegend = document.getElementById('map-legend');
-    if (mapLegend) mapLegend.style.display = anyPreview ? '' : 'none';
+    if (mapLegend) mapLegend.style.display = (anyPreview || anyEdited) ? '' : 'none';
 
     const bounds = new google.maps.LatLngBounds();
 
-    posMap.forEach(({ lat, lng, indices, hasPreview }) => {
+    posMap.forEach(({ lat, lng, indices, hasPreview, hasEdited }) => {
         const count = indices.length;
         const labelText = count === 1 ? String(indices[0] + 1) : String(count);
         bounds.extend({ lat, lng });
 
-        const fillColor = hasPreview ? '#f97316' : (count > 1 ? '#d97706' : '#2563eb');
-        const markerTitle = hasPreview
+        const fillColor = hasEdited ? '#16a34a' : hasPreview ? '#f97316' : (count > 1 ? '#d97706' : '#2563eb');
+        const markerTitle = hasEdited
+            ? (count === 1 ? 'Edited — Photo #' + (indices[0] + 1) : count + ' photos at this location (edited)')
+            : hasPreview
             ? `GPX preview — Photo #${indices[0] + 1}` + (count > 1 ? ` (+${count - 1} more)` : '')
             : (count === 1 ? 'Photo #' + (indices[0] + 1) : count + ' photos at this location');
 
@@ -2331,10 +2414,12 @@ function updateOverviewMap(preserveView = false) {
             content: buildMarkerInfoContent(indices)
         });
         marker.addListener('click', function () {
+            if (mapEditMode.active) return;
             overviewMarkers.forEach(m => m.infoWindow && m.infoWindow.close());
             infoWindow.open(overviewMap, marker);
         });
         marker.infoWindow = infoWindow;
+        marker.fileIndices = indices;
 
         overviewMarkers.push(marker);
     });
