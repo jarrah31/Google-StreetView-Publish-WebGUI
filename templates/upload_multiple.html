@@ -225,6 +225,7 @@
                                     <th class="filename-column" data-col="filename">Filename<div class="col-resize-handle"></div></th>
                                     <th class="placeid-column" data-col="placeid">PlaceID<div class="col-resize-handle"></div></th>
                                     <th class="status-column" data-col="status">Status<div class="col-resize-handle"></div></th>
+                                    <th class="blurify-column" data-col="blurify">Blurify<div class="col-resize-handle"></div></th>
                                     <th class="actions-column">More Info</th>
                                 </tr>
                             </thead>
@@ -308,6 +309,67 @@
             </div>
             <div id="pannellum-viewer"></div>
             <img id="image-preview-img" class="image-preview-img" src="" alt="Preview" style="display:none;">
+        </div>
+    </div>
+
+    <!-- Blurify Modal -->
+    <div id="blurify-modal" class="blurify-modal" style="display:none;">
+        <div class="blurify-header">
+            <span id="blurify-filename" class="blurify-header-title"></span>
+            <span class="blurify-header-hint">Drag to draw • Click a region to select, then drag to move or drag handles to resize</span>
+            <button id="blurify-close-btn" class="blurify-header-close">✕ Close</button>
+        </div>
+        <div class="blurify-body">
+            <div class="blurify-canvas-area" id="blurify-canvas-area">
+                <canvas id="blurify-canvas"></canvas>
+            </div>
+            <div class="blurify-sidebar">
+                <div id="blurify-editing-banner" class="blurify-editing-banner" style="display:none;">
+                    <span>✏️ Editing: <strong id="blurify-editing-region-label">Region 1</strong></span>
+                    <button id="blurify-deselect-btn" class="blurify-deselect-btn" title="Deselect region and go back to drawing mode">✕ Deselect</button>
+                </div>
+                <div class="blurify-tool-section">
+                    <label class="blurify-label">Blur Intensity</label>
+                    <div class="blurify-intensity-row">
+                        <input type="range" id="blurify-intensity-slider" min="1" max="100" value="50" class="blurify-slider">
+                        <span id="blurify-intensity-value" class="blurify-intensity-value">50%</span>
+                    </div>
+                    <div class="blurify-preset-btns">
+                        <button class="blurify-preset-btn" data-value="25">Light</button>
+                        <button class="blurify-preset-btn active" data-value="50">Medium</button>
+                        <button class="blurify-preset-btn" data-value="100">Heavy</button>
+                    </div>
+                </div>
+                <div class="blurify-tool-section">
+                    <label class="blurify-label">Shape</label>
+                    <div class="blurify-preset-btns">
+                        <button class="blurify-shape-btn active" data-shape="rect">▭ Rectangle</button>
+                        <button class="blurify-shape-btn" data-shape="oval">⬭ Oval</button>
+                    </div>
+                </div>
+                <div class="blurify-tool-section">
+                    <label class="blurify-label">Edge Blend</label>
+                    <div class="blurify-intensity-row">
+                        <input type="range" id="blurify-feather-slider" min="0" max="60" value="0" class="blurify-slider">
+                        <span id="blurify-feather-value" class="blurify-intensity-value">0px</span>
+                    </div>
+                    <p class="blurify-hint">How much the blur fades into the surrounding area. 0 = sharp edge.</p>
+                </div>
+                <div class="blurify-tool-section">
+                    <button id="blurify-outlines-btn" class="blurify-toggle-btn">Hide Outlines</button>
+                </div>
+                <div class="blurify-tool-section" style="flex:1; min-height:0;">
+                    <label class="blurify-label">Blur Regions (<span id="blurify-region-count">0</span>)</label>
+                    <ul id="blurify-regions-list" class="blurify-regions-list">
+                        <li class="blurify-no-regions">Drag on the image to add blur areas.</li>
+                    </ul>
+                    <button id="blurify-clear-all-btn" class="blurify-clear-btn" style="display:none;">Clear All Regions</button>
+                </div>
+                <div class="blurify-actions">
+                    <button id="blurify-apply-btn" class="blurify-apply-btn">Apply Blur</button>
+                    <button id="blurify-cancel-btn" class="blurify-cancel-btn">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -438,6 +500,9 @@ function initializeMultipleUpload() {
     
     // Initialize GPS edit modal
     initializeGpsEditModal();
+
+    // Initialize Blurify modal
+    initializeBlurifyModal();
 
     // GPX file input — enable Validate, reset Fix GPS and prior results
     document.getElementById('gpx-file-input').addEventListener('change', function() {
@@ -737,6 +802,9 @@ function createFileRow(index, fileData) {
                 ${fileData.status.icon} ${fileData.status.text}
             </span>
         </td>
+        <td class="blurify-column">
+            <button class="blurify-open-btn" data-file-index="${index}"${fileData.blurified ? ' data-blurified="true"' : ''}>✏️ Blurify${fileData.blurified ? ' ✓' : ''}</button>
+        </td>
         <td class="actions-column">
             <button class="detail-toggle-btn" data-index="${index}">Details ▼</button>
         </td>
@@ -801,7 +869,7 @@ function createDetailRow(index, fileData) {
     }
 
     const detailsHtml = `
-        <td colspan="${gpxProcessed ? 8 : 7}" class="detail-content">
+        <td colspan="${gpxProcessed ? 9 : 8}" class="detail-content">
             <div class="file-details">
                 <!-- <h4>File Details: ${file.name}</h4> -->
                 <div class="file-details-grid">
@@ -1944,6 +2012,9 @@ document.addEventListener('click', function(event) {
     } else if (event.target.classList.contains('reset-gps-btn')) {
         const fileIndex = parseInt(event.target.getAttribute('data-file-index'));
         resetGpsCoordinates(fileIndex);
+    } else if (event.target.classList.contains('blurify-open-btn')) {
+        const fileIndex = parseInt(event.target.getAttribute('data-file-index'));
+        openBlurifyModal(fileIndex);
     }
 });
 
@@ -2846,6 +2917,767 @@ async function runGpxValidate() {
     if (noMatchCount > 0) parts.push(`${noMatchCount} outside ${getGpxThreshold()}s threshold`);
     showFlashMessage(parts.join(', ') + '.', matchCount > 0 ? 'success' : 'warning');
 }
+
+// ─── Blurify ────────────────────────────────────────────────────────────────
+
+let blurifyFileIndex = null;
+let blurifyCanvas = null;
+let blurifyCtx = null;
+let blurifyImg = null;
+let blurifyRegions = [];
+let blurifyIsDrawing = false;
+let blurifyStartX = 0, blurifyStartY = 0;
+let blurifyCurrentX = 0, blurifyCurrentY = 0;
+let blurifyCurrentIntensity = 50;
+let blurifyCurrentFeather = 0;
+let blurifyCurrentShape = 'rect';
+let blurifyShowOutlines = true;
+let blurifyImageNaturalW = 0, blurifyImageNaturalH = 0;
+let blurifySelectedIdx = -1;      // index of selected (hovered/dragged) region, -1 = none
+let blurifyDragMode = null;        // null | 'draw' | 'move' | handle type ('nw','n','ne',…)
+let blurifyDragStartX = 0, blurifyDragStartY = 0;
+let blurifyDragOrigRegion = null;  // snapshot of region at drag start
+
+function openBlurifyModal(index) {
+    blurifyFileIndex = index;
+    const fd = filesMetadata[index];
+    blurifyRegions = [];
+    blurifyIsDrawing = false;
+    blurifySelectedIdx = -1;
+    blurifyDragMode = null;
+
+    const modal = document.getElementById('blurify-modal');
+    document.getElementById('blurify-filename').textContent = fd.file.name;
+    document.getElementById('blurify-intensity-slider').value = blurifyCurrentIntensity;
+    document.getElementById('blurify-intensity-value').textContent = blurifyCurrentIntensity + '%';
+    document.getElementById('blurify-feather-slider').value = blurifyCurrentFeather;
+    document.getElementById('blurify-feather-value').textContent = blurifyCurrentFeather + 'px';
+    blurifyShowOutlines = true;
+    updateOutlinesToggleBtn();
+    blurifyCurrentShape = 'rect';
+    document.querySelectorAll('.blurify-shape-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.shape === 'rect'));
+    blurifyUpdateEditingBanner();
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    updateBlurifyRegionsList();
+
+    blurifyImg = new Image();
+    const objectUrl = URL.createObjectURL(fd.file);
+    blurifyImg.onload = function() {
+        blurifyImageNaturalW = blurifyImg.naturalWidth;
+        blurifyImageNaturalH = blurifyImg.naturalHeight;
+        URL.revokeObjectURL(objectUrl);
+        initBlurifyCanvas();
+        redrawBlurifyCanvas();
+    };
+    blurifyImg.src = objectUrl;
+}
+
+function initBlurifyCanvas() {
+    const wrapper = document.getElementById('blurify-canvas-area');
+    blurifyCanvas = document.getElementById('blurify-canvas');
+    blurifyCtx = blurifyCanvas.getContext('2d');
+
+    const maxW = wrapper.clientWidth - 32;
+    const maxH = wrapper.clientHeight - 32;
+    const aspect = blurifyImageNaturalW / blurifyImageNaturalH;
+
+    let cw, ch;
+    if (aspect > maxW / maxH) {
+        cw = maxW; ch = Math.round(maxW / aspect);
+    } else {
+        ch = maxH; cw = Math.round(maxH * aspect);
+    }
+
+    blurifyCanvas.width = cw;
+    blurifyCanvas.height = ch;
+    blurifyCanvas.style.width = cw + 'px';
+    blurifyCanvas.style.height = ch + 'px';
+}
+
+function blurifyCanvasPos(e) {
+    const rect = blurifyCanvas.getBoundingClientRect();
+    const scaleX = blurifyCanvas.width / rect.width;
+    const scaleY = blurifyCanvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return {
+        x: Math.max(0, Math.min(blurifyCanvas.width,  (src.clientX - rect.left)  * scaleX)),
+        y: Math.max(0, Math.min(blurifyCanvas.height, (src.clientY - rect.top) * scaleY))
+    };
+}
+
+function buildFeatherMask(offW, offH, ix, iy, iw, ih, f) {
+    // Mask: solid white inside the inner rect, linear fade outward over f pixels,
+    // radial fade at corners. The original image shows through where the mask is dark.
+    const m = new OffscreenCanvas(offW, offH);
+    const mc = m.getContext('2d');
+
+    mc.fillStyle = '#fff';
+    mc.fillRect(ix, iy, iw, ih);
+
+    // Edge strips
+    const topG = mc.createLinearGradient(0, iy - f, 0, iy);
+    topG.addColorStop(0, 'rgba(255,255,255,0)'); topG.addColorStop(1, 'rgba(255,255,255,1)');
+    mc.fillStyle = topG; mc.fillRect(ix, iy - f, iw, f);
+
+    const botG = mc.createLinearGradient(0, iy + ih, 0, iy + ih + f);
+    botG.addColorStop(0, 'rgba(255,255,255,1)'); botG.addColorStop(1, 'rgba(255,255,255,0)');
+    mc.fillStyle = botG; mc.fillRect(ix, iy + ih, iw, f);
+
+    const leftG = mc.createLinearGradient(ix - f, 0, ix, 0);
+    leftG.addColorStop(0, 'rgba(255,255,255,0)'); leftG.addColorStop(1, 'rgba(255,255,255,1)');
+    mc.fillStyle = leftG; mc.fillRect(ix - f, iy, f, ih);
+
+    const rightG = mc.createLinearGradient(ix + iw, 0, ix + iw + f, 0);
+    rightG.addColorStop(0, 'rgba(255,255,255,1)'); rightG.addColorStop(1, 'rgba(255,255,255,0)');
+    mc.fillStyle = rightG; mc.fillRect(ix + iw, iy, f, ih);
+
+    // Corners (radial fade centred on each corner of the inner rect)
+    [
+        [ix,      iy,      ix - f,  iy - f ],
+        [ix + iw, iy,      ix + iw, iy - f ],
+        [ix,      iy + ih, ix - f,  iy + ih],
+        [ix + iw, iy + ih, ix + iw, iy + ih],
+    ].forEach(([cx, cy, dx, dy]) => {
+        const cg = mc.createRadialGradient(cx, cy, 0, cx, cy, f);
+        cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(1, 'rgba(255,255,255,0)');
+        mc.fillStyle = cg; mc.fillRect(dx, dy, f, f);
+    });
+
+    return m;
+}
+
+function buildOvalFeatherMask(offW, offH, cx, cy, rx, ry, f) {
+    // Solid white ellipse inside, fades outward over f pixels.
+    // Technique: draw expanded ellipse → blur → overdraw solid inner ellipse to restore opacity.
+    const m = new OffscreenCanvas(offW, offH);
+    const mc = m.getContext('2d');
+    if (f <= 0) {
+        mc.fillStyle = '#fff';
+        mc.beginPath(); mc.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); mc.fill();
+        return m;
+    }
+    // Expanded solid ellipse (ensures center stays ~1.0 after blur)
+    const bigOff = new OffscreenCanvas(offW, offH);
+    const bc = bigOff.getContext('2d');
+    bc.fillStyle = '#fff';
+    bc.beginPath(); bc.ellipse(cx, cy, rx + f * 2, ry + f * 2, 0, 0, Math.PI * 2); bc.fill();
+    // Blur the expanded ellipse into the mask canvas
+    mc.filter = `blur(${f}px)`;
+    mc.drawImage(bigOff, 0, 0);
+    mc.filter = 'none';
+    // Restore full opacity inside the original ellipse
+    mc.fillStyle = '#fff';
+    mc.beginPath(); mc.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); mc.fill();
+    return m;
+}
+
+function drawOvalBlurRegion(ctx, r) {
+    const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+    const radius = Math.max(1, Math.round(r.intensity * 0.5));
+    const feather = r.feather || 0;
+    const ecx = r.x + r.width / 2, ecy = r.y + r.height / 2;
+    const erx = r.width / 2,       ery = r.height / 2;
+
+    if (feather <= 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(ecx, ecy, erx, ery, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.filter = `blur(${radius}px)`;
+        ctx.drawImage(blurifyImg, 0, 0, cw, ch);
+        ctx.filter = 'none';
+        ctx.restore();
+        return;
+    }
+
+    const pad = feather + Math.ceil(radius) + 2;
+    const offW = r.width + pad * 2, offH = r.height + pad * 2;
+
+    const blurOff = new OffscreenCanvas(offW, offH);
+    const blurCtx = blurOff.getContext('2d');
+    blurCtx.filter = `blur(${radius}px)`;
+    blurCtx.drawImage(blurifyImg, pad - r.x, pad - r.y, cw, ch);
+    blurCtx.filter = 'none';
+
+    // Oval mask: inner ellipse at (pad + erx, pad + ery)
+    const maskOff = buildOvalFeatherMask(offW, offH, pad + erx, pad + ery, erx, ery, feather);
+    blurCtx.globalCompositeOperation = 'destination-in';
+    blurCtx.drawImage(maskOff, 0, 0);
+
+    ctx.drawImage(blurOff, r.x - pad, r.y - pad);
+}
+
+function drawBlurRegion(ctx, r) {
+    if (r.shape === 'oval') { drawOvalBlurRegion(ctx, r); return; }
+    const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+    const radius = Math.max(1, Math.round(r.intensity * 0.5));
+    const feather = r.feather || 0;
+
+    if (feather <= 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(r.x, r.y, r.width, r.height);
+        ctx.clip();
+        ctx.filter = `blur(${radius}px)`;
+        ctx.drawImage(blurifyImg, 0, 0, cw, ch);
+        ctx.filter = 'none';
+        ctx.restore();
+        return;
+    }
+
+    // Pad enough for blur bleeding + feather overhang
+    const pad = feather + Math.ceil(radius) + 2;
+    const offW = r.width + pad * 2, offH = r.height + pad * 2;
+
+    // Render the blurred image for this expanded region
+    const blurOff = new OffscreenCanvas(offW, offH);
+    const blurCtx = blurOff.getContext('2d');
+    blurCtx.filter = `blur(${radius}px)`;
+    blurCtx.drawImage(blurifyImg, pad - r.x, pad - r.y, cw, ch);
+    blurCtx.filter = 'none';
+
+    // Build a mask: full opacity over inner rect, fades outward over feather px
+    // Inner rect sits at (pad, pad) in offscreen coords
+    const maskOff = buildFeatherMask(offW, offH, pad, pad, r.width, r.height, feather);
+
+    // Clip blurred image to feathered shape
+    blurCtx.globalCompositeOperation = 'destination-in';
+    blurCtx.drawImage(maskOff, 0, 0);
+
+    // Stamp onto main canvas; offset by -pad so inner rect aligns with r.x/r.y
+    ctx.drawImage(blurOff, r.x - pad, r.y - pad);
+}
+
+function redrawBlurifyCanvas() {
+    if (!blurifyCtx || !blurifyImg) return;
+    const ctx = blurifyCtx;
+    const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.filter = 'none';
+    ctx.drawImage(blurifyImg, 0, 0, cw, ch);
+
+    blurifyRegions.forEach((r, i) => {
+        drawBlurRegion(ctx, r);
+
+        const isSelected = (i === blurifySelectedIdx);
+
+        if (blurifyShowOutlines || isSelected) {
+            // Outline: cyan for selected, dimmer for others
+            ctx.strokeStyle = isSelected ? '#00d4ff' : 'rgba(0,212,255,0.55)';
+            ctx.lineWidth = isSelected ? 2 : 1.5;
+            ctx.setLineDash([5, 3]);
+            if (r.shape === 'oval') {
+                ctx.beginPath();
+                ctx.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2 - 1, r.height / 2 - 1, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                ctx.strokeRect(r.x + 1, r.y + 1, r.width - 2, r.height - 2);
+            }
+            ctx.setLineDash([]);
+        }
+
+        if (blurifyShowOutlines) {
+            // Numbered badge (only when outlines visible)
+            ctx.fillStyle = 'rgba(0,212,255,0.9)';
+            ctx.fillRect(r.x + 1, r.y + 1, 22, 18);
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(i + 1, r.x + 5, r.y + 10);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // Resize handles on the selected region (always, even when outlines hidden)
+        if (isSelected) blurifyDrawHandles(ctx, r);
+    });
+
+    // Active draw-selection preview
+    if (blurifyIsDrawing) {
+        const sx = Math.min(blurifyStartX, blurifyCurrentX);
+        const sy = Math.min(blurifyStartY, blurifyCurrentY);
+        const sw = Math.abs(blurifyCurrentX - blurifyStartX);
+        const sh = Math.abs(blurifyCurrentY - blurifyStartY);
+        if (sw > 2 && sh > 2) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 3]);
+            if (blurifyCurrentShape === 'oval') {
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.beginPath();
+                ctx.ellipse(sx + sw / 2, sy + sh / 2, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(sx + sw / 2, sy + sh / 2, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.fillRect(sx, sy, sw, sh);
+                ctx.strokeRect(sx, sy, sw, sh);
+            }
+            ctx.setLineDash([]);
+        }
+    }
+}
+
+function updateBlurifyRegionsList() {
+    const list = document.getElementById('blurify-regions-list');
+    const count = document.getElementById('blurify-region-count');
+    const clearBtn = document.getElementById('blurify-clear-all-btn');
+
+    count.textContent = blurifyRegions.length;
+
+    if (blurifyRegions.length === 0) {
+        list.innerHTML = '<li class="blurify-no-regions">Drag on the image to add blur areas.</li>';
+        clearBtn.style.display = 'none';
+        return;
+    }
+
+    clearBtn.style.display = 'block';
+    list.innerHTML = blurifyRegions.map((r, i) => `
+        <li class="blurify-region-item">
+            <span class="blurify-region-num">${i + 1}</span>
+            <span class="blurify-region-shape-icon" title="${r.shape === 'oval' ? 'Oval' : 'Rectangle'}">${r.shape === 'oval' ? '⬭' : '▭'}</span>
+            <span class="blurify-region-info">${r.intensity}%${r.feather > 0 ? ` · ${r.feather}px` : ''}</span>
+            <button class="blurify-region-delete" data-idx="${i}" title="Remove">✕</button>
+        </li>
+    `).join('');
+
+    list.querySelectorAll('.blurify-region-delete').forEach(btn => {
+        btn.addEventListener('click', e => {
+            const idx = parseInt(e.currentTarget.dataset.idx);
+            blurifyRegions.splice(idx, 1);
+            // Adjust or clear selected index
+            if (blurifySelectedIdx === idx) blurifySelectedIdx = -1;
+            else if (blurifySelectedIdx > idx) blurifySelectedIdx--;
+            updateBlurifyRegionsList();
+            redrawBlurifyCanvas();
+        });
+    });
+}
+
+// ── Blurify: move / resize helpers ───────────────────────────────────────────
+
+const BLURIFY_HANDLE_SIZE = 8;    // half-width of each square handle (hit zone)
+const BLURIFY_MIN_REGION = 10;    // minimum region dimension in canvas px
+
+/** Return the 8 handle positions for region r. */
+function blurifyGetHandles(r) {
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+    const rx = r.x + r.width,      by = r.y + r.height;
+    return [
+        { type: 'nw', x: r.x, y: r.y,  cursor: 'nw-resize' },
+        { type: 'n',  x: cx,  y: r.y,  cursor: 'n-resize'  },
+        { type: 'ne', x: rx,  y: r.y,  cursor: 'ne-resize' },
+        { type: 'e',  x: rx,  y: cy,   cursor: 'e-resize'  },
+        { type: 'se', x: rx,  y: by,   cursor: 'se-resize' },
+        { type: 's',  x: cx,  y: by,   cursor: 's-resize'  },
+        { type: 'sw', x: r.x, y: by,   cursor: 'sw-resize' },
+        { type: 'w',  x: r.x, y: cy,   cursor: 'w-resize'  },
+    ];
+}
+
+/** True if (mx,my) is inside region r (respects oval shape). */
+function blurifyHitRegion(r, mx, my) {
+    if (r.shape === 'oval') {
+        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+        const rx = r.width / 2, ry = r.height / 2;
+        if (rx <= 0 || ry <= 0) return false;
+        const dx = (mx - cx) / rx, dy = (my - cy) / ry;
+        return dx * dx + dy * dy <= 1;
+    }
+    return mx >= r.x && mx <= r.x + r.width && my >= r.y && my <= r.y + r.height;
+}
+
+/**
+ * Return {regionIdx, type} for the topmost hit, or null.
+ * Checks selected region's handles first, then interiors top-to-bottom.
+ */
+function blurifyGetHitInfo(mx, my) {
+    const hs = BLURIFY_HANDLE_SIZE;
+    // 1. Handles of selected region take priority
+    if (blurifySelectedIdx >= 0 && blurifySelectedIdx < blurifyRegions.length) {
+        const handles = blurifyGetHandles(blurifyRegions[blurifySelectedIdx]);
+        for (const h of handles) {
+            if (Math.abs(mx - h.x) <= hs && Math.abs(my - h.y) <= hs)
+                return { regionIdx: blurifySelectedIdx, type: h.type, cursor: h.cursor };
+        }
+        if (blurifyHitRegion(blurifyRegions[blurifySelectedIdx], mx, my))
+            return { regionIdx: blurifySelectedIdx, type: 'move', cursor: 'move' };
+    }
+    // 2. Other regions (last drawn = topmost)
+    for (let i = blurifyRegions.length - 1; i >= 0; i--) {
+        if (i === blurifySelectedIdx) continue;
+        const handles = blurifyGetHandles(blurifyRegions[i]);
+        for (const h of handles) {
+            if (Math.abs(mx - h.x) <= hs && Math.abs(my - h.y) <= hs)
+                return { regionIdx: i, type: h.type, cursor: h.cursor };
+        }
+        if (blurifyHitRegion(blurifyRegions[i], mx, my))
+            return { regionIdx: i, type: 'move', cursor: 'move' };
+    }
+    return null;
+}
+
+/** Apply a move or resize drag delta to region r (mutates in place). */
+function blurifyApplyDrag(r, orig, type, dx, dy) {
+    const M = BLURIFY_MIN_REGION;
+    const right  = orig.x + orig.width;
+    const bottom = orig.y + orig.height;
+    switch (type) {
+        case 'move': {
+            const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+            r.x = Math.max(0, Math.min(cw - orig.width,  orig.x + dx));
+            r.y = Math.max(0, Math.min(ch - orig.height, orig.y + dy));
+            break;
+        }
+        case 'nw':
+            r.x = Math.min(orig.x + dx, right  - M);
+            r.y = Math.min(orig.y + dy, bottom - M);
+            r.width  = right  - r.x;
+            r.height = bottom - r.y;
+            break;
+        case 'n':
+            r.y = Math.min(orig.y + dy, bottom - M);
+            r.height = bottom - r.y;
+            break;
+        case 'ne':
+            r.y      = Math.min(orig.y + dy, bottom - M);
+            r.height = bottom - r.y;
+            r.width  = Math.max(M, orig.width + dx);
+            break;
+        case 'e':
+            r.width = Math.max(M, orig.width + dx);
+            break;
+        case 'se':
+            r.width  = Math.max(M, orig.width  + dx);
+            r.height = Math.max(M, orig.height + dy);
+            break;
+        case 's':
+            r.height = Math.max(M, orig.height + dy);
+            break;
+        case 'sw':
+            r.x     = Math.min(orig.x + dx, right - M);
+            r.width = right - r.x;
+            r.height = Math.max(M, orig.height + dy);
+            break;
+        case 'w':
+            r.x     = Math.min(orig.x + dx, right - M);
+            r.width = right - r.x;
+            break;
+    }
+}
+
+/** Draw resize handles for the selected region. */
+function blurifyDrawHandles(ctx, r) {
+    const hs = BLURIFY_HANDLE_SIZE;
+    blurifyGetHandles(r).forEach(h => {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        ctx.strokeStyle = '#00d4ff';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([]);
+        ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+    });
+}
+
+// ── Blurify: canvas event wiring ─────────────────────────────────────────────
+
+function initBlurifyCanvasEvents() {
+    const canvas = document.getElementById('blurify-canvas');
+
+    canvas.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        const p = blurifyCanvasPos(e);
+        const hit = blurifyGetHitInfo(p.x, p.y);
+
+        if (hit) {
+            // Select + start move/resize of existing region
+            blurifySelectRegion(hit.regionIdx);
+            blurifyDragMode       = hit.type;
+            blurifyDragStartX     = p.x;
+            blurifyDragStartY     = p.y;
+            blurifyDragOrigRegion = Object.assign({}, blurifyRegions[hit.regionIdx]);
+            redrawBlurifyCanvas();
+        } else {
+            // Deselect and start drawing a new region
+            blurifySelectedIdx = -1;
+            blurifyDragMode    = 'draw';
+            blurifyIsDrawing   = true;
+            blurifyStartX      = p.x;
+            blurifyStartY      = p.y;
+            blurifyCurrentX    = p.x;
+            blurifyCurrentY    = p.y;
+            blurifyUpdateEditingBanner();
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        const p = blurifyCanvasPos(e);
+
+        if (blurifyDragMode && blurifyDragMode !== 'draw') {
+            // Move or resize an existing region
+            const r    = blurifyRegions[blurifySelectedIdx];
+            const orig = blurifyDragOrigRegion;
+            blurifyApplyDrag(r, orig, blurifyDragMode, p.x - blurifyDragStartX, p.y - blurifyDragStartY);
+            redrawBlurifyCanvas();
+        } else if (blurifyIsDrawing) {
+            // Drawing a new region
+            blurifyCurrentX = p.x;
+            blurifyCurrentY = p.y;
+            redrawBlurifyCanvas();
+        } else {
+            // Update cursor based on what's under the pointer
+            const hit = blurifyGetHitInfo(p.x, p.y);
+            canvas.style.cursor = hit ? hit.cursor : 'crosshair';
+        }
+    });
+
+    canvas.addEventListener('mouseup', e => {
+        const p = blurifyCanvasPos(e);
+
+        if (blurifyDragMode === 'draw') {
+            // Finalise new region
+            blurifyIsDrawing = false;
+            blurifyCurrentX  = p.x;
+            blurifyCurrentY  = p.y;
+            const x = Math.min(blurifyStartX, blurifyCurrentX);
+            const y = Math.min(blurifyStartY, blurifyCurrentY);
+            const w = Math.abs(blurifyCurrentX - blurifyStartX);
+            const h = Math.abs(blurifyCurrentY - blurifyStartY);
+            if (w > 5 && h > 5) {
+                blurifyRegions.push({ x, y, width: w, height: h,
+                    intensity: blurifyCurrentIntensity,
+                    feather:   blurifyCurrentFeather,
+                    shape:     blurifyCurrentShape });
+                blurifySelectedIdx = blurifyRegions.length - 1;
+                blurifyUpdateEditingBanner();
+                updateBlurifyRegionsList();
+            }
+        }
+        // Finish any drag
+        blurifyDragMode        = null;
+        blurifyDragOrigRegion  = null;
+        redrawBlurifyCanvas();
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        if (blurifyIsDrawing) {
+            blurifyIsDrawing = false;
+            blurifyDragMode  = null;
+            redrawBlurifyCanvas();
+        }
+        canvas.style.cursor = 'crosshair';
+    });
+}
+
+function closeBlurifyModal() {
+    document.getElementById('blurify-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    blurifyFileIndex = null;
+    blurifyRegions = [];
+    blurifyIsDrawing = false;
+    blurifySelectedIdx = -1;
+    blurifyDragMode = null;
+    blurifyImg = null;
+}
+
+async function applyBlurify() {
+    if (blurifyRegions.length === 0) {
+        showFlashMessage('Draw at least one region on the image first.', 'warning');
+        return;
+    }
+
+    const applyBtn = document.getElementById('blurify-apply-btn');
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Processing…';
+
+    try {
+        const fd = filesMetadata[blurifyFileIndex];
+        const scaleX = blurifyImageNaturalW / blurifyCanvas.width;
+        const scaleY = blurifyImageNaturalH / blurifyCanvas.height;
+
+        const avgScale = (scaleX + scaleY) / 2;
+        const scaledRegions = blurifyRegions.map(r => ({
+            x:         Math.round(r.x * scaleX),
+            y:         Math.round(r.y * scaleY),
+            width:     Math.round(r.width  * scaleX),
+            height:    Math.round(r.height * scaleY),
+            intensity: r.intensity,
+            feather:   Math.round((r.feather || 0) * avgScale),
+            shape:     r.shape || 'rect'
+        }));
+
+        const formData = new FormData();
+        formData.append('file', fd.file, fd.file.name);
+        formData.append('regions', JSON.stringify(scaledRegions));
+
+        const resp = await fetch('/blurify', { method: 'POST', body: formData });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${resp.status}`);
+        }
+
+        const blob = await resp.blob();
+        const newFile = new File([blob], fd.file.name, {
+            type: 'image/jpeg',
+            lastModified: fd.file.lastModified
+        });
+
+        // Replace file reference — upload will use this blurified version
+        fd.file = newFile;
+        fd.blurified = true;
+
+        // Update thumbnail in the table
+        const thumb = document.querySelector(`.photo-row[data-file-index="${blurifyFileIndex}"] .file-thumbnail`);
+        if (thumb) {
+            URL.revokeObjectURL(thumb.src);
+            thumb.src = URL.createObjectURL(newFile);
+        }
+
+        // Update the Blurify button label in the open detail row
+        const openBtn = document.querySelector(`.blurify-open-btn[data-file-index="${blurifyFileIndex}"]`);
+        if (openBtn) {
+            openBtn.textContent = '✏️ Blurify ✓';
+            openBtn.dataset.blurified = 'true';
+        }
+
+        closeBlurifyModal();
+        showFlashMessage(`Blur applied to "${fd.file.name}". The edited photo will be uploaded.`, 'success');
+    } catch (err) {
+        console.error('Blurify apply error:', err);
+        showFlashMessage('Failed to apply blur: ' + err.message, 'error');
+    } finally {
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply Blur';
+    }
+}
+
+function initializeBlurifyModal() {
+    const modal = document.getElementById('blurify-modal');
+
+    document.getElementById('blurify-close-btn').addEventListener('click', closeBlurifyModal);
+    document.getElementById('blurify-cancel-btn').addEventListener('click', closeBlurifyModal);
+    document.getElementById('blurify-apply-btn').addEventListener('click', applyBlurify);
+    document.getElementById('blurify-deselect-btn').addEventListener('click', () => {
+        blurifySelectedIdx = -1;
+        blurifyDragMode = null;
+        blurifyUpdateEditingBanner();
+        redrawBlurifyCanvas();
+    });
+    document.getElementById('blurify-clear-all-btn').addEventListener('click', () => {
+        blurifyRegions = [];
+        blurifySelectedIdx = -1;
+        updateBlurifyRegionsList();
+        redrawBlurifyCanvas();
+    });
+
+    const slider = document.getElementById('blurify-intensity-slider');
+    const valLabel = document.getElementById('blurify-intensity-value');
+    slider.addEventListener('input', () => {
+        blurifyCurrentIntensity = parseInt(slider.value);
+        valLabel.textContent = blurifyCurrentIntensity + '%';
+        updatePresetButtons();
+        if (blurifySelectedIdx >= 0 && blurifyRegions[blurifySelectedIdx]) {
+            blurifyRegions[blurifySelectedIdx].intensity = blurifyCurrentIntensity;
+            updateBlurifyRegionsList();
+            redrawBlurifyCanvas();
+        }
+    });
+
+    document.querySelectorAll('.blurify-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!btn.dataset.value) return;
+            blurifyCurrentIntensity = parseInt(btn.dataset.value);
+            slider.value = blurifyCurrentIntensity;
+            valLabel.textContent = blurifyCurrentIntensity + '%';
+            updatePresetButtons();
+            if (blurifySelectedIdx >= 0 && blurifyRegions[blurifySelectedIdx]) {
+                blurifyRegions[blurifySelectedIdx].intensity = blurifyCurrentIntensity;
+                updateBlurifyRegionsList();
+                redrawBlurifyCanvas();
+            }
+        });
+    });
+
+    const featherSlider = document.getElementById('blurify-feather-slider');
+    const featherLabel = document.getElementById('blurify-feather-value');
+    featherSlider.addEventListener('input', () => {
+        blurifyCurrentFeather = parseInt(featherSlider.value);
+        featherLabel.textContent = blurifyCurrentFeather + 'px';
+        if (blurifySelectedIdx >= 0 && blurifyRegions[blurifySelectedIdx]) {
+            blurifyRegions[blurifySelectedIdx].feather = blurifyCurrentFeather;
+            updateBlurifyRegionsList();
+            redrawBlurifyCanvas();
+        }
+    });
+
+    document.getElementById('blurify-outlines-btn').addEventListener('click', () => {
+        blurifyShowOutlines = !blurifyShowOutlines;
+        updateOutlinesToggleBtn();
+        redrawBlurifyCanvas();
+    });
+
+    document.querySelectorAll('.blurify-shape-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            blurifyCurrentShape = btn.dataset.shape;
+            document.querySelectorAll('.blurify-shape-btn').forEach(b =>
+                b.classList.toggle('active', b === btn));
+        });
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') closeBlurifyModal();
+    });
+
+    initBlurifyCanvasEvents();
+}
+
+function updatePresetButtons() {
+    document.querySelectorAll('.blurify-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.value) === blurifyCurrentIntensity);
+    });
+}
+
+/**
+ * Sync sliders + current-intensity/feather globals to the given region's values,
+ * then show/hide the editing banner. Caller must call redrawBlurifyCanvas() if needed.
+ */
+function blurifySelectRegion(idx) {
+    blurifySelectedIdx = idx;
+    if (idx >= 0 && blurifyRegions[idx]) {
+        const r = blurifyRegions[idx];
+        blurifyCurrentIntensity = r.intensity;
+        blurifyCurrentFeather   = r.feather || 0;
+        document.getElementById('blurify-intensity-slider').value = blurifyCurrentIntensity;
+        document.getElementById('blurify-intensity-value').textContent = blurifyCurrentIntensity + '%';
+        document.getElementById('blurify-feather-slider').value = blurifyCurrentFeather;
+        document.getElementById('blurify-feather-value').textContent = blurifyCurrentFeather + 'px';
+        updatePresetButtons();
+    }
+    blurifyUpdateEditingBanner();
+}
+
+function blurifyUpdateEditingBanner() {
+    const banner = document.getElementById('blurify-editing-banner');
+    if (!banner) return;
+    const visible = blurifySelectedIdx >= 0;
+    banner.style.display = visible ? 'flex' : 'none';
+    if (visible) {
+        document.getElementById('blurify-editing-region-label').textContent = `Region ${blurifySelectedIdx + 1}`;
+    }
+}
+
+function updateOutlinesToggleBtn() {
+    const btn = document.getElementById('blurify-outlines-btn');
+    if (!btn) return;
+    btn.textContent = blurifyShowOutlines ? 'Hide Outlines' : 'Show Outlines';
+    btn.classList.toggle('active', !blurifyShowOutlines);
+}
+
+// ─── End Blurify ─────────────────────────────────────────────────────────────
 
 function runGpsFix() {
     if (!gpxValidated) {

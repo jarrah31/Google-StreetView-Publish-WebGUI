@@ -4,6 +4,8 @@ import requests
 import json
 import os
 import tempfile
+import io
+import struct
 import google_auth_oauthlib.flow
 import google.auth.exceptions
 import re
@@ -491,6 +493,148 @@ def preview_photo_serve(token):
     resp.headers['Access-Control-Allow-Origin'] = '*'
     resp.headers['Cache-Control'] = 'no-store'
     return resp
+
+def _extract_xmp_segments(jpeg_bytes):
+    """Return raw XMP APP1 segment bytes found in the JPEG."""
+    xmp_segments = []
+    if len(jpeg_bytes) < 4 or jpeg_bytes[:2] != b'\xff\xd8':
+        return xmp_segments
+    i = 2
+    while i + 3 < len(jpeg_bytes):
+        if jpeg_bytes[i] != 0xFF:
+            break
+        marker = jpeg_bytes[i + 1]
+        if marker == 0xDA:  # SOS — scan data starts, stop here
+            break
+        if marker in (0xD8, 0xD9):
+            i += 2
+            continue
+        length = struct.unpack('>H', jpeg_bytes[i + 2:i + 4])[0]
+        if marker == 0xE1:
+            seg_data = jpeg_bytes[i + 4:i + 2 + length]
+            if seg_data.startswith(b'http://ns.adobe.com/xap/1.0/\x00'):
+                xmp_segments.append(jpeg_bytes[i:i + 2 + length])
+        i += 2 + length
+    return xmp_segments
+
+
+def _inject_after_soi(jpeg_bytes, segments):
+    """Insert raw byte segments immediately after the JPEG SOI marker."""
+    if not segments or jpeg_bytes[:2] != b'\xff\xd8':
+        return jpeg_bytes
+    return b'\xff\xd8' + b''.join(segments) + jpeg_bytes[2:]
+
+
+def _apply_blur_regions(image_bytes, regions):
+    """
+    Gaussian-blur rectangular regions of a JPEG in-memory.
+    All EXIF and XMP metadata from the original is preserved in the output.
+    regions: list of dicts {x, y, width, height, intensity (1-100)}
+    """
+    from PIL import Image, ImageFilter
+    import piexif
+
+    # Preserve EXIF
+    try:
+        exif_bytes = piexif.dump(piexif.load(image_bytes))
+    except Exception:
+        exif_bytes = None
+
+    # Preserve XMP (Street View panorama tags live here)
+    xmp_segments = _extract_xmp_segments(image_bytes)
+
+    img = Image.open(io.BytesIO(image_bytes))
+    if img.mode not in ('RGB', 'RGBA'):
+        img = img.convert('RGB')
+
+    from PIL import ImageDraw, ImageChops
+    for region in regions:
+        x = max(0, int(region.get('x', 0)))
+        y = max(0, int(region.get('y', 0)))
+        w = max(1, int(region.get('width', 1)))
+        h = max(1, int(region.get('height', 1)))
+        intensity = max(1, min(100, int(region.get('intensity', 50))))
+        feather = max(0, int(region.get('feather', 0)))
+        shape = region.get('shape', 'rect')
+        x2 = min(x + w, img.width)
+        y2 = min(y + h, img.height)
+        if x2 <= x or y2 <= y:
+            continue
+        radius = max(2, int(intensity * 0.5))
+        box = (x, y, x2, y2)
+        bw, bh = x2 - x, y2 - y
+
+        if feather <= 0:
+            # Hard edge — blit blurred crop, masked to shape
+            blurred = img.crop(box).filter(ImageFilter.GaussianBlur(radius=radius))
+            if shape == 'oval':
+                mask = Image.new('L', (bw, bh), 0)
+                ImageDraw.Draw(mask).ellipse([0, 0, bw - 1, bh - 1], fill=255)
+                img.paste(blurred, box, mask)
+            else:
+                img.paste(blurred, box)
+        else:
+            # Outward feather — expand paste area so blur dissolves into surroundings
+            ex  = max(0, x  - feather)
+            ey  = max(0, y  - feather)
+            ex2 = min(img.width,  x2 + feather)
+            ey2 = min(img.height, y2 + feather)
+            ew, eh = ex2 - ex, ey2 - ey
+            pad = radius + 2
+            px,  py  = max(0, ex - pad), max(0, ey - pad)
+            px2, py2 = min(img.width, ex2 + pad), min(img.height, ey2 + pad)
+            blurred_region = img.crop((px, py, px2, py2)) \
+                               .filter(ImageFilter.GaussianBlur(radius=radius)) \
+                               .crop((ex - px, ey - py, ex2 - px, ey2 - py))
+            # Shape mask: full opacity over drawn area, blurred outward then inner restored
+            ix, iy = x - ex, y - ey
+            ix2, iy2 = x2 - ex, y2 - ey
+            mask = Image.new('L', (ew, eh), 0)
+            if shape == 'oval':
+                ImageDraw.Draw(mask).ellipse([ix, iy, ix2 - 1, iy2 - 1], fill=255)
+            else:
+                ImageDraw.Draw(mask).rectangle([ix, iy, ix2 - 1, iy2 - 1], fill=255)
+            soft_mask = mask.filter(ImageFilter.GaussianBlur(radius=max(1, feather * 0.5)))
+            final_mask = ImageChops.lighter(soft_mask, mask)
+            img.paste(blurred_region, (ex, ey), final_mask)
+
+    out = io.BytesIO()
+    save_kwargs = {'format': 'JPEG'}
+    if exif_bytes:
+        save_kwargs['exif'] = exif_bytes
+    try:
+        img.save(out, quality='keep', **save_kwargs)
+    except (TypeError, ValueError):
+        img.save(out, quality=95, **save_kwargs)
+
+    result = out.getvalue()
+    if xmp_segments:
+        result = _inject_after_soi(result, xmp_segments)
+    return result
+
+
+@app.route('/blurify', methods=['POST'])
+@token_required
+@limiter.limit("30 per minute")
+def blurify_photo():
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file provided'}), 400
+    try:
+        regions = json.loads(request.form.get('regions', '[]'))
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Invalid regions JSON'}), 400
+    if not isinstance(regions, list) or len(regions) > 50:
+        return jsonify({'error': 'Invalid regions'}), 400
+    try:
+        result = _apply_blur_regions(file.read(), regions)
+        resp = Response(result, mimetype='image/jpeg')
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
+    except Exception as e:
+        app.logger.error(f'Blurify error: {e}')
+        return jsonify({'error': 'Image processing failed'}), 500
+
 
 @app.route('/')
 def index():

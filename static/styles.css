@@ -1577,6 +1577,7 @@ select option {
 .photo-table .filename-column  { width: 200px; min-width: 30px; text-align: left; white-space: nowrap; padding-left: 10px; overflow: hidden; }
 .photo-table .placeid-column   { width: 240px; min-width: 30px;  text-align: left; overflow: hidden; }
 .photo-table .status-column    { width: 130px; text-align: center; }
+.photo-table .blurify-column   { width: 100px; text-align: center; }
 .photo-table .actions-column   { width: 110px; text-align: center; }
 
 /* Table container */
@@ -3112,3 +3113,330 @@ select option {
   .action-button, .view-photos-link { width: 100%; }
   .nav-brand span { display: none; }
 }
+
+/* ─── Blurify Modal ─────────────────────────────────────────────────────── */
+.blurify-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #0d0d0d;
+  flex-direction: column;
+}
+
+.blurify-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.blurify-header-title {
+  color: #f0f0f0;
+  font-weight: 600;
+  font-size: .9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.blurify-header-hint {
+  color: #666;
+  font-size: .8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.blurify-header-close {
+  background: none;
+  border: 1px solid #444;
+  color: #bbb;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .82rem;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.blurify-header-close:hover { background: #2a2a2a; color: #fff; border-color: #666; }
+
+.blurify-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.blurify-canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px;
+  background: #0a0a0a;
+}
+
+#blurify-canvas {
+  display: block;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+  box-shadow: 0 0 0 1px #333;
+}
+
+.blurify-sidebar {
+  width: 265px;
+  flex-shrink: 0;
+  background: #161616;
+  border-left: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.blurify-tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blurify-label {
+  color: #888;
+  font-size: .73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.blurify-intensity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.blurify-slider {
+  flex: 1;
+  accent-color: #00d4ff;
+  cursor: pointer;
+}
+
+.blurify-intensity-value {
+  color: #00d4ff;
+  font-size: .85rem;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+.blurify-preset-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.blurify-preset-btn,
+.blurify-shape-btn {
+  flex: 1;
+  padding: 5px 0;
+  background: #222;
+  border: 1px solid #3a3a3a;
+  color: #aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .78rem;
+  transition: all .15s;
+}
+.blurify-preset-btn:hover,
+.blurify-shape-btn:hover  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; }
+.blurify-preset-btn.active,
+.blurify-shape-btn.active  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; font-weight: 600; }
+
+.blurify-regions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 60px;
+}
+
+.blurify-no-regions {
+  color: #444;
+  font-size: .82rem;
+  text-align: center;
+  padding: 16px 4px;
+  line-height: 1.6;
+}
+
+.blurify-region-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 7px 9px;
+}
+
+.blurify-region-num {
+  color: #00d4ff;
+  font-size: .78rem;
+  font-weight: 700;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.blurify-region-shape-icon {
+  color: #00d4ff;
+  font-size: .82rem;
+  flex-shrink: 0;
+}
+
+.blurify-region-info {
+  flex: 1;
+  color: #aaa;
+  font-size: .78rem;
+}
+
+.blurify-region-delete {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: .8rem;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.blurify-region-delete:hover { color: #e74c3c; }
+
+.blurify-clear-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #666;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .78rem;
+  width: 100%;
+  transition: all .15s;
+}
+.blurify-clear-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+
+.blurify-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #2a2a2a;
+}
+
+.blurify-apply-btn {
+  padding: 11px;
+  background: #1a7a4a;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+  transition: background .15s;
+}
+.blurify-apply-btn:hover:not(:disabled) { background: #1f9057; }
+.blurify-apply-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.blurify-cancel-btn {
+  padding: 8px;
+  background: none;
+  border: 1px solid #333;
+  color: #777;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .82rem;
+  transition: all .15s;
+}
+.blurify-cancel-btn:hover { border-color: #555; color: #ccc; }
+
+.blurify-hint {
+  color: #555;
+  font-size: .74rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.blurify-toggle-btn {
+  width: 100%;
+  padding: 7px;
+  background: #222;
+  border: 1px solid #3a3a3a;
+  color: #aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .82rem;
+  transition: all .15s;
+  text-align: center;
+}
+.blurify-toggle-btn:hover { border-color: #00d4ff; color: #00d4ff; }
+.blurify-toggle-btn.active { border-color: #f39c12; color: #f39c12; background: #221a00; }
+
+/* Blurify trigger button (table column cell) */
+.blurify-open-btn {
+  white-space: nowrap;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--text-secondary);
+  transition: all .15s;
+}
+.blurify-open-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.blurify-open-btn[data-blurified="true"] {
+  border-color: var(--success, #27ae60);
+  color: var(--success, #27ae60);
+}
+
+/* Editing banner — appears when a region is selected */
+.blurify-editing-banner {
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.6);
+  border-radius: 5px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: #00d4ff;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.blurify-deselect-btn {
+  background: transparent;
+  border: 1px solid rgba(0,212,255,0.4);
+  border-radius: 3px;
+  color: #00d4ff;
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.blurify-deselect-btn:hover { background: rgba(0,212,255,0.15); }
