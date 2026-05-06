@@ -5,7 +5,7 @@
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifreader@3/dist/exif-reader.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=geometry,places" async defer></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
 <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 {% endblock %}
@@ -78,104 +78,146 @@
                         <div class="gps-fix-banner-icon">⚠</div>
                         <div class="gps-fix-banner-content">
                             <p id="gps-fix-banner-text" class="gps-fix-banner-description"></p>
-                            <ol class="gps-fix-steps" id="gps-fix-steps">
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Select camera timezone</span>
-                                        <div class="gps-fix-step-control">
-                                            <select id="utc-offset-input" class="gpx-offset-input" title="Select the timezone your camera clock was set to. GPX timestamps are always UTC.">
-                                                <option value="-12">UTC-12</option>
-                                                <option value="-11">UTC-11</option>
-                                                <option value="-10">UTC-10 (HST)</option>
-                                                <option value="-9">UTC-9 (AKST)</option>
-                                                <option value="-8">UTC-8 (PST)</option>
-                                                <option value="-7">UTC-7 (MST/PDT)</option>
-                                                <option value="-6">UTC-6 (CST/MDT)</option>
-                                                <option value="-5">UTC-5 (EST/CDT)</option>
-                                                <option value="-4">UTC-4 (EDT/AST)</option>
-                                                <option value="-3.5">UTC-3:30 (NST)</option>
-                                                <option value="-3">UTC-3 (BRT)</option>
-                                                <option value="-2">UTC-2</option>
-                                                <option value="-1">UTC-1</option>
-                                                <option value="0" selected>UTC+0 (GMT/UTC)</option>
-                                                <option value="1">UTC+1 (BST/CET)</option>
-                                                <option value="2">UTC+2 (CEST/EET)</option>
-                                                <option value="3">UTC+3 (MSK/EAT)</option>
-                                                <option value="3.5">UTC+3:30 (IRST)</option>
-                                                <option value="4">UTC+4 (GST)</option>
-                                                <option value="4.5">UTC+4:30 (AFT)</option>
-                                                <option value="5">UTC+5 (PKT)</option>
-                                                <option value="5.5">UTC+5:30 (IST)</option>
-                                                <option value="5.75">UTC+5:45 (NPT)</option>
-                                                <option value="6">UTC+6 (BDT)</option>
-                                                <option value="6.5">UTC+6:30 (MMT)</option>
-                                                <option value="7">UTC+7 (ICT/WIB)</option>
-                                                <option value="8">UTC+8 (CST/AWST)</option>
-                                                <option value="9">UTC+9 (JST/KST)</option>
-                                                <option value="9.5">UTC+9:30 (ACST)</option>
-                                                <option value="10">UTC+10 (AEST)</option>
-                                                <option value="10.5">UTC+10:30 (LHST)</option>
-                                                <option value="11">UTC+11 (AEDT)</option>
-                                                <option value="12">UTC+12 (NZST)</option>
-                                                <option value="13">UTC+13 (NZDT)</option>
-                                                <option value="14">UTC+14 (LINT)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Choose GPX file</span>
-                                        <div class="gps-fix-step-control">
-                                            <label for="gpx-file-input" class="page-link view-photos-link">Choose GPX File</label>
-                                            <input type="file" id="gpx-file-input" accept=".gpx" class="gpx-file-input-hidden">
-                                            <span id="gpx-filename-display" class="gpx-filename-display">No file selected</span>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Validate GPX file</span>
-                                        <div class="gps-fix-step-control">
-                                            <button id="validate-gpx-btn" class="page-link view-photos-link" disabled>Validate GPX File</button>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Adjust delta threshold and re-validate if needed</span>
-                                        <div class="gps-fix-step-control">
-                                            <div class="num-stepper">
-                                                <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="-1">−</button>
-                                                <input type="number" id="gpx-threshold-input" class="gpx-threshold-input" value="2" min="1" max="60" step="1" title="Photos within this many seconds of a GPX trackpoint will have their GPS updated.">
-                                                <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="1">+</button>
+                            <div class="gps-fix-options-area" id="gps-fix-steps">
+
+                                <!-- Option 1: GPX file -->
+                                <div class="gps-fix-option">
+                                    <div class="gps-fix-option-label">Option 1</div>
+                                    <strong class="gps-fix-option-title">Use a GPX Track File</strong>
+                                    <p class="gps-fix-option-desc">Match photo timestamps against GPS trackpoints recorded during your shoot.</p>
+                                    <ol class="gps-fix-steps-list">
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Select camera timezone</span>
+                                                <div class="gps-fix-step-control">
+                                                    <select id="utc-offset-input" class="gpx-offset-input" title="Select the timezone your camera clock was set to. GPX timestamps are always UTC.">
+                                                        <option value="-12">UTC-12</option>
+                                                        <option value="-11">UTC-11</option>
+                                                        <option value="-10">UTC-10 (HST)</option>
+                                                        <option value="-9">UTC-9 (AKST)</option>
+                                                        <option value="-8">UTC-8 (PST)</option>
+                                                        <option value="-7">UTC-7 (MST/PDT)</option>
+                                                        <option value="-6">UTC-6 (CST/MDT)</option>
+                                                        <option value="-5">UTC-5 (EST/CDT)</option>
+                                                        <option value="-4">UTC-4 (EDT/AST)</option>
+                                                        <option value="-3.5">UTC-3:30 (NST)</option>
+                                                        <option value="-3">UTC-3 (BRT)</option>
+                                                        <option value="-2">UTC-2</option>
+                                                        <option value="-1">UTC-1</option>
+                                                        <option value="0" selected>UTC+0 (GMT/UTC)</option>
+                                                        <option value="1">UTC+1 (BST/CET)</option>
+                                                        <option value="2">UTC+2 (CEST/EET)</option>
+                                                        <option value="3">UTC+3 (MSK/EAT)</option>
+                                                        <option value="3.5">UTC+3:30 (IRST)</option>
+                                                        <option value="4">UTC+4 (GST)</option>
+                                                        <option value="4.5">UTC+4:30 (AFT)</option>
+                                                        <option value="5">UTC+5 (PKT)</option>
+                                                        <option value="5.5">UTC+5:30 (IST)</option>
+                                                        <option value="5.75">UTC+5:45 (NPT)</option>
+                                                        <option value="6">UTC+6 (BDT)</option>
+                                                        <option value="6.5">UTC+6:30 (MMT)</option>
+                                                        <option value="7">UTC+7 (ICT/WIB)</option>
+                                                        <option value="8">UTC+8 (CST/AWST)</option>
+                                                        <option value="9">UTC+9 (JST/KST)</option>
+                                                        <option value="9.5">UTC+9:30 (ACST)</option>
+                                                        <option value="10">UTC+10 (AEST)</option>
+                                                        <option value="10.5">UTC+10:30 (LHST)</option>
+                                                        <option value="11">UTC+11 (AEDT)</option>
+                                                        <option value="12">UTC+12 (NZST)</option>
+                                                        <option value="13">UTC+13 (NZDT)</option>
+                                                        <option value="14">UTC+14 (LINT)</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <span class="gps-fix-step-hint">seconds</span>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Adjust time skew <span class="gps-fix-step-hint">(use Show Map to see changes)</span></span>
-                                        <div class="gps-fix-step-control">
-                                            <div class="num-stepper">
-                                                <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="-1">−</button>
-                                                <input type="number" id="gpx-skew-input" class="gpx-threshold-input" value="0" min="-3600" max="3600" step="1" title="Shift photo timestamps by this many seconds to correct camera clock drift. Negative = camera ran fast (photos timestamped ahead of GPS); positive = camera ran slow. Map markers update live.">
-                                                <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="1">+</button>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Choose GPX file</span>
+                                                <div class="gps-fix-step-control">
+                                                    <label for="gpx-file-input" class="page-link view-photos-link">Choose GPX File</label>
+                                                    <input type="file" id="gpx-file-input" accept=".gpx" class="gpx-file-input-hidden">
+                                                    <span id="gpx-filename-display" class="gpx-filename-display">No file selected</span>
+                                                </div>
                                             </div>
-                                            <span class="gps-fix-step-hint">seconds (live)</span>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li class="gps-fix-step">
-                                    <div class="gps-fix-step-body">
-                                        <span class="gps-fix-step-label">Fix GPS</span>
-                                        <div class="gps-fix-step-control">
-                                            <button id="fix-gps-btn" class="page-link view-photos-link primary-button" disabled>Fix GPS</button>
-                                        </div>
-                                    </div>
-                                </li>
-                            </ol>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Validate GPX file</span>
+                                                <div class="gps-fix-step-control">
+                                                    <button id="validate-gpx-btn" class="page-link view-photos-link" disabled>Validate GPX File</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Adjust delta threshold and re-validate if needed</span>
+                                                <div class="gps-fix-step-control">
+                                                    <div class="num-stepper">
+                                                        <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="-1">−</button>
+                                                        <input type="number" id="gpx-threshold-input" class="gpx-threshold-input" value="2" min="1" max="60" step="1" title="Photos within this many seconds of a GPX trackpoint will have their GPS updated.">
+                                                        <button type="button" class="stepper-btn" data-target="gpx-threshold-input" data-delta="1">+</button>
+                                                    </div>
+                                                    <span class="gps-fix-step-hint">seconds</span>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Adjust time skew <span class="gps-fix-step-hint">(use Show Map to see changes)</span></span>
+                                                <div class="gps-fix-step-control">
+                                                    <div class="num-stepper">
+                                                        <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="-1">−</button>
+                                                        <input type="number" id="gpx-skew-input" class="gpx-threshold-input" value="0" min="-3600" max="3600" step="1" title="Shift photo timestamps by this many seconds to correct camera clock drift. Negative = camera ran fast (photos timestamped ahead of GPS); positive = camera ran slow. Map markers update live.">
+                                                        <button type="button" class="stepper-btn" data-target="gpx-skew-input" data-delta="1">+</button>
+                                                    </div>
+                                                    <span class="gps-fix-step-hint">seconds (live)</span>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Fix GPS</span>
+                                                <div class="gps-fix-step-control">
+                                                    <button id="fix-gps-btn" class="page-link view-photos-link primary-button" disabled>Fix GPS</button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </div>
+
+                                <!-- Divider -->
+                                <div class="gps-fix-or-divider"><span>or</span></div>
+
+                                <!-- Option 2: Manual GPS -->
+                                <div class="gps-fix-option">
+                                    <div class="gps-fix-option-label">Option 2</div>
+                                    <strong class="gps-fix-option-title">Place GPS Manually</strong>
+                                    <p class="gps-fix-option-desc">Manually position each photo on a map when no GPX track is available.</p>
+                                    <ol class="gps-fix-steps-list">
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Click <strong>Details ▼</strong> on any photo row to expand it</span>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">In the <em>GPS Data</em> section, click <strong>📍 Add GPS Position</strong></span>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Search for a location, then click <strong>Place Marker</strong> and drag it to the exact spot</span>
+                                            </div>
+                                        </li>
+                                        <li class="gps-fix-step">
+                                            <div class="gps-fix-step-body">
+                                                <span class="gps-fix-step-label">Click <strong>Apply GPS</strong> to save — repeat for each photo</span>
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </div>
+
+                            </div>
                         </div>
                         <button id="gps-fix-toggle" class="gps-fix-toggle" onclick="toggleGpsFixBanner()">Hide</button>
                     </div>
@@ -377,34 +419,45 @@
     <div id="gps-edit-modal" class="modal" style="display: none;">
         <div class="modal-content gps-modal-content">
             <div class="modal-header">
-                <h3>Edit GPS Location</h3>
+                <h3 id="gps-modal-title">Edit GPS Location</h3>
                 <span class="close" id="gps-modal-close">&times;</span>
             </div>
-            <div class="modal-body">
-                <div class="current-coordinates">
-                    <p>Current Location: <span id="current-filename"></span></p>
-                    <div class="coordinate-display">
-                        <span>Latitude: <strong id="current-lat"></strong></span>
-                        <span>Longitude: <strong id="current-lng"></strong></span>
+            <div class="modal-body gps-modal-split">
+                <!-- Top half: Map -->
+                <div class="gps-modal-map-section">
+                    <div class="gps-modal-toolbar">
+                        <div class="gps-search-container">
+                            <input type="text" id="gps-search-input" class="gps-search-input" placeholder="Search for a location..." autocomplete="off">
+                            <button id="gps-search-btn" class="view-photos-link gps-toolbar-btn">Search</button>
+                        </div>
+                        <button id="gps-place-marker-btn" class="view-photos-link gps-toolbar-btn">Place Marker</button>
+                    </div>
+                    <div id="gps-map" class="gps-map"></div>
+                    <div class="gps-map-info-bar">
+                        <div class="current-coordinates">
+                            <span>Lat: <strong id="current-lat">--</strong></span>
+                            <span>Lng: <strong id="current-lng">--</strong></span>
+                        </div>
+                        <div class="coordinate-inputs-inline">
+                            <input type="number" id="manual-lat" step="0.0000001" min="-90" max="90" placeholder="Lat">
+                            <input type="number" id="manual-lng" step="0.0000001" min="-180" max="180" placeholder="Lng">
+                            <button id="manual-coords-btn" class="view-photos-link gps-toolbar-btn">Go</button>
+                        </div>
                     </div>
                 </div>
-                <div id="gps-map" class="gps-map"></div>
-                <div class="coordinate-inputs">
-                    <div class="input-group">
-                        <label for="manual-lat">Latitude:</label>
-                        <input type="number" id="manual-lat" step="0.0000001" min="-90" max="90" placeholder="e.g. 51.5074">
+                <!-- Bottom half: 360 Viewer -->
+                <div class="gps-modal-viewer-section">
+                    <div class="gps-modal-viewer-header">
+                        <span id="gps-viewer-filename">360° Photo Preview</span>
                     </div>
-                    <div class="input-group">
-                        <label for="manual-lng">Longitude:</label>
-                        <input type="number" id="manual-lng" step="0.0000001" min="-180" max="180" placeholder="e.g. -0.1278">
-                    </div>
-                    <button id="manual-coords-btn" class="view-photos-link">Set Manual Coordinates</button>
+                    <div id="gps-pannellum-viewer" class="gps-pannellum-viewer"></div>
                 </div>
             </div>
+            <div id="gps-modal-message" class="gps-modal-message" style="display:none;"></div>
             <div class="modal-footer">
                 <button id="gps-cancel-btn" class="view-photos-link">Cancel</button>
                 <button id="gps-reset-btn" class="view-photos-link" style="display: none;">Reset to Original</button>
-                <button id="gps-save-btn" class="view-photos-link primary-button">Save Location</button>
+                <button id="gps-save-btn" class="view-photos-link primary-button">Apply GPS</button>
             </div>
         </div>
     </div>
@@ -773,7 +826,6 @@ function createFileRow(index, fileData) {
         <td class="checkbox-column">
             <input type="checkbox" class="file-checkbox" data-index="${index}"
                    ${fileData.selected ? 'checked' : ''}
-                   ${fileData.status === UploadStatus.ERROR ? 'disabled' : ''}
                    title="${getCheckboxTooltip(fileData)}">
         </td>
         <td class="number-column">${index + 1}</td>
@@ -882,23 +934,26 @@ function createDetailRow(index, fileData) {
                     </div>
                     <div class="detail-section">
                         <h5>GPS Data</h5>
-                        ${metadata && metadata.hasGpsData ? `
-                            ${fileData.editedGPS.isEdited ? `
-                                <p><strong>Latitude:</strong> <span class="gps-coord edited" data-coord="lat">${fileData.editedGPS.latitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
-                                <p><strong>Longitude:</strong> <span class="gps-coord edited" data-coord="lng">${fileData.editedGPS.longitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
-                                <p class="gps-source edited">📍 Location manually adjusted</p>
-                                <div class="gps-actions">
-                                    <button class="edit-gps-btn" data-file-index="${index}">📍 Edit Map Location</button>
-                                    <button class="reset-gps-btn" data-file-index="${index}">↺ Reset to Original</button>
-                                </div>
-                            ` : `
-                                <p><strong>Latitude:</strong> <span class="gps-coord" data-coord="lat">${metadata.latitude}</span></p>
-                                <p><strong>Longitude:</strong> <span class="gps-coord" data-coord="lng">${metadata.longitude}</span></p>
-                                <div class="gps-actions">
-                                    <button class="edit-gps-btn" data-file-index="${index}">📍 Edit Map Location</button>
-                                </div>
-                            `}
-                        ` : '<p>No GPS data found</p>'}
+                        ${fileData.editedGPS.isEdited ? `
+                            <p><strong>Latitude:</strong> <span class="gps-coord edited" data-coord="lat">${fileData.editedGPS.latitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+                            <p><strong>Longitude:</strong> <span class="gps-coord edited" data-coord="lng">${fileData.editedGPS.longitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
+                            <p class="gps-source edited">📍 Location manually added</p>
+                            <div class="gps-actions">
+                                <button class="edit-gps-btn" data-file-index="${index}">📍 Edit GPS Position</button>
+                                <button class="reset-gps-btn" data-file-index="${index}">↺ Reset to Original</button>
+                            </div>
+                        ` : metadata && metadata.hasGpsData ? `
+                            <p><strong>Latitude:</strong> <span class="gps-coord" data-coord="lat">${metadata.latitude}</span></p>
+                            <p><strong>Longitude:</strong> <span class="gps-coord" data-coord="lng">${metadata.longitude}</span></p>
+                            <div class="gps-actions">
+                                <button class="edit-gps-btn" data-file-index="${index}">📍 Edit GPS Position</button>
+                            </div>
+                        ` : `
+                            <p class="gps-missing">No GPS data found</p>
+                            <div class="gps-actions">
+                                <button class="edit-gps-btn" data-file-index="${index}">📍 Add GPS Position</button>
+                            </div>
+                        `}
                         ${gpxSection}
                     </div>
                     <div class="detail-section">
@@ -968,7 +1023,7 @@ function getMetadataStatusIcon(metadata, fileData) {
 
 function getCheckboxTooltip(fileData) {
     if (fileData.status === UploadStatus.ERROR) {
-        return "Cannot select - Missing essential metadata required for upload";
+        return "Has errors - can select to remove, but cannot upload";
     } else if (fileData.status === UploadStatus.WARNING) {
         return "Can select but missing some panorama metadata - Upload with caution";
     } else if (fileData.status === UploadStatus.ALREADY_UPLOADED) {
@@ -1008,12 +1063,6 @@ function formatExifDate(exifDateStr) {
 }
 
 function handleFileCheckbox(event, index) {
-    // Don't allow selection of files with critical errors
-    if (filesMetadata[index].status === UploadStatus.ERROR) {
-        event.target.checked = false;
-        return;
-    }
-    
     filesMetadata[index].selected = event.target.checked;
     
     // Update row visual state
@@ -1034,14 +1083,9 @@ function handleRowClick(event, index) {
         return;
     }
     
-    // Don't allow selection of files with critical errors
-    if (filesMetadata[index].status === UploadStatus.ERROR) {
-        return;
-    }
-    
     // Toggle the checkbox
     const checkbox = document.querySelector(`.file-checkbox[data-index="${index}"]`);
-    if (checkbox && !checkbox.disabled) {
+    if (checkbox) {
         checkbox.checked = !checkbox.checked;
         filesMetadata[index].selected = checkbox.checked;
         
@@ -1133,9 +1177,12 @@ function updateMasterCheckbox() {
 }
 
 function updateSelectionCount() {
-    const selectedCount = Object.values(filesMetadata).filter(f => f.selected).length;
+    const selectedFiles = Object.values(filesMetadata).filter(f => f.selected);
+    const selectedCount = selectedFiles.length;
+    const anySelectedHasError = selectedFiles.some(f => f.status === UploadStatus.ERROR);
     document.querySelectorAll('.upload-selected-btn').forEach(btn => {
-        btn.disabled = selectedCount === 0 || isUploading;
+        btn.disabled = selectedCount === 0 || isUploading || anySelectedHasError;
+        btn.title = anySelectedHasError ? 'Cannot upload: one or more selected photos have errors' : '';
     });
     document.querySelectorAll('.upload-button-text').forEach(el => {
         el.textContent = `Upload Selected (${selectedCount})`;
@@ -1965,7 +2012,9 @@ function resetToInitialState() {
 // GPS Edit Modal Variables
 let gpsEditMap = null;
 let gpsEditMarker = null;
+let gpsQueueMarkers = [];
 let currentEditingFileIndex = null;
+let gpsModalPannellumViewer = null;
 
 // Initialize GPS Edit Modal
 function initializeGpsEditModal() {
@@ -1975,32 +2024,24 @@ function initializeGpsEditModal() {
     const saveBtn = document.getElementById('gps-save-btn');
     const resetBtn = document.getElementById('gps-reset-btn');
     const manualCoordsBtn = document.getElementById('manual-coords-btn');
-    
-    // Close button handlers
+    const searchBtn = document.getElementById('gps-search-btn');
+    const searchInput = document.getElementById('gps-search-input');
+    const placeMarkerBtn = document.getElementById('gps-place-marker-btn');
+
     closeBtn.addEventListener('click', closeGpsEditModal);
     cancelBtn.addEventListener('click', closeGpsEditModal);
-    
-    // Save button handler
     saveBtn.addEventListener('click', saveGpsEdits);
-    
-    // Reset button handler
     resetBtn.addEventListener('click', resetGpsToOriginal);
-    
-    // Manual coordinates button
     manualCoordsBtn.addEventListener('click', setManualCoordinates);
-    
-    // Close on outside click
-    window.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            closeGpsEditModal();
-        }
+    searchBtn.addEventListener('click', searchGpsLocation);
+    placeMarkerBtn.addEventListener('click', placeMarkerAtCenter);
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); searchGpsLocation(); }
     });
-    
-    // Close on escape key
+
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && modal.style.display === 'block') {
-            closeGpsEditModal();
-        }
+        if (event.key === 'Escape' && modal.style.display === 'flex') closeGpsEditModal();
     });
 }
 
@@ -2018,91 +2059,272 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// Find initial GPS position for the modal: use this photo's GPS, or any other selected photo's GPS
+function findInitialGpsPosition(fileIndex) {
+    const fileData = filesMetadata[fileIndex];
+    // Use this photo's edited GPS first
+    if (fileData.editedGPS.isEdited) {
+        return { lat: fileData.editedGPS.latitude, lng: fileData.editedGPS.longitude };
+    }
+    // Use this photo's original GPS
+    if (fileData.metadata && fileData.metadata.hasGpsData) {
+        return { lat: fileData.metadata.latitude, lng: fileData.metadata.longitude };
+    }
+    // Fall back to any other selected photo with GPS
+    for (const [idx, fd] of Object.entries(filesMetadata)) {
+        if (parseInt(idx) === fileIndex) continue;
+        if (fd.editedGPS.isEdited) return { lat: fd.editedGPS.latitude, lng: fd.editedGPS.longitude };
+        if (fd.metadata && fd.metadata.hasGpsData) return { lat: fd.metadata.latitude, lng: fd.metadata.longitude };
+    }
+    return null;
+}
+
 // Open GPS Edit Modal
 function openGpsEditModal(fileIndex) {
     const fileData = filesMetadata[fileIndex];
-    
-    if (!fileData || !fileData.metadata || !fileData.metadata.hasGpsData) {
-        alert('No GPS data available for this photo.');
-        return;
-    }
-    
+    if (!fileData) return;
+
     currentEditingFileIndex = fileIndex;
     const modal = document.getElementById('gps-edit-modal');
-    const filenameSpan = document.getElementById('current-filename');
     const resetBtn = document.getElementById('gps-reset-btn');
-    
-    // Set filename
-    filenameSpan.textContent = fileData.file.name;
-    
-    // Show/hide reset button based on whether GPS is edited
+    const hasOriginalGps = fileData.metadata && fileData.metadata.hasGpsData;
+
+    // Update modal title
+    const titleEl = document.getElementById('gps-modal-title');
+    titleEl.textContent = fileData.editedGPS.isEdited || hasOriginalGps ? 'Edit GPS Position' : 'Add GPS Position';
+
+    // Show/hide reset button (only when there's something to reset to)
     resetBtn.style.display = fileData.editedGPS.isEdited ? 'inline-block' : 'none';
-    
-    // Get current coordinates (edited if available, otherwise original)
-    const currentLat = fileData.editedGPS.isEdited ? fileData.editedGPS.latitude : fileData.metadata.latitude;
-    const currentLng = fileData.editedGPS.isEdited ? fileData.editedGPS.longitude : fileData.metadata.longitude;
-    
-    // Update coordinate display
-    updateCoordinateDisplay(currentLat, currentLng);
-    
-    // Set manual input fields
-    document.getElementById('manual-lat').value = currentLat;
-    document.getElementById('manual-lng').value = currentLng;
-    
-    // Show modal
-    modal.style.display = 'block';
-    
-    // Initialize map
+
+    // Get initial map position
+    const pos = findInitialGpsPosition(fileIndex);
+    const hasMarkerPosition = pos !== null;
+
+    if (hasMarkerPosition) {
+        updateCoordinateDisplay(pos.lat, pos.lng);
+        document.getElementById('manual-lat').value = pos.lat;
+        document.getElementById('manual-lng').value = pos.lng;
+    } else {
+        document.getElementById('current-lat').textContent = '--';
+        document.getElementById('current-lng').textContent = '--';
+        document.getElementById('manual-lat').value = '';
+        document.getElementById('manual-lng').value = '';
+    }
+
+    // Show modal as flex for split layout
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Initialize map and 360 viewer after layout settles
     setTimeout(() => {
-        initializeGpsMap(currentLat, currentLng);
+        initializeGpsMap(pos, hasMarkerPosition);
+        addQueueMarkersToGpsMap(fileIndex);
+        initGpsModalViewer(fileData.file);
     }, 100);
 }
 
 // Initialize GPS Map
-function initializeGpsMap(lat, lng) {
+function initializeGpsMap(pos, placeMarker) {
     const mapElement = document.getElementById('gps-map');
-    
+
     if (!window.google || !window.google.maps) {
-        alert('Google Maps API not loaded. Please refresh the page and try again.');
+        showFlashMessage('Google Maps API not loaded. Please refresh the page.', 'error');
         return;
     }
-    
-    // Create map
+
+    const center = pos || { lat: 51.505, lng: -0.09 };
+
     gpsEditMap = new google.maps.Map(mapElement, {
-        center: { lat: lat, lng: lng },
-        zoom: 16,
+        center: center,
+        zoom: placeMarker ? 16 : 3,
         mapTypeId: 'hybrid'
     });
-    
-    // Create marker
-    gpsEditMarker = new google.maps.Marker({
-        position: { lat: lat, lng: lng },
-        map: gpsEditMap,
-        draggable: true,
-        title: 'Drag to adjust GPS location'
-    });
-    
-    // Add marker drag listener
+
+    if (placeMarker) {
+        gpsEditMarker = new google.maps.Marker({
+            position: center,
+            map: gpsEditMap,
+            draggable: true,
+            title: 'Drag to adjust GPS location'
+        });
+        updateCoordinateDisplay(center.lat, center.lng);
+        attachMarkerListeners();
+    }
+}
+
+function attachMarkerListeners() {
     gpsEditMarker.addListener('drag', function(event) {
-        const newLat = event.latLng.lat();
-        const newLng = event.latLng.lng();
-        updateCoordinateDisplay(newLat, newLng);
-        
-        // Update manual input fields
-        document.getElementById('manual-lat').value = newLat.toFixed(7);
-        document.getElementById('manual-lng').value = newLng.toFixed(7);
+        const lat = event.latLng.lat();
+        const lng = event.latLng.lng();
+        updateCoordinateDisplay(lat, lng);
+        document.getElementById('manual-lat').value = lat.toFixed(7);
+        document.getElementById('manual-lng').value = lng.toFixed(7);
     });
-    
-    // Add marker dragend listener for final update
     gpsEditMarker.addListener('dragend', function(event) {
-        const newLat = event.latLng.lat();
-        const newLng = event.latLng.lng();
-        updateCoordinateDisplay(newLat, newLng);
-        
-        // Update manual input fields
-        document.getElementById('manual-lat').value = newLat.toFixed(7);
-        document.getElementById('manual-lng').value = newLng.toFixed(7);
+        const lat = event.latLng.lat();
+        const lng = event.latLng.lng();
+        updateCoordinateDisplay(lat, lng);
+        document.getElementById('manual-lat').value = lat.toFixed(7);
+        document.getElementById('manual-lng').value = lng.toFixed(7);
     });
+}
+
+// Add numbered markers for all queued photos that already have GPS
+function addQueueMarkersToGpsMap(currentFileIndex) {
+    gpsQueueMarkers.forEach(m => m.setMap(null));
+    gpsQueueMarkers = [];
+
+    if (!gpsEditMap) return;
+
+    Object.entries(filesMetadata).forEach(([idx, fd]) => {
+        const i = parseInt(idx);
+        if (i === currentFileIndex) return;
+
+        let lat, lng;
+        if (fd.editedGPS && fd.editedGPS.isEdited) {
+            lat = fd.editedGPS.latitude;
+            lng = fd.editedGPS.longitude;
+        } else if (fd.metadata && fd.metadata.hasGpsData) {
+            lat = fd.metadata.latitude;
+            lng = fd.metadata.longitude;
+        } else {
+            return;
+        }
+
+        const marker = new google.maps.Marker({
+            position: { lat, lng },
+            map: gpsEditMap,
+            title: `#${i + 1}: ${fd.file.name}`,
+            label: {
+                text: String(i + 1),
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '11px'
+            },
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 13,
+                fillColor: '#f59e0b',
+                fillOpacity: 1,
+                strokeColor: '#fff',
+                strokeWeight: 2
+            },
+            zIndex: 1
+        });
+
+        gpsQueueMarkers.push(marker);
+    });
+}
+
+// Place a marker at the current map center
+function placeMarkerAtCenter() {
+    if (!gpsEditMap) return;
+    const center = gpsEditMap.getCenter();
+    const lat = center.lat();
+    const lng = center.lng();
+
+    if (gpsEditMarker) {
+        gpsEditMarker.setPosition({ lat, lng });
+    } else {
+        gpsEditMarker = new google.maps.Marker({
+            position: { lat, lng },
+            map: gpsEditMap,
+            draggable: true,
+            title: 'Drag to adjust GPS location'
+        });
+        attachMarkerListeners();
+    }
+    updateCoordinateDisplay(lat, lng);
+    document.getElementById('manual-lat').value = lat.toFixed(7);
+    document.getElementById('manual-lng').value = lng.toFixed(7);
+}
+
+// Show a message inside the GPS modal (not on the background page)
+function showGpsModalMessage(text, type = 'error') {
+    const el = document.getElementById('gps-modal-message');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'gps-modal-message gps-modal-message--' + type;
+    el.style.display = 'block';
+    if (type !== 'error') {
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+}
+
+function clearGpsModalMessage() {
+    const el = document.getElementById('gps-modal-message');
+    if (el) el.style.display = 'none';
+}
+
+// Search for a location using Google Geocoder
+function searchGpsLocation() {
+    const query = document.getElementById('gps-search-input').value.trim();
+    if (!query) return;
+    if (!window.google || !window.google.maps) {
+        showGpsModalMessage('Google Maps not loaded yet. Please try again.', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('gps-search-btn');
+    btn.textContent = 'Searching…';
+    btn.disabled = true;
+    clearGpsModalMessage();
+
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: query }, (results, status) => {
+        btn.textContent = 'Search';
+        btn.disabled = false;
+
+        if (status === google.maps.GeocoderStatus.OK && results.length > 0) {
+            const loc = results[0].geometry.location;
+            const bounds = results[0].geometry.viewport;
+            gpsEditMap.fitBounds(bounds);
+            if (gpsEditMarker) {
+                gpsEditMarker.setPosition(loc);
+                updateCoordinateDisplay(loc.lat(), loc.lng());
+                document.getElementById('manual-lat').value = loc.lat().toFixed(7);
+                document.getElementById('manual-lng').value = loc.lng().toFixed(7);
+            }
+        } else {
+            const messages = {
+                ZERO_RESULTS: 'No results found for that search. Try a different term.',
+                REQUEST_DENIED: 'Search denied — the Geocoding API may not be enabled for this API key.',
+                OVER_DAILY_LIMIT: 'API quota exceeded. Try again later.',
+                OVER_QUERY_LIMIT: 'Too many requests. Please wait a moment.',
+                INVALID_REQUEST: 'Invalid search request.',
+            };
+            showGpsModalMessage(messages[status] || `Search failed (${status}). Try a different term.`, 'error');
+        }
+    });
+}
+
+// Initialize the pannellum 360 viewer inside the GPS modal
+async function initGpsModalViewer(file) {
+    destroyGpsModalViewer();
+    const viewerEl = document.getElementById('gps-pannellum-viewer');
+    const filenameEl = document.getElementById('gps-viewer-filename');
+    if (filenameEl) filenameEl.textContent = file.name;
+
+    try {
+        const panoramaUrl = await getPreviewUrl(file);
+        gpsModalPannellumViewer = pannellum.viewer('gps-pannellum-viewer', {
+            type: 'equirectangular',
+            panorama: panoramaUrl,
+            autoLoad: true,
+            showControls: true,
+            mouseZoom: true,
+            compass: false
+        });
+    } catch (err) {
+        if (viewerEl) viewerEl.innerHTML = '<div class="gps-viewer-error">360° preview unavailable</div>';
+    }
+}
+
+function destroyGpsModalViewer() {
+    if (gpsModalPannellumViewer) {
+        gpsModalPannellumViewer.destroy();
+        gpsModalPannellumViewer = null;
+    }
 }
 
 // Update coordinate display
@@ -2115,75 +2337,90 @@ function updateCoordinateDisplay(lat, lng) {
 function setManualCoordinates() {
     const manualLat = parseFloat(document.getElementById('manual-lat').value);
     const manualLng = parseFloat(document.getElementById('manual-lng').value);
-    
-    // Validate coordinates
+
     if (isNaN(manualLat) || isNaN(manualLng)) {
-        alert('Please enter valid latitude and longitude values.');
+        showFlashMessage('Please enter valid latitude and longitude values.', 'error');
         return;
     }
-    
     if (manualLat < -90 || manualLat > 90) {
-        alert('Latitude must be between -90 and 90 degrees.');
+        showFlashMessage('Latitude must be between -90 and 90 degrees.', 'error');
         return;
     }
-    
     if (manualLng < -180 || manualLng > 180) {
-        alert('Longitude must be between -180 and 180 degrees.');
+        showFlashMessage('Longitude must be between -180 and 180 degrees.', 'error');
         return;
     }
-    
-    // Update map and marker
+
     const newPosition = { lat: manualLat, lng: manualLng };
     gpsEditMap.setCenter(newPosition);
-    gpsEditMarker.setPosition(newPosition);
-    
-    // Update coordinate display
+    gpsEditMap.setZoom(16);
+
+    if (gpsEditMarker) {
+        gpsEditMarker.setPosition(newPosition);
+    } else {
+        gpsEditMarker = new google.maps.Marker({
+            position: newPosition,
+            map: gpsEditMap,
+            draggable: true,
+            title: 'Drag to adjust GPS location'
+        });
+        attachMarkerListeners();
+    }
     updateCoordinateDisplay(manualLat, manualLng);
 }
 
 // Save GPS edits
 function saveGpsEdits() {
     if (currentEditingFileIndex === null) return;
-    
-    const newLat = parseFloat(document.getElementById('current-lat').textContent);
-    const newLng = parseFloat(document.getElementById('current-lng').textContent);
-    
-    // Update file metadata
+
+    if (!gpsEditMarker) {
+        showFlashMessage('Please place a marker on the map first.', 'error');
+        return;
+    }
+
+    const pos = gpsEditMarker.getPosition();
+    const newLat = pos.lat();
+    const newLng = pos.lng();
+
     updateGpsCoordinates(currentEditingFileIndex, newLat, newLng);
-    
-    // Close modal
     closeGpsEditModal();
-    
-    // Show success message
-    showFlashMessage('GPS coordinates updated successfully!', 'success');
+    showFlashMessage('GPS position applied successfully!', 'success');
 }
 
 // Update GPS coordinates
 function updateGpsCoordinates(fileIndex, newLat, newLng) {
     const fileData = filesMetadata[fileIndex];
-    
-    // Update edited GPS data
+
     fileData.editedGPS = {
         latitude: parseFloat(newLat.toFixed(7)),
         longitude: parseFloat(newLng.toFixed(7)),
         isEdited: true
     };
-    
-    // Update the details section if it's visible
+
+    // Update upload status now that GPS may have changed
+    fileData.status = determineInitialStatus(fileData.metadata, fileData.uploadData || null, fileData.editedGPS);
+    updateRowStatus(fileIndex, fileData.status);
+
     updateDetailRowGpsDisplay(fileIndex);
-    
-    // Update the main table metadata icon
     updateMainTableMetadataIcon(fileIndex);
-    
     detectDuplicateGps();
     updateGpsFixBanner();
-    console.log(`Updated GPS for file ${fileIndex}: ${newLat}, ${newLng}`);
+}
+
+// Update a row's status cell and checkbox state
+function updateRowStatus(fileIndex, status) {
+    const statusCell = document.querySelector(`tr[data-file-index="${fileIndex}"] .status-column .upload-status`);
+    if (statusCell) {
+        statusCell.className = `upload-status ${status.class}`;
+        statusCell.innerHTML = `${status.icon} ${status.text}`;
+    }
+
+    updateSelectionCount();
 }
 
 // Reset GPS to original coordinates
 function resetGpsToOriginal() {
     if (currentEditingFileIndex === null) return;
-    
     resetGpsCoordinates(currentEditingFileIndex);
     closeGpsEditModal();
     showFlashMessage('GPS coordinates reset to original values.', 'info');
@@ -2192,58 +2429,58 @@ function resetGpsToOriginal() {
 // Reset GPS coordinates to original
 function resetGpsCoordinates(fileIndex) {
     const fileData = filesMetadata[fileIndex];
-    
-    // Reset edited GPS data
+
     fileData.editedGPS = {
         latitude: null,
         longitude: null,
         isEdited: false
     };
-    
-    // Update the details section if it's visible
+
+    fileData.status = determineInitialStatus(fileData.metadata, fileData.uploadData || null, fileData.editedGPS);
+    updateRowStatus(fileIndex, fileData.status);
+
     updateDetailRowGpsDisplay(fileIndex);
-    
-    // Update the main table metadata icon
     updateMainTableMetadataIcon(fileIndex);
-    
     detectDuplicateGps();
     updateGpsFixBanner();
-    console.log(`Reset GPS for file ${fileIndex} to original values`);
 }
 
 // Update detail row GPS display
 function updateDetailRowGpsDisplay(fileIndex) {
     const detailRow = document.querySelector(`.detail-row[data-file-index="${fileIndex}"]`);
     if (!detailRow || detailRow.style.display === 'none') return;
-    
+
     const fileData = filesMetadata[fileIndex];
     const metadata = fileData.metadata;
-    
-    if (!metadata || !metadata.hasGpsData) return;
-    
+
     const gpsSection = detailRow.querySelector('.detail-section:nth-child(2)');
     if (!gpsSection) return;
-    
-    // Regenerate GPS section HTML
-    const gpsHtml = `
-        <h5>GPS Data</h5>
-        ${fileData.editedGPS.isEdited ? `
+
+    let gpsHtml = '<h5>GPS Data</h5>';
+    if (fileData.editedGPS.isEdited) {
+        gpsHtml += `
             <p><strong>Latitude:</strong> <span class="gps-coord edited" data-coord="lat">${fileData.editedGPS.latitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
             <p><strong>Longitude:</strong> <span class="gps-coord edited" data-coord="lng">${fileData.editedGPS.longitude}</span> <span class="edited-indicator" title="Manually edited">✏️</span></p>
-            <p class="gps-source edited">📍 Location manually adjusted</p>
+            <p class="gps-source edited">📍 Location manually added</p>
             <div class="gps-actions">
-                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit Map Location</button>
+                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit GPS Position</button>
                 <button class="reset-gps-btn" data-file-index="${fileIndex}">↺ Reset to Original</button>
-            </div>
-        ` : `
+            </div>`;
+    } else if (metadata && metadata.hasGpsData) {
+        gpsHtml += `
             <p><strong>Latitude:</strong> <span class="gps-coord" data-coord="lat">${metadata.latitude}</span></p>
             <p><strong>Longitude:</strong> <span class="gps-coord" data-coord="lng">${metadata.longitude}</span></p>
             <div class="gps-actions">
-                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit Map Location</button>
-            </div>
-        `}
-    `;
-    
+                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Edit GPS Position</button>
+            </div>`;
+    } else {
+        gpsHtml += `
+            <p class="gps-missing">No GPS data found</p>
+            <div class="gps-actions">
+                <button class="edit-gps-btn" data-file-index="${fileIndex}">📍 Add GPS Position</button>
+            </div>`;
+    }
+
     gpsSection.innerHTML = gpsHtml;
 }
 
@@ -2251,30 +2488,32 @@ function updateDetailRowGpsDisplay(fileIndex) {
 function updateMainTableMetadataIcon(fileIndex) {
     const mainRow = document.querySelector(`.photo-row[data-file-index="${fileIndex}"]`);
     if (!mainRow) return;
-    
+
     const metadataCell = mainRow.querySelector('.metadata-column');
     if (!metadataCell) return;
-    
+
     const fileData = filesMetadata[fileIndex];
-    const metadata = fileData.metadata;
-    
-    metadataCell.innerHTML = getMetadataStatusIcon(metadata, fileData);
+    metadataCell.innerHTML = getMetadataStatusIcon(fileData.metadata, fileData);
 }
 
 // Close GPS Edit Modal
 function closeGpsEditModal() {
     const modal = document.getElementById('gps-edit-modal');
     modal.style.display = 'none';
+    document.body.style.overflow = '';
 
-    // Clean up map
-    if (gpsEditMap) {
-        gpsEditMap = null;
-    }
-    if (gpsEditMarker) {
-        gpsEditMarker = null;
-    }
+    destroyGpsModalViewer();
 
+    gpsQueueMarkers.forEach(m => m.setMap(null));
+    gpsQueueMarkers = [];
+    gpsEditMap = null;
+    gpsEditMarker = null;
     currentEditingFileIndex = null;
+
+    // Clear search input and message
+    const searchInput = document.getElementById('gps-search-input');
+    if (searchInput) searchInput.value = '';
+    clearGpsModalMessage();
 }
 
 // ========== OVERVIEW MAP ==========
