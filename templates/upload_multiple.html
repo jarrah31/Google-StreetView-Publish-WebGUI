@@ -3597,7 +3597,7 @@ function updateBlurifyRegionsList() {
 // ── Blurify: move / resize helpers ───────────────────────────────────────────
 
 const BLURIFY_HANDLE_SIZE = 8;    // half-width of each square handle (hit zone)
-const BLURIFY_MIN_REGION = 10;    // minimum region dimension in canvas px
+const BLURIFY_MIN_REGION = 2;     // minimum region dimension in image-space px (2 = ~16 screen px at 8×)
 
 /** Return the 8 handle positions for region r. */
 function blurifyGetHandles(r) {
@@ -3838,7 +3838,10 @@ function initBlurifyCanvasEvents() {
             const y = Math.min(blurifyStartY, blurifyCurrentY);
             const w = Math.abs(blurifyCurrentX - blurifyStartX);
             const h = Math.abs(blurifyCurrentY - blurifyStartY);
-            if (w > 5 && h > 5) {
+            // Require at least 5 screen-pixels in each axis so tiny mis-clicks are ignored,
+            // but scale the threshold down with zoom so small regions are reachable when zoomed in.
+            const minImgPx = Math.max(BLURIFY_MIN_REGION, 5 / blurifyZoom);
+            if (w > minImgPx && h > minImgPx) {
                 blurifyRegions.push({ x, y, width: w, height: h,
                     intensity: blurifyCurrentIntensity,
                     feather:   blurifyCurrentFeather,
