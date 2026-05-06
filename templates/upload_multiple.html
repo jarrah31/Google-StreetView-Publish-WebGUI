@@ -358,7 +358,7 @@
     <div id="blurify-modal" class="blurify-modal" style="display:none;">
         <div class="blurify-header">
             <span id="blurify-filename" class="blurify-header-title"></span>
-            <span class="blurify-header-hint">Drag to draw • Click a region to select, then drag to move or drag handles to resize</span>
+            <span class="blurify-header-hint">Drag to draw • Click to select/move/resize • Scroll or +/−/0 to zoom • Space+drag to pan</span>
             <button id="blurify-close-btn" class="blurify-header-close">✕ Close</button>
         </div>
         <div class="blurify-body">
@@ -369,6 +369,16 @@
                 <div id="blurify-editing-banner" class="blurify-editing-banner" style="display:none;">
                     <span>✏️ Editing: <strong id="blurify-editing-region-label">Region 1</strong></span>
                     <button id="blurify-deselect-btn" class="blurify-deselect-btn" title="Deselect region and go back to drawing mode">✕ Deselect</button>
+                </div>
+                <div class="blurify-tool-section">
+                    <label class="blurify-label">Zoom <span id="blurify-zoom-value" class="blurify-intensity-value" style="float:right;">1×</span></label>
+                    <input type="range" id="blurify-zoom-slider" min="100" max="800" value="100" step="25" class="blurify-slider">
+                    <div class="blurify-preset-btns" style="margin-top:4px;">
+                        <button class="blurify-zoom-preset-btn active" data-zoom="1">1×</button>
+                        <button class="blurify-zoom-preset-btn" data-zoom="2">2×</button>
+                        <button class="blurify-zoom-preset-btn" data-zoom="4">4×</button>
+                        <button class="blurify-zoom-preset-btn" data-zoom="8">8×</button>
+                    </div>
                 </div>
                 <div class="blurify-tool-section">
                     <label class="blurify-label">Blur Intensity</label>
@@ -3176,6 +3186,15 @@ let blurifySelectedIdx = -1;      // index of selected (hovered/dragged) region,
 let blurifyDragMode = null;        // null | 'draw' | 'move' | handle type ('nw','n','ne',…)
 let blurifyDragStartX = 0, blurifyDragStartY = 0;
 let blurifyDragOrigRegion = null;  // snapshot of region at drag start
+// Zoom / pan
+let blurifyZoom = 1.0;
+let blurifyPanX = 0, blurifyPanY = 0;
+let blurifySpaceHeld = false;
+let blurifyIsPanning = false;
+let blurifyPanStartRawX = 0, blurifyPanStartRawY = 0;
+let blurifyPanStartPanX = 0, blurifyPanStartPanY = 0;
+const BLURIFY_MIN_ZOOM = 1.0;
+const BLURIFY_MAX_ZOOM = 8.0;
 
 function openBlurifyModal(index) {
     blurifyFileIndex = index;
@@ -3184,6 +3203,11 @@ function openBlurifyModal(index) {
     blurifyIsDrawing = false;
     blurifySelectedIdx = -1;
     blurifyDragMode = null;
+    blurifyZoom = 1.0;
+    blurifyPanX = 0;
+    blurifyPanY = 0;
+    blurifySpaceHeld = false;
+    blurifyIsPanning = false;
 
     const modal = document.getElementById('blurify-modal');
     document.getElementById('blurify-filename').textContent = fd.file.name;
@@ -3196,6 +3220,13 @@ function openBlurifyModal(index) {
     blurifyCurrentShape = 'rect';
     document.querySelectorAll('.blurify-shape-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.shape === 'rect'));
+    // Reset zoom UI
+    const zoomSliderEl = document.getElementById('blurify-zoom-slider');
+    if (zoomSliderEl) { zoomSliderEl.value = 100; }
+    const zoomValEl = document.getElementById('blurify-zoom-value');
+    if (zoomValEl) { zoomValEl.textContent = '1×'; }
+    document.querySelectorAll('.blurify-zoom-preset-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.zoom === '1'));
     blurifyUpdateEditingBanner();
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -3240,9 +3271,15 @@ function blurifyCanvasPos(e) {
     const scaleX = blurifyCanvas.width / rect.width;
     const scaleY = blurifyCanvas.height / rect.height;
     const src = e.touches ? e.touches[0] : e;
+    // rawX/rawY: position in canvas CSS-pixel space (before zoom transform)
+    const rawX = (src.clientX - rect.left) * scaleX;
+    const rawY = (src.clientY - rect.top) * scaleY;
+    // x/y: position in image space (inverse of zoom/pan transform)
+    const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
     return {
-        x: Math.max(0, Math.min(blurifyCanvas.width,  (src.clientX - rect.left)  * scaleX)),
-        y: Math.max(0, Math.min(blurifyCanvas.height, (src.clientY - rect.top) * scaleY))
+        rawX, rawY,
+        x: Math.max(0, Math.min(cw, (rawX - blurifyPanX) / blurifyZoom)),
+        y: Math.max(0, Math.min(ch, (rawY - blurifyPanY) / blurifyZoom))
     };
 }
 
@@ -3389,6 +3426,51 @@ function drawBlurRegion(ctx, r) {
     ctx.drawImage(blurOff, r.x - pad, r.y - pad);
 }
 
+/**
+ * Set zoom level, optionally anchored to a focal point in raw canvas coords.
+ * Clamps zoom, adjusts pan so focal point stays fixed, clamps pan to keep
+ * the image filling the canvas, then redraws.
+ */
+function blurifySetZoom(newZoom, focalRawX, focalRawY) {
+    const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+    newZoom = Math.max(BLURIFY_MIN_ZOOM, Math.min(BLURIFY_MAX_ZOOM, newZoom));
+
+    if (focalRawX !== undefined && focalRawY !== undefined) {
+        // Keep the image point under the focal pixel stationary
+        const imgX = (focalRawX - blurifyPanX) / blurifyZoom;
+        const imgY = (focalRawY - blurifyPanY) / blurifyZoom;
+        blurifyPanX = focalRawX - imgX * newZoom;
+        blurifyPanY = focalRawY - imgY * newZoom;
+    } else {
+        // Zoom toward canvas centre
+        const imgCX = (cw / 2 - blurifyPanX) / blurifyZoom;
+        const imgCY = (ch / 2 - blurifyPanY) / blurifyZoom;
+        blurifyPanX = cw / 2 - imgCX * newZoom;
+        blurifyPanY = ch / 2 - imgCY * newZoom;
+    }
+
+    blurifyZoom = newZoom;
+
+    // Clamp pan so image always fills the canvas
+    if (blurifyZoom <= 1) {
+        blurifyPanX = 0; blurifyPanY = 0;
+    } else {
+        blurifyPanX = Math.max(cw  * (1 - blurifyZoom), Math.min(0, blurifyPanX));
+        blurifyPanY = Math.max(ch * (1 - blurifyZoom), Math.min(0, blurifyPanY));
+    }
+
+    // Sync zoom slider + label + preset buttons
+    const zSlider = document.getElementById('blurify-zoom-slider');
+    const zLabel  = document.getElementById('blurify-zoom-value');
+    if (zSlider) zSlider.value = Math.round(blurifyZoom * 100);
+    if (zLabel)  zLabel.textContent =
+        (blurifyZoom === Math.floor(blurifyZoom) ? blurifyZoom.toFixed(0) : blurifyZoom.toFixed(1)) + '×';
+    document.querySelectorAll('.blurify-zoom-preset-btn').forEach(b =>
+        b.classList.toggle('active', parseFloat(b.dataset.zoom) === blurifyZoom));
+
+    redrawBlurifyCanvas();
+}
+
 function redrawBlurifyCanvas() {
     if (!blurifyCtx || !blurifyImg) return;
     const ctx = blurifyCtx;
@@ -3396,41 +3478,48 @@ function redrawBlurifyCanvas() {
 
     ctx.clearRect(0, 0, cw, ch);
     ctx.filter = 'none';
+
+    // Apply zoom / pan transform — all region drawing happens in image space
+    ctx.save();
+    ctx.translate(blurifyPanX, blurifyPanY);
+    ctx.scale(blurifyZoom, blurifyZoom);
+
     ctx.drawImage(blurifyImg, 0, 0, cw, ch);
 
     blurifyRegions.forEach((r, i) => {
         drawBlurRegion(ctx, r);
 
         const isSelected = (i === blurifySelectedIdx);
+        const z = blurifyZoom;   // shorthand for compensating stroke/badge sizes
 
         if (blurifyShowOutlines || isSelected) {
             // Outline: cyan for selected, dimmer for others
+            // Divide lineWidth and dash lengths by zoom so they appear constant on screen
             ctx.strokeStyle = isSelected ? '#00d4ff' : 'rgba(0,212,255,0.55)';
-            ctx.lineWidth = isSelected ? 2 : 1.5;
-            ctx.setLineDash([5, 3]);
+            ctx.lineWidth = (isSelected ? 2 : 1.5) / z;
+            ctx.setLineDash([5 / z, 3 / z]);
             if (r.shape === 'oval') {
                 ctx.beginPath();
-                ctx.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2 - 1, r.height / 2 - 1, 0, 0, Math.PI * 2);
+                ctx.ellipse(r.x + r.width / 2, r.y + r.height / 2,
+                            r.width / 2 - 1 / z, r.height / 2 - 1 / z, 0, 0, Math.PI * 2);
                 ctx.stroke();
             } else {
-                ctx.strokeRect(r.x + 1, r.y + 1, r.width - 2, r.height - 2);
+                ctx.strokeRect(r.x + 1 / z, r.y + 1 / z, r.width - 2 / z, r.height - 2 / z);
             }
             ctx.setLineDash([]);
         }
 
         if (blurifyShowOutlines) {
-            // Numbered badge (only when outlines visible)
+            // Numbered badge — keep it constant size on screen
+            const bw = 22 / z, bh = 18 / z;
             ctx.fillStyle = 'rgba(0,212,255,0.9)';
-            ctx.fillRect(r.x + 1, r.y + 1, 22, 18);
+            ctx.fillRect(r.x + 1 / z, r.y + 1 / z, bw, bh);
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = `bold ${11 / z}px sans-serif`;
             ctx.textBaseline = 'middle';
-            ctx.fillText(i + 1, r.x + 5, r.y + 10);
+            ctx.fillText(i + 1, r.x + 5 / z, r.y + 10 / z);
             ctx.textBaseline = 'alphabetic';
         }
-
-        // Resize handles on the selected region (always, even when outlines hidden)
-        if (isSelected) blurifyDrawHandles(ctx, r);
     });
 
     // Active draw-selection preview
@@ -3439,10 +3528,11 @@ function redrawBlurifyCanvas() {
         const sy = Math.min(blurifyStartY, blurifyCurrentY);
         const sw = Math.abs(blurifyCurrentX - blurifyStartX);
         const sh = Math.abs(blurifyCurrentY - blurifyStartY);
+        const z = blurifyZoom;
         if (sw > 2 && sh > 2) {
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([5, 3]);
+            ctx.lineWidth = 1.5 / z;
+            ctx.setLineDash([5 / z, 3 / z]);
             if (blurifyCurrentShape === 'oval') {
                 ctx.fillStyle = 'rgba(255,255,255,0.08)';
                 ctx.beginPath();
@@ -3458,6 +3548,13 @@ function redrawBlurifyCanvas() {
             }
             ctx.setLineDash([]);
         }
+    }
+
+    // Restore to screen space, then draw resize handles for the selected region
+    ctx.restore();
+    const selIdx = blurifySelectedIdx;
+    if (selIdx >= 0 && blurifyRegions[selIdx]) {
+        blurifyDrawHandles(ctx, blurifyRegions[selIdx]);
     }
 }
 
@@ -3531,19 +3628,24 @@ function blurifyHitRegion(r, mx, my) {
 }
 
 /**
- * Return {regionIdx, type} for the topmost hit, or null.
+ * Return {regionIdx, type, cursor} for the topmost hit, or null.
+ * p = { rawX, rawY, x, y } from blurifyCanvasPos().
+ * Handle hit uses screen-space rawX/rawY (handles are drawn in screen space).
+ * Interior hit uses image-space x/y.
  * Checks selected region's handles first, then interiors top-to-bottom.
  */
-function blurifyGetHitInfo(mx, my) {
+function blurifyGetHitInfo(p) {
     const hs = BLURIFY_HANDLE_SIZE;
     // 1. Handles of selected region take priority
     if (blurifySelectedIdx >= 0 && blurifySelectedIdx < blurifyRegions.length) {
         const handles = blurifyGetHandles(blurifyRegions[blurifySelectedIdx]);
         for (const h of handles) {
-            if (Math.abs(mx - h.x) <= hs && Math.abs(my - h.y) <= hs)
+            const sx = blurifyPanX + h.x * blurifyZoom;
+            const sy = blurifyPanY + h.y * blurifyZoom;
+            if (Math.abs(p.rawX - sx) <= hs && Math.abs(p.rawY - sy) <= hs)
                 return { regionIdx: blurifySelectedIdx, type: h.type, cursor: h.cursor };
         }
-        if (blurifyHitRegion(blurifyRegions[blurifySelectedIdx], mx, my))
+        if (blurifyHitRegion(blurifyRegions[blurifySelectedIdx], p.x, p.y))
             return { regionIdx: blurifySelectedIdx, type: 'move', cursor: 'move' };
     }
     // 2. Other regions (last drawn = topmost)
@@ -3551,10 +3653,12 @@ function blurifyGetHitInfo(mx, my) {
         if (i === blurifySelectedIdx) continue;
         const handles = blurifyGetHandles(blurifyRegions[i]);
         for (const h of handles) {
-            if (Math.abs(mx - h.x) <= hs && Math.abs(my - h.y) <= hs)
+            const sx = blurifyPanX + h.x * blurifyZoom;
+            const sy = blurifyPanY + h.y * blurifyZoom;
+            if (Math.abs(p.rawX - sx) <= hs && Math.abs(p.rawY - sy) <= hs)
                 return { regionIdx: i, type: h.type, cursor: h.cursor };
         }
-        if (blurifyHitRegion(blurifyRegions[i], mx, my))
+        if (blurifyHitRegion(blurifyRegions[i], p.x, p.y))
             return { regionIdx: i, type: 'move', cursor: 'move' };
     }
     return null;
@@ -3609,16 +3713,21 @@ function blurifyApplyDrag(r, orig, type, dx, dy) {
     }
 }
 
-/** Draw resize handles for the selected region. */
+/**
+ * Draw resize handles for region r in screen space (call after ctx.restore()).
+ * Converts image-space handle positions to screen coords via pan/zoom.
+ */
 function blurifyDrawHandles(ctx, r) {
     const hs = BLURIFY_HANDLE_SIZE;
     blurifyGetHandles(r).forEach(h => {
+        const sx = blurifyPanX + h.x * blurifyZoom;
+        const sy = blurifyPanY + h.y * blurifyZoom;
         ctx.fillStyle = '#fff';
-        ctx.fillRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        ctx.fillRect(sx - hs / 2, sy - hs / 2, hs, hs);
         ctx.strokeStyle = '#00d4ff';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([]);
-        ctx.strokeRect(h.x - hs / 2, h.y - hs / 2, hs, hs);
+        ctx.strokeRect(sx - hs / 2, sy - hs / 2, hs, hs);
     });
 }
 
@@ -3627,10 +3736,31 @@ function blurifyDrawHandles(ctx, r) {
 function initBlurifyCanvasEvents() {
     const canvas = document.getElementById('blurify-canvas');
 
+    // ── Scroll-wheel zoom (focal-point) ──────────────────────────────────────
+    canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        const p = blurifyCanvasPos(e);
+        const factor = e.deltaY < 0 ? 1.25 : 1 / 1.25;
+        blurifySetZoom(blurifyZoom * factor, p.rawX, p.rawY);
+    }, { passive: false });
+
+    // ── Mouse down ───────────────────────────────────────────────────────────
     canvas.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
         const p = blurifyCanvasPos(e);
-        const hit = blurifyGetHitInfo(p.x, p.y);
+
+        // Space+drag → pan (only useful when zoomed)
+        if (blurifySpaceHeld) {
+            blurifyIsPanning    = true;
+            blurifyPanStartRawX = p.rawX;
+            blurifyPanStartRawY = p.rawY;
+            blurifyPanStartPanX = blurifyPanX;
+            blurifyPanStartPanY = blurifyPanY;
+            canvas.style.cursor = 'grabbing';
+            return;
+        }
+
+        const hit = blurifyGetHitInfo(p);
 
         if (hit) {
             // Select + start move/resize of existing region
@@ -3653,8 +3783,19 @@ function initBlurifyCanvasEvents() {
         }
     });
 
+    // ── Mouse move ───────────────────────────────────────────────────────────
     canvas.addEventListener('mousemove', e => {
         const p = blurifyCanvasPos(e);
+
+        if (blurifyIsPanning) {
+            const cw = blurifyCanvas.width, ch = blurifyCanvas.height;
+            blurifyPanX = Math.max(cw * (1 - blurifyZoom),
+                          Math.min(0, blurifyPanStartPanX + (p.rawX - blurifyPanStartRawX)));
+            blurifyPanY = Math.max(ch * (1 - blurifyZoom),
+                          Math.min(0, blurifyPanStartPanY + (p.rawY - blurifyPanStartRawY)));
+            redrawBlurifyCanvas();
+            return;
+        }
 
         if (blurifyDragMode && blurifyDragMode !== 'draw') {
             // Move or resize an existing region
@@ -3669,12 +3810,23 @@ function initBlurifyCanvasEvents() {
             redrawBlurifyCanvas();
         } else {
             // Update cursor based on what's under the pointer
-            const hit = blurifyGetHitInfo(p.x, p.y);
-            canvas.style.cursor = hit ? hit.cursor : 'crosshair';
+            if (blurifySpaceHeld) {
+                canvas.style.cursor = 'grab';
+            } else {
+                const hit = blurifyGetHitInfo(p);
+                canvas.style.cursor = hit ? hit.cursor : 'crosshair';
+            }
         }
     });
 
+    // ── Mouse up ─────────────────────────────────────────────────────────────
     canvas.addEventListener('mouseup', e => {
+        if (blurifyIsPanning) {
+            blurifyIsPanning = false;
+            canvas.style.cursor = blurifySpaceHeld ? 'grab' : 'crosshair';
+            return;
+        }
+
         const p = blurifyCanvasPos(e);
 
         if (blurifyDragMode === 'draw') {
@@ -3702,7 +3854,11 @@ function initBlurifyCanvasEvents() {
         redrawBlurifyCanvas();
     });
 
+    // ── Mouse leave ───────────────────────────────────────────────────────────
     canvas.addEventListener('mouseleave', () => {
+        if (blurifyIsPanning) {
+            blurifyIsPanning = false;
+        }
         if (blurifyIsDrawing) {
             blurifyIsDrawing = false;
             blurifyDragMode  = null;
@@ -3721,6 +3877,10 @@ function closeBlurifyModal() {
     blurifySelectedIdx = -1;
     blurifyDragMode = null;
     blurifyImg = null;
+    blurifyZoom = 1.0;
+    blurifyPanX = 0; blurifyPanY = 0;
+    blurifySpaceHeld = false;
+    blurifyIsPanning = false;
 }
 
 async function applyBlurify() {
@@ -3867,8 +4027,43 @@ function initializeBlurifyModal() {
         });
     });
 
+    // ── Zoom slider ───────────────────────────────────────────────────────────
+    const zoomSlider = document.getElementById('blurify-zoom-slider');
+    zoomSlider.addEventListener('input', () => {
+        const newZoom = parseInt(zoomSlider.value) / 100;
+        blurifySetZoom(newZoom);  // zoom toward canvas centre
+    });
+
+    // ── Zoom preset buttons ───────────────────────────────────────────────────
+    document.querySelectorAll('.blurify-zoom-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            blurifySetZoom(parseFloat(btn.dataset.zoom));
+        });
+    });
+
+    // ── Keyboard shortcuts ────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') closeBlurifyModal();
+        if (modal.style.display !== 'flex') return;
+        if (e.key === 'Escape') { closeBlurifyModal(); return; }
+        // Zoom: +/= zoom in, - zoom out, 0 reset
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); blurifySetZoom(blurifyZoom * 1.5); }
+        if (e.key === '-')                  { e.preventDefault(); blurifySetZoom(blurifyZoom / 1.5); }
+        if (e.key === '0')                  { e.preventDefault(); blurifySetZoom(1); }
+        // Space: switch cursor to grab for panning
+        if (e.key === ' ' && !blurifySpaceHeld) {
+            e.preventDefault();
+            blurifySpaceHeld = true;
+            const cv = document.getElementById('blurify-canvas');
+            if (cv && !blurifyIsPanning) cv.style.cursor = 'grab';
+        }
+    });
+    document.addEventListener('keyup', e => {
+        if (e.key === ' ') {
+            blurifySpaceHeld = false;
+            blurifyIsPanning = false;
+            const cv = document.getElementById('blurify-canvas');
+            if (cv) cv.style.cursor = 'crosshair';
+        }
     });
 
     initBlurifyCanvasEvents();

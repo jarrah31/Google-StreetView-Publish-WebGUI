@@ -3442,7 +3442,8 @@ select option {
 }
 
 .blurify-preset-btn,
-.blurify-shape-btn {
+.blurify-shape-btn,
+.blurify-zoom-preset-btn {
   flex: 1;
   padding: 5px 0;
   background: #222;
@@ -3454,9 +3455,11 @@ select option {
   transition: all .15s;
 }
 .blurify-preset-btn:hover,
-.blurify-shape-btn:hover  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; }
+.blurify-shape-btn:hover,
+.blurify-zoom-preset-btn:hover  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; }
 .blurify-preset-btn.active,
-.blurify-shape-btn.active  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; font-weight: 600; }
+.blurify-shape-btn.active,
+.blurify-zoom-preset-btn.active  { border-color: #00d4ff; color: #00d4ff; background: #0a2a33; font-weight: 600; }
 
 .blurify-regions-list {
   list-style: none;
