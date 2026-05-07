@@ -574,7 +574,10 @@ def _apply_blur_regions(image_bytes, regions):
             else:
                 img.paste(blurred, box)
         else:
-            # Outward feather — expand paste area so blur dissolves into surroundings
+            # Feathered edge — expand paste area so blur fades smoothly into surroundings.
+            # Strategy: inflate the shape mask by feather//2 px, then blur with
+            # sigma = feather/6 so the Gaussian drops to ~0 within feather px of the
+            # original shape boundary (smooth gradient, no hard step at the edge).
             ex  = max(0, x  - feather)
             ey  = max(0, y  - feather)
             ex2 = min(img.width,  x2 + feather)
@@ -586,16 +589,37 @@ def _apply_blur_regions(image_bytes, regions):
             blurred_region = img.crop((px, py, px2, py2)) \
                                .filter(ImageFilter.GaussianBlur(radius=radius)) \
                                .crop((ex - px, ey - py, ex2 - px, ey2 - py))
-            # Shape mask: full opacity over drawn area, blurred outward then inner restored
+            # Coordinates of the drawn shape within the expanded canvas
             ix, iy = x - ex, y - ey
             ix2, iy2 = x2 - ex, y2 - ey
-            mask = Image.new('L', (ew, eh), 0)
+            rx = (ix2 - ix) / 2  # oval semi-axes
+            ry = (iy2 - iy) / 2
+            cx_f = (ix + ix2) / 2
+            cy_f = (iy + iy2) / 2
+            # Hard mask — ensures the interior stays at exactly 255 opacity
+            hard_mask = Image.new('L', (ew, eh), 0)
             if shape == 'oval':
-                ImageDraw.Draw(mask).ellipse([ix, iy, ix2 - 1, iy2 - 1], fill=255)
+                ImageDraw.Draw(hard_mask).ellipse([ix, iy, ix2 - 1, iy2 - 1], fill=255)
             else:
-                ImageDraw.Draw(mask).rectangle([ix, iy, ix2 - 1, iy2 - 1], fill=255)
-            soft_mask = mask.filter(ImageFilter.GaussianBlur(radius=max(1, feather * 0.5)))
-            final_mask = ImageChops.lighter(soft_mask, mask)
+                ImageDraw.Draw(hard_mask).rectangle([ix, iy, ix2 - 1, iy2 - 1], fill=255)
+            # Inflated mask (shape grown by feather//2) blurred with sigma=feather/6.
+            # At the original boundary the value is ≈255; at feather px out it falls to ≈0,
+            # giving a smooth outward fade that matches the canvas-side linear gradient.
+            half_f = max(1, feather // 2)
+            sigma  = max(1.0, feather / 6.0)
+            inflated = Image.new('L', (ew, eh), 0)
+            if shape == 'oval':
+                ImageDraw.Draw(inflated).ellipse(
+                    [max(0, int(cx_f - rx - half_f)), max(0, int(cy_f - ry - half_f)),
+                     min(ew - 1, int(cx_f + rx + half_f)), min(eh - 1, int(cy_f + ry + half_f))],
+                    fill=255)
+            else:
+                ImageDraw.Draw(inflated).rectangle(
+                    [max(0, ix - half_f), max(0, iy - half_f),
+                     min(ew - 1, ix2 + half_f), min(eh - 1, iy2 + half_f)],
+                    fill=255)
+            soft_mask  = inflated.filter(ImageFilter.GaussianBlur(radius=sigma))
+            final_mask = ImageChops.lighter(soft_mask, hard_mask)
             img.paste(blurred_region, (ex, ey), final_mask)
 
     out = io.BytesIO()
