@@ -3933,15 +3933,21 @@ async function applyBlurify() {
         const scaleY = blurifyImageNaturalH / blurifyCanvas.height;
 
         const avgScale = (scaleX + scaleY) / 2;
-        const scaledRegions = blurifyRegions.map(r => ({
-            x:         Math.round(r.x * scaleX),
-            y:         Math.round(r.y * scaleY),
-            width:     Math.round(r.width  * scaleX),
-            height:    Math.round(r.height * scaleY),
-            intensity: r.intensity,
-            feather:   Math.round((r.feather || 0) * avgScale),
-            shape:     r.shape || 'rect'
-        }));
+        const scaledRegions = blurifyRegions.map(r => {
+            // Canvas preview uses blur(intensity*0.5)px in canvas-pixel space.
+            // Scale to image pixels so the server produces the same visual blur strength.
+            const canvasRadius = Math.max(1, r.intensity * 0.5);
+            return {
+                x:         Math.round(r.x * scaleX),
+                y:         Math.round(r.y * scaleY),
+                width:     Math.round(r.width  * scaleX),
+                height:    Math.round(r.height * scaleY),
+                intensity: r.intensity,                                // kept for compatibility
+                radius:    Math.max(2, Math.round(canvasRadius * avgScale)),  // image px
+                feather:   Math.round((r.feather || 0) * avgScale),    // image px
+                shape:     r.shape || 'rect'
+            };
+        });
 
         const formData = new FormData();
         formData.append('file', fd.file, fd.file.name);

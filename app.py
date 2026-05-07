@@ -560,7 +560,12 @@ def _apply_blur_regions(image_bytes, regions):
         y2 = min(y + h, img.height)
         if x2 <= x or y2 <= y:
             continue
-        radius = max(2, int(intensity * 0.5))
+        # Prefer client-supplied image-pixel radius (matches canvas preview strength).
+        # Fall back to intensity-derived radius for older callers.
+        if 'radius' in region:
+            radius = max(2, int(region.get('radius', 25)))
+        else:
+            radius = max(2, int(intensity * 0.5))
         box = (x, y, x2, y2)
         bw, bh = x2 - x, y2 - y
 
