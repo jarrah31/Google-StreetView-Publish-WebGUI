@@ -3315,43 +3315,32 @@ function blurifyCanvasPos(e) {
 }
 
 function buildFeatherMask(offW, offH, ix, iy, iw, ih, f) {
-    // Mask: solid white inside the inner rect, linear fade outward over f pixels,
-    // radial fade at corners. The original image shows through where the mask is dark.
+    // Mask: solid white inside the inner rect, fades outward over f pixels.
+    // Mirrors the server-side feather (inflate by f/2, Gaussian sigma=f/6) so the
+    // canvas preview matches the post-Apply JPEG. A pure linear gradient drops
+    // opacity faster in the inflated zone, making the rendered blur look smaller
+    // than what the server actually produces.
     const m = new OffscreenCanvas(offW, offH);
     const mc = m.getContext('2d');
-
+    if (f <= 0) {
+        mc.fillStyle = '#fff';
+        mc.fillRect(ix, iy, iw, ih);
+        return m;
+    }
+    const halfF = Math.max(1, f / 2);
+    const sigma = Math.max(1, f / 6);
+    // Inflated solid rect (ensures center stays ~1.0 after blur)
+    const bigOff = new OffscreenCanvas(offW, offH);
+    const bc = bigOff.getContext('2d');
+    bc.fillStyle = '#fff';
+    bc.fillRect(ix - halfF, iy - halfF, iw + halfF * 2, ih + halfF * 2);
+    // Blur the inflated rect into the mask canvas
+    mc.filter = `blur(${sigma}px)`;
+    mc.drawImage(bigOff, 0, 0);
+    mc.filter = 'none';
+    // Restore full opacity inside the original rect
     mc.fillStyle = '#fff';
     mc.fillRect(ix, iy, iw, ih);
-
-    // Edge strips
-    const topG = mc.createLinearGradient(0, iy - f, 0, iy);
-    topG.addColorStop(0, 'rgba(255,255,255,0)'); topG.addColorStop(1, 'rgba(255,255,255,1)');
-    mc.fillStyle = topG; mc.fillRect(ix, iy - f, iw, f);
-
-    const botG = mc.createLinearGradient(0, iy + ih, 0, iy + ih + f);
-    botG.addColorStop(0, 'rgba(255,255,255,1)'); botG.addColorStop(1, 'rgba(255,255,255,0)');
-    mc.fillStyle = botG; mc.fillRect(ix, iy + ih, iw, f);
-
-    const leftG = mc.createLinearGradient(ix - f, 0, ix, 0);
-    leftG.addColorStop(0, 'rgba(255,255,255,0)'); leftG.addColorStop(1, 'rgba(255,255,255,1)');
-    mc.fillStyle = leftG; mc.fillRect(ix - f, iy, f, ih);
-
-    const rightG = mc.createLinearGradient(ix + iw, 0, ix + iw + f, 0);
-    rightG.addColorStop(0, 'rgba(255,255,255,1)'); rightG.addColorStop(1, 'rgba(255,255,255,0)');
-    mc.fillStyle = rightG; mc.fillRect(ix + iw, iy, f, ih);
-
-    // Corners (radial fade centred on each corner of the inner rect)
-    [
-        [ix,      iy,      ix - f,  iy - f ],
-        [ix + iw, iy,      ix + iw, iy - f ],
-        [ix,      iy + ih, ix - f,  iy + ih],
-        [ix + iw, iy + ih, ix + iw, iy + ih],
-    ].forEach(([cx, cy, dx, dy]) => {
-        const cg = mc.createRadialGradient(cx, cy, 0, cx, cy, f);
-        cg.addColorStop(0, 'rgba(255,255,255,1)'); cg.addColorStop(1, 'rgba(255,255,255,0)');
-        mc.fillStyle = cg; mc.fillRect(dx, dy, f, f);
-    });
-
     return m;
 }
 
