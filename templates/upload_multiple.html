@@ -893,11 +893,15 @@ function createFileRow(index, fileData) {
         searchPlaceForFile(index);
     });
     
-    // Add thumbnail click handler for image preview
+    // Add thumbnail click handler for image preview.
+    // Always read filesMetadata[index].file at click time so that a
+    // blurified replacement is picked up rather than the original closure value.
     const thumbnail = row.querySelector('.file-thumbnail');
     thumbnail.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent row click
-        showImagePreview(thumbnailUrl, file.name, file);
+        const currentFd = filesMetadata[index];
+        const currentUrl = URL.createObjectURL(currentFd.file);
+        showImagePreview(currentUrl, currentFd.file.name, currentFd.file);
     });
     
     // Add row click handler
@@ -1224,19 +1228,23 @@ function updatePlaceId(index, placeId) {
 
 function searchPlaceForFile(index) {
     const fileData = filesMetadata[index];
-    if (!fileData.metadata || !fileData.metadata.hasGpsData) {
+    const lat = fileData.editedGPS?.isEdited ? fileData.editedGPS.latitude
+              : fileData.metadata?.hasGpsData ? fileData.metadata.latitude : null;
+    const lng = fileData.editedGPS?.isEdited ? fileData.editedGPS.longitude
+              : fileData.metadata?.hasGpsData ? fileData.metadata.longitude : null;
+
+    if (lat === null) {
         alert('No GPS coordinates available for this photo.');
         return;
     }
-    
+
     currentSearchFileIndex = index;
     const modal = document.getElementById('placeModal');
     modal.style.display = 'block';
-    
-    // Set up the search parameters
-    document.getElementById('latitude-input-hidden').value = fileData.metadata.latitude;
-    document.getElementById('longitude-input-hidden').value = fileData.metadata.longitude;
-    
+
+    document.getElementById('latitude-input-hidden').value = lat;
+    document.getElementById('longitude-input-hidden').value = lng;
+
     fetchPlaces();
 }
 
@@ -1837,6 +1845,10 @@ function hideImagePreview() {
         document.body.style.overflow = '';
         if (pannellumViewer) { pannellumViewer.destroy(); pannellumViewer = null; }
         document.getElementById('image-preview-img').src = '';
+        // Revoke the blob URL we created in the thumbnail click handler
+        if (previewCurrentUrl && previewCurrentUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(previewCurrentUrl);
+        }
         previewCurrentUrl = null;
         previewCurrentFile = null;
     }, 300);
@@ -2415,6 +2427,9 @@ function updateGpsCoordinates(fileIndex, newLat, newLng) {
     updateMainTableMetadataIcon(fileIndex);
     detectDuplicateGps();
     updateGpsFixBanner();
+
+    const searchBtn = document.querySelector(`tr[data-file-index="${fileIndex}"] .search-placeid-btn`);
+    if (searchBtn) searchBtn.disabled = false;
 }
 
 // Update a row's status cell and checkbox state
@@ -2453,6 +2468,9 @@ function resetGpsCoordinates(fileIndex) {
     updateMainTableMetadataIcon(fileIndex);
     detectDuplicateGps();
     updateGpsFixBanner();
+
+    const searchBtn = document.querySelector(`tr[data-file-index="${fileIndex}"] .search-placeid-btn`);
+    if (searchBtn) searchBtn.disabled = !fileData.metadata?.hasGpsData;
 }
 
 // Update detail row GPS display
