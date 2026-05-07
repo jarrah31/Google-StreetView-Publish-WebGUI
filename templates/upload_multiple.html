@@ -3213,6 +3213,8 @@ let blurifyPanStartRawX = 0, blurifyPanStartRawY = 0;
 let blurifyPanStartPanX = 0, blurifyPanStartPanY = 0;
 const BLURIFY_MIN_ZOOM = 1.0;
 const BLURIFY_MAX_ZOOM = 8.0;
+// Per-file zoom/pan memory so reopening a blurified file shows the result at the same scale
+const blurifyZoomMemory = {};  // fileIndex → { zoom, panX, panY }
 
 function openBlurifyModal(index) {
     blurifyFileIndex = index;
@@ -3221,9 +3223,11 @@ function openBlurifyModal(index) {
     blurifyIsDrawing = false;
     blurifySelectedIdx = -1;
     blurifyDragMode = null;
-    blurifyZoom = 1.0;
-    blurifyPanX = 0;
-    blurifyPanY = 0;
+    // Restore zoom/pan if we've previously edited this file, otherwise start at 1×
+    const mem = blurifyZoomMemory[index];
+    blurifyZoom = mem ? mem.zoom : 1.0;
+    blurifyPanX = mem ? mem.panX : 0;
+    blurifyPanY = mem ? mem.panY : 0;
     blurifySpaceHeld = false;
     blurifyIsPanning = false;
 
@@ -3238,13 +3242,13 @@ function openBlurifyModal(index) {
     blurifyCurrentShape = 'rect';
     document.querySelectorAll('.blurify-shape-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.shape === 'rect'));
-    // Reset zoom UI
+    // Sync zoom UI to the restored (or default) zoom level
     const zoomSliderEl = document.getElementById('blurify-zoom-slider');
-    if (zoomSliderEl) { zoomSliderEl.value = 100; }
+    if (zoomSliderEl) { zoomSliderEl.value = Math.round(blurifyZoom * 100); }
     const zoomValEl = document.getElementById('blurify-zoom-value');
-    if (zoomValEl) { zoomValEl.textContent = '1×'; }
+    if (zoomValEl) { zoomValEl.textContent = blurifyZoom + '×'; }
     document.querySelectorAll('.blurify-zoom-preset-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.zoom === '1'));
+        b.classList.toggle('active', parseFloat(b.dataset.zoom) === blurifyZoom));
     blurifyUpdateEditingBanner();
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -3257,7 +3261,16 @@ function openBlurifyModal(index) {
         blurifyImageNaturalH = blurifyImg.naturalHeight;
         URL.revokeObjectURL(objectUrl);
         initBlurifyCanvas();
-        redrawBlurifyCanvas();
+        // If restoring a saved zoom, re-apply via blurifySetZoom so pan clamping runs
+        // against the newly sized canvas (window may have resized between sessions).
+        if (blurifyZoomMemory[blurifyFileIndex]) {
+            const m = blurifyZoomMemory[blurifyFileIndex];
+            blurifyPanX = m.panX;
+            blurifyPanY = m.panY;
+            blurifySetZoom(m.zoom);  // clamps pan and syncs UI
+        } else {
+            redrawBlurifyCanvas();
+        }
     };
     blurifyImg.src = objectUrl;
 }
@@ -3964,6 +3977,8 @@ async function applyBlurify() {
             openBtn.dataset.blurified = 'true';
         }
 
+        // Remember zoom/pan so reopening shows the result at the same scale
+        blurifyZoomMemory[blurifyFileIndex] = { zoom: blurifyZoom, panX: blurifyPanX, panY: blurifyPanY };
         closeBlurifyModal();
         showFlashMessage(`Blur applied to "${fd.file.name}". The edited photo will be uploaded.`, 'success');
     } catch (err) {
