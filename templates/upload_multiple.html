@@ -3357,7 +3357,10 @@ function buildFeatherMask(offW, offH, ix, iy, iw, ih, f) {
 
 function buildOvalFeatherMask(offW, offH, cx, cy, rx, ry, f) {
     // Solid white ellipse inside, fades outward over f pixels.
-    // Technique: draw expanded ellipse → blur → overdraw solid inner ellipse to restore opacity.
+    // Mirrors the server-side _apply_blur_regions feather: inflate by f/2, blur
+    // with sigma=f/6 so the Gaussian falls to ~0 within f pixels of the original
+    // boundary. Result reaches f canvas-px (matching the rect mask's reach), not
+    // ~5f as the previous inflate-by-2f / blur-by-f approach produced.
     const m = new OffscreenCanvas(offW, offH);
     const mc = m.getContext('2d');
     if (f <= 0) {
@@ -3365,13 +3368,15 @@ function buildOvalFeatherMask(offW, offH, cx, cy, rx, ry, f) {
         mc.beginPath(); mc.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); mc.fill();
         return m;
     }
-    // Expanded solid ellipse (ensures center stays ~1.0 after blur)
+    const halfF = Math.max(1, f / 2);
+    const sigma = Math.max(1, f / 6);
+    // Inflated solid ellipse (ensures center stays ~1.0 after blur)
     const bigOff = new OffscreenCanvas(offW, offH);
     const bc = bigOff.getContext('2d');
     bc.fillStyle = '#fff';
-    bc.beginPath(); bc.ellipse(cx, cy, rx + f * 2, ry + f * 2, 0, 0, Math.PI * 2); bc.fill();
-    // Blur the expanded ellipse into the mask canvas
-    mc.filter = `blur(${f}px)`;
+    bc.beginPath(); bc.ellipse(cx, cy, rx + halfF, ry + halfF, 0, 0, Math.PI * 2); bc.fill();
+    // Blur the inflated ellipse into the mask canvas
+    mc.filter = `blur(${sigma}px)`;
     mc.drawImage(bigOff, 0, 0);
     mc.filter = 'none';
     // Restore full opacity inside the original ellipse
