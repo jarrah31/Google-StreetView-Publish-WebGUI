@@ -358,7 +358,7 @@
     <div id="blurify-modal" class="blurify-modal" style="display:none;">
         <div class="blurify-header">
             <span id="blurify-filename" class="blurify-header-title"></span>
-            <span class="blurify-header-hint">Drag to draw • Click to select/move/resize • Scroll or +/−/0 to zoom • Space+drag to pan</span>
+            <span class="blurify-header-hint">Drag to draw • Click to select/move/resize • Scroll or +/−/0 to zoom • Space+drag or P to pan • Del to delete</span>
             <button id="blurify-close-btn" class="blurify-header-close">✕ Close</button>
         </div>
         <div class="blurify-body">
@@ -368,7 +368,10 @@
             <div class="blurify-sidebar">
                 <div id="blurify-editing-banner" class="blurify-editing-banner" style="display:none;">
                     <span>✏️ Editing: <strong id="blurify-editing-region-label">Region 1</strong></span>
-                    <button id="blurify-deselect-btn" class="blurify-deselect-btn" title="Deselect region and go back to drawing mode">✕ Deselect</button>
+                    <div class="blurify-banner-actions">
+                        <button id="blurify-delete-region-btn" class="blurify-delete-region-btn" title="Delete this region (Del)">🗑 Delete</button>
+                        <button id="blurify-deselect-btn" class="blurify-deselect-btn" title="Deselect region and go back to drawing mode">✕ Deselect</button>
+                    </div>
                 </div>
                 <div class="blurify-tool-section">
                     <label class="blurify-label">Zoom <span id="blurify-zoom-value" class="blurify-intensity-value" style="float:right;">1×</span></label>
@@ -379,6 +382,9 @@
                         <button class="blurify-zoom-preset-btn" data-zoom="4">4×</button>
                         <button class="blurify-zoom-preset-btn" data-zoom="8">8×</button>
                     </div>
+                </div>
+                <div class="blurify-tool-section blurify-tool-section--pan">
+                    <button id="blurify-pan-btn" class="blurify-toggle-btn" title="Toggle pan mode (P) — drag the image to pan when zoomed">✋ Pan Mode: OFF</button>
                 </div>
                 <div class="blurify-tool-section">
                     <label class="blurify-label">Blur Intensity</label>
@@ -3208,6 +3214,7 @@ let blurifyDragOrigRegion = null;  // snapshot of region at drag start
 let blurifyZoom = 1.0;
 let blurifyPanX = 0, blurifyPanY = 0;
 let blurifySpaceHeld = false;
+let blurifyPanMode = false;
 let blurifyIsPanning = false;
 let blurifyPanStartRawX = 0, blurifyPanStartRawY = 0;
 let blurifyPanStartPanX = 0, blurifyPanStartPanY = 0;
@@ -3229,6 +3236,7 @@ function openBlurifyModal(index) {
     blurifyPanX = mem ? mem.panX : 0;
     blurifyPanY = mem ? mem.panY : 0;
     blurifySpaceHeld = false;
+    blurifyPanMode = false;
     blurifyIsPanning = false;
 
     const modal = document.getElementById('blurify-modal');
@@ -3239,6 +3247,8 @@ function openBlurifyModal(index) {
     document.getElementById('blurify-feather-value').textContent = blurifyCurrentFeather + 'px';
     blurifyShowOutlines = true;
     updateOutlinesToggleBtn();
+    const panBtn = document.getElementById('blurify-pan-btn');
+    if (panBtn) { panBtn.classList.remove('active'); panBtn.textContent = '✋ Pan Mode: OFF'; }
     blurifyCurrentShape = 'rect';
     document.querySelectorAll('.blurify-shape-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.shape === 'rect'));
@@ -3774,8 +3784,8 @@ function initBlurifyCanvasEvents() {
         if (e.button !== 0) return;
         const p = blurifyCanvasPos(e);
 
-        // Space+drag → pan (only useful when zoomed)
-        if (blurifySpaceHeld) {
+        // Space+drag or Pan Mode → pan (only useful when zoomed)
+        if (blurifySpaceHeld || blurifyPanMode) {
             blurifyIsPanning    = true;
             blurifyPanStartRawX = p.rawX;
             blurifyPanStartRawY = p.rawY;
@@ -3835,7 +3845,7 @@ function initBlurifyCanvasEvents() {
             redrawBlurifyCanvas();
         } else {
             // Update cursor based on what's under the pointer
-            if (blurifySpaceHeld) {
+            if (blurifySpaceHeld || blurifyPanMode) {
                 canvas.style.cursor = 'grab';
             } else {
                 const hit = blurifyGetHitInfo(p);
@@ -3848,7 +3858,7 @@ function initBlurifyCanvasEvents() {
     canvas.addEventListener('mouseup', e => {
         if (blurifyIsPanning) {
             blurifyIsPanning = false;
-            canvas.style.cursor = blurifySpaceHeld ? 'grab' : 'crosshair';
+            canvas.style.cursor = (blurifySpaceHeld || blurifyPanMode) ? 'grab' : 'crosshair';
             return;
         }
 
@@ -3892,7 +3902,7 @@ function initBlurifyCanvasEvents() {
             blurifyDragMode  = null;
             redrawBlurifyCanvas();
         }
-        canvas.style.cursor = 'crosshair';
+        canvas.style.cursor = blurifyPanMode ? 'grab' : 'crosshair';
     });
 }
 
@@ -3908,6 +3918,7 @@ function closeBlurifyModal() {
     blurifyZoom = 1.0;
     blurifyPanX = 0; blurifyPanY = 0;
     blurifySpaceHeld = false;
+    blurifyPanMode = false;
     blurifyIsPanning = false;
 }
 
@@ -3996,6 +4007,8 @@ function initializeBlurifyModal() {
     document.getElementById('blurify-close-btn').addEventListener('click', closeBlurifyModal);
     document.getElementById('blurify-cancel-btn').addEventListener('click', closeBlurifyModal);
     document.getElementById('blurify-apply-btn').addEventListener('click', applyBlurify);
+    document.getElementById('blurify-delete-region-btn').addEventListener('click', blurifyDeleteSelected);
+    document.getElementById('blurify-pan-btn').addEventListener('click', blurifyTogglePanMode);
     document.getElementById('blurify-deselect-btn').addEventListener('click', () => {
         blurifySelectedIdx = -1;
         blurifyDragMode = null;
@@ -4081,6 +4094,14 @@ function initializeBlurifyModal() {
     document.addEventListener('keydown', e => {
         if (modal.style.display !== 'flex') return;
         if (e.key === 'Escape') { closeBlurifyModal(); return; }
+        // Delete / Backspace: remove selected region
+        if ((e.key === 'Delete' || e.key === 'Backspace') && blurifySelectedIdx >= 0) {
+            e.preventDefault();
+            blurifyDeleteSelected();
+            return;
+        }
+        // P: toggle pan mode
+        if (e.key === 'p' || e.key === 'P') { e.preventDefault(); blurifyTogglePanMode(); }
         // Zoom: +/= zoom in, - zoom out, 0 reset
         if (e.key === '+' || e.key === '=') { e.preventDefault(); blurifySetZoom(blurifyZoom * 1.5); }
         if (e.key === '-')                  { e.preventDefault(); blurifySetZoom(blurifyZoom / 1.5); }
@@ -4137,6 +4158,29 @@ function blurifyUpdateEditingBanner() {
     banner.style.display = visible ? 'flex' : 'none';
     if (visible) {
         document.getElementById('blurify-editing-region-label').textContent = `Region ${blurifySelectedIdx + 1}`;
+    }
+}
+
+function blurifyDeleteSelected() {
+    if (blurifySelectedIdx < 0) return;
+    const idx = blurifySelectedIdx;
+    blurifyRegions.splice(idx, 1);
+    blurifySelectedIdx = -1;
+    updateBlurifyRegionsList();
+    blurifyUpdateEditingBanner();
+    redrawBlurifyCanvas();
+}
+
+function blurifyTogglePanMode() {
+    blurifyPanMode = !blurifyPanMode;
+    const btn = document.getElementById('blurify-pan-btn');
+    if (btn) {
+        btn.classList.toggle('active', blurifyPanMode);
+        btn.textContent = blurifyPanMode ? '✋ Pan Mode: ON' : '✋ Pan Mode: OFF';
+    }
+    const canvas = document.getElementById('blurify-canvas');
+    if (canvas && !blurifyIsPanning) {
+        canvas.style.cursor = blurifyPanMode ? 'grab' : 'crosshair';
     }
 }
 

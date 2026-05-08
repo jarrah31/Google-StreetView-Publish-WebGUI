@@ -3702,6 +3702,13 @@ select option {
   flex-shrink: 0;
 }
 
+.blurify-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
 .blurify-deselect-btn {
   background: transparent;
   border: 1px solid rgba(0,212,255,0.4);
@@ -3714,3 +3721,16 @@ select option {
   transition: background 0.15s;
 }
 .blurify-deselect-btn:hover { background: rgba(0,212,255,0.15); }
+
+.blurify-delete-region-btn {
+  background: transparent;
+  border: 1px solid rgba(231,76,60,0.5);
+  border-radius: 3px;
+  color: #e74c3c;
+  font-size: 11px;
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.blurify-delete-region-btn:hover { background: rgba(231,76,60,0.15); }
