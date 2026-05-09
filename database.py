@@ -498,6 +498,46 @@ def clean_deleted_photos(existing_photo_ids):
     finally:
         conn.close()
 
+def update_photo_metadata(photo_id, latitude=None, longitude=None, heading=None, places=None):
+    """Update editable photo metadata (coordinates, heading, places) in the database."""
+    logger.debug(f"=== FUNCTION DB: update_photo_metadata === photo_id={photo_id}")
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        updates = []
+        params = []
+        if latitude is not None:
+            updates.append("latitude = ?")
+            params.append(latitude)
+        if longitude is not None:
+            updates.append("longitude = ?")
+            params.append(longitude)
+        if heading is not None:
+            updates.append("heading = ?")
+            params.append(heading)
+        if updates:
+            updates.append("updated_at = ?")
+            params.append(datetime.now().isoformat())
+            params.append(photo_id)
+            cursor.execute(f"UPDATE photos SET {', '.join(updates)} WHERE photo_id = ?", params)
+
+        if places is not None:
+            cursor.execute("DELETE FROM places WHERE photo_id = ?", (photo_id,))
+            for place in places:
+                cursor.execute(
+                    "INSERT INTO places (photo_id, place_id, name, language_code) VALUES (?, ?, ?, ?)",
+                    (photo_id, place.get('placeId'), place.get('name'), place.get('languageCode'))
+                )
+
+        conn.commit()
+        logger.info(f"Database - Updated metadata for photo {photo_id}")
+    except Exception as e:
+        logger.error(f"Database - Error updating metadata for photo {photo_id}: {str(e)}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
 def delete_photo(photo_id):
     """Remove a single photo and its related records from the database."""
     logger.debug(f"=== FUNCTION DB: delete_photo === photo_id={photo_id}")

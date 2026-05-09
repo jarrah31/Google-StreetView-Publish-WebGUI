@@ -934,7 +934,7 @@ def list_photos_table_page():
         # Build base query
         base_query = """
         SELECT p.*, 
-               GROUP_CONCAT(DISTINCT pl.name) as place_names,
+               GROUP_CONCAT(DISTINCT COALESCE(pl.name, pl.place_id)) as place_names,
                COUNT(DISTINCT c.target_photo_id) as connection_count
         FROM photos p
         LEFT JOIN places pl ON p.photo_id = pl.photo_id
@@ -957,13 +957,13 @@ def list_photos_table_page():
             
             # Execute a completely separate query when places filter is used
             place_query = """
-            SELECT p.*, 
-                   GROUP_CONCAT(DISTINCT places.name) as place_names,
+            SELECT p.*,
+                   GROUP_CONCAT(DISTINCT COALESCE(places.name, places.place_id)) as place_names,
                    COUNT(DISTINCT c.target_photo_id) as connection_count
             FROM photos p
             JOIN places ON p.photo_id = places.photo_id
             LEFT JOIN connections c ON p.photo_id = c.source_photo_id
-            WHERE places.name LIKE ? COLLATE NOCASE
+            WHERE COALESCE(places.name, places.place_id) LIKE ? COLLATE NOCASE
             GROUP BY p.photo_id
             ORDER BY {} {}
             """.format(sort_by, sort_order)
@@ -1743,6 +1743,7 @@ def update_photo(photo_id):
         return redirect(url_for('edit_photo', photo_id=photo_id))
 
     place_id = request.form.get('placeId')
+    place_name = request.form.get('placeName')
     if place_id:
         photo["places"] = [{"placeId": place_id, "languageCode": "en"}]
 
@@ -1750,6 +1751,21 @@ def update_photo(photo_id):
     try:
         response = update_photo_api(credentials.token, photo_id, photo)
         # If we get here, the update was successful since update_photo_api would raise an APIError on failure
+        # Prefer place data from the API response (includes resolved name),
+        # fall back to form-submitted data (includes name from search), or None to leave DB unchanged
+        if response and "places" in response:
+            db_places = response["places"]
+        elif place_id:
+            db_places = [{"placeId": place_id, "name": place_name or None, "languageCode": "en"}]
+        else:
+            db_places = None
+        database.update_photo_metadata(
+            photo_id,
+            latitude=photo["pose"]["latLngPair"].get("latitude"),
+            longitude=photo["pose"]["latLngPair"].get("longitude"),
+            heading=photo["pose"].get("heading"),
+            places=db_places
+        )
         main_message = 'Photo updated successfully'
         details = "Please refresh the page after 30 seconds to see the changes."
         flash(Markup(f'{escape(main_message)}<br><span class="flash-details">{escape(details)}</span>'), 'success')

@@ -82,8 +82,6 @@
                     <form id="edit-form" action="{{ url_for('update_photo', photo_id=photo.photoId.id) }}" method="POST" class="grid-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Hidden fields to store original date formats for database update -->
-                        <input type="hidden" id="original-capture-time" value="{{ photo.originalCaptureTime }}">
-                        <input type="hidden" id="original-upload-time" value="{{ photo.originalUploadTime }}">
                         
                         <!-- Latitude -->
                         <label for="latitude" class="grid-label">Latitude:*</label>
@@ -102,9 +100,10 @@
                         <div class="grid-value form-group-wrapper"> <!-- Keep form-group-wrapper for structure -->
                             <div class="input-wrapper">
                                 <input type="text" id="placeId" name="placeId" value="{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}">
+                                <input type="hidden" id="placeName" name="placeName" value="{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}">
                                 <button type="button" class="search-button" id="placeID-search-button">&#128269;</button> <!-- magnifying glass icon -->
                             </div>
-                            <sub>{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
+                            <sub id="placeNameDisplay">{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}</sub>
                         </div>
 
                         <!-- Heading -->
@@ -659,101 +658,22 @@
             const submitButton = document.getElementById('submit-button');
 
             form.addEventListener('submit', function(event) {
-                // Prevent default form submission
-                event.preventDefault();
-                
-                // Disable the button and change text
                 submitButton.textContent = 'Please wait...';
                 submitButton.disabled = true;
-                
-                // Get the form data
-                const formData = new FormData(form);
-                
-                // Get values needed for the database update
-                const photoId = "{{ photo.photoId.id }}";
-                const latitude = formData.get('latitude');
-                const longitude = formData.get('longitude');
-                const heading = formData.get('heading');
-                const placeId = formData.get('placeId');
-                
-                // Create data object to update the database
-                // Include only the fields that will be updated by the API call
-                // while preserving all the existing photo data
-                const photoData = {
-                    photoId: { id: photoId },
-                    // Preserve existing data using the correct date formats from hidden fields
-                    captureTime: document.getElementById('original-capture-time').value,
-                    uploadTime: document.getElementById('original-upload-time').value,
-                    viewCount: {{ photo.viewCount if photo.viewCount is not none else 0 }},
-                    shareLink: "{{ photo.shareLink }}",
-                    thumbnailUrl: "{{ photo.thumbnailUrl }}",
-                    mapsPublishStatus: "{{ photo.mapsPublishStatus|default('') }}",
-                    // Include the updated fields
-                    pose: {
-                        latLngPair: {
-                            latitude: parseFloat(latitude),
-                            longitude: parseFloat(longitude)
-                        },
-                        heading: parseFloat(heading)
-                    }
-                };
-                
-                // DEBUG: Log the photoData being prepared for database update
-                console.log('=== EDIT_PHOTO DEBUG: PhotoData for database update ===');
-                console.log('PhotoID:', photoId);
-                console.log('Form values - Latitude:', latitude, 'Longitude:', longitude, 'Heading:', heading, 'PlaceID:', placeId);
-                console.log('Preserved data from hidden fields:');
-                console.log('  captureTime:', document.getElementById('original-capture-time').value);
-                console.log('  uploadTime:', document.getElementById('original-upload-time').value);
-                console.log('  viewCount:', {{ photo.viewCount if photo.viewCount is not none else 0 }});
-                console.log('  shareLink:', "{{ photo.shareLink }}");
-                console.log('Complete photoData object:', JSON.stringify(photoData, null, 2));
-                
-                // Add places if placeId exists
-                if (placeId) {
-                    photoData.places = [{ placeId: placeId, languageCode: "en" }];
-                } 
-                // If there was an existing place and no new placeId is provided, preserve the existing place data
-                else if ({% if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] %}true{% else %}false{% endif %}) {
-                    photoData.places = [{
-                        placeId: "{{ photo.places[0].placeId if 'places' in photo and photo.places|length > 0 and 'placeId' in photo.places[0] else '' }}",
-                        name: "{{ photo.places[0].name if 'places' in photo and photo.places|length > 0 and 'name' in photo.places[0] else '' }}",
-                        languageCode: "{{ photo.places[0].languageCode if 'places' in photo and photo.places|length > 0 and 'languageCode' in photo.places[0] else 'en' }}"
-                    }];
-                }
-                
-                // First update the database via a fetch request
-                fetch('/update_db', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(photoData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Database updated successfully:', data);
-                })
-                .catch(error => {
-                    console.error('Error updating database:', error);
-                })
-                .finally(() => {
-                    // Submit the form to update via API regardless of database update result
-                    form.submit();
-                });
             });
 
         });
 
         // function to handle place selection
         function selectPlace(event, element) {
-            event.preventDefault(); // prevent the link from being followed
-            let placeId = element.getAttribute('data-place-id'); // get place id from data attribute
+            event.preventDefault();
+            let placeId = element.getAttribute('data-place-id');
+            let placeName = element.textContent.trim();
 
-            // set PlaceId input box value to the selected place id
             document.querySelector("#placeId").value = placeId;
+            document.querySelector("#placeName").value = placeName;
+            document.querySelector("#placeNameDisplay").textContent = placeName;
 
-            // close the modal
             modal.style.display = 'none';
         }
         
