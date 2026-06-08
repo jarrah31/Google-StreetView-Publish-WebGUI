@@ -1654,16 +1654,46 @@ def create_connections():
             source_id = first_req['photo']['photoId']['id']
             dest_ids = [c['target']['id'] for c in first_req['photo'].get('connections', [])]
 
-            # For each destination, fetch its current connections, add source if missing
+            app.logger.debug(f"Reciprocal: source={source_id}, destinations={dest_ids}")
+
+            # For each destination, fetch its current connections, add source if missing.
+            #
+            # The destination's connection list must be read from BOTH the live API
+            # *and* the local database, then merged. The Street View API is eventually
+            # consistent: a connection written seconds ago may not yet appear in a fresh
+            # GET. Because updateMask='connections' replaces the entire array, relying on
+            # the API alone lets rapid back-to-back reciprocal writes clobber each other
+            # (a stale GET returns [], so the new write drops previously-added links).
+            # The local DB is written synchronously on every operation, so unioning the
+            # two sources guarantees we never drop a link we just created.
             reciprocal_requests = []
-            db_updates = []
             for dest_id in dest_ids:
                 try:
                     dest_photo = get_photo(credentials.token, dest_id)
-                    existing = dest_photo.get('connections', [])
-                    existing_target_ids = {c['target']['id'] for c in existing}
+                    if dest_photo is None:
+                        app.logger.error(f"Reciprocal: get_photo returned None for {dest_id}")
+                        reciprocal_errors.append(dest_id)
+                        continue
+                    api_existing = dest_photo.get('connections', [])
+                    api_target_ids = {c['target']['id'] for c in api_existing}
+
+                    # Merge with the local DB's view of this destination's connections
+                    db_target_ids = set()
+                    try:
+                        for conn in database.get_connections_by_photo_ids([dest_id]):
+                            db_target_ids.add(conn['target'])
+                    except Exception as e:
+                        app.logger.error(f"Reciprocal: error reading DB connections for {dest_id}: {e}")
+
+                    existing_target_ids = api_target_ids | db_target_ids
+                    app.logger.debug(
+                        f"Reciprocal: {dest_id} existing connections "
+                        f"api={list(api_target_ids)} db={list(db_target_ids)} merged={list(existing_target_ids)}"
+                    )
                     if source_id not in existing_target_ids:
-                        new_conns = existing + [{'target': {'id': source_id}}]
+                        # Write the full merged set so no existing link is dropped
+                        new_conns = [{'target': {'id': tid}} for tid in existing_target_ids]
+                        new_conns.append({'target': {'id': source_id}})
                         reciprocal_requests.append({
                             'updateMask': 'connections',
                             'photo': {
@@ -1671,15 +1701,18 @@ def create_connections():
                                 'connections': new_conns
                             }
                         })
-                        db_updates.append(dest_id)
+                        app.logger.debug(f"Reciprocal: queued update for {dest_id} with {len(new_conns)} connections")
+                    else:
+                        app.logger.debug(f"Reciprocal: {dest_id} already has {source_id}, skipping")
                 except Exception as e:
-                    app.logger.error(f"Error fetching connections for {dest_id}: {e}")
+                    app.logger.error(f"Reciprocal: error fetching connections for {dest_id}: {e}")
                     reciprocal_errors.append(dest_id)
 
             # Send reciprocal updates in batches of 20 (API limit)
             for i in range(0, len(reciprocal_requests), 20):
                 batch = reciprocal_requests[i:i + 20]
                 try:
+                    app.logger.debug(f"Reciprocal: sending batch of {len(batch)} updates")
                     rec_resp = requests.post(
                         'https://streetviewpublish.googleapis.com/v1/photos:batchUpdate',
                         headers={
@@ -1690,12 +1723,24 @@ def create_connections():
                         timeout=30
                     )
                     rec_resp.raise_for_status()
-                    for req in batch:
+                    rec_data = rec_resp.json()
+                    app.logger.debug(f"Reciprocal batch response: {rec_data}")
+                    results = rec_data.get('results', [])
+                    for idx, req in enumerate(batch):
                         dest_id = req['photo']['photoId']['id']
-                        database.add_connection(dest_id, source_id)
-                        reciprocal_added += 1
+                        result = results[idx] if idx < len(results) else {}
+                        # Success: result contains a 'photo' key; failure: contains 'status' with non-zero code
+                        status = result.get('status', {})
+                        status_code = status.get('code', 0)
+                        if 'photo' in result or status_code == 0:
+                            database.add_connection(dest_id, source_id)
+                            reciprocal_added += 1
+                            app.logger.debug(f"Reciprocal: success for {dest_id}")
+                        else:
+                            reciprocal_errors.append(dest_id)
+                            app.logger.error(f"Reciprocal: API rejected update for {dest_id}: {status}")
                 except Exception as e:
-                    app.logger.error(f"Error creating reciprocal connections batch: {e}")
+                    app.logger.error(f"Reciprocal: batch request failed: {e}")
                     for req in batch:
                         reciprocal_errors.append(req['photo']['photoId']['id'])
 
