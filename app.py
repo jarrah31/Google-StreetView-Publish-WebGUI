@@ -27,6 +27,7 @@ from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 # Find the placedID by using this page:
@@ -45,7 +46,7 @@ if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
 # fetch_token() — the classic "fails sometimes, works on retry" OAuth symptom.
 os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
-APP_VERSION = "3.4.2"
+APP_VERSION = "3.4.3"
 
 # OAuth scope requested for the Street View Publish API. Single source of truth so
 # the authorize, callback, and credential-load paths can never drift apart.
@@ -53,6 +54,18 @@ STREETVIEW_SCOPE = 'https://www.googleapis.com/auth/streetviewpublish'
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# When running behind a reverse proxy that terminates TLS (e.g. the prod Docker
+# instance behind https://sv.nb.moyho.me/), Flask otherwise sees the request as
+# internal http and reconstructs request.url with the wrong scheme/host. That
+# breaks the OAuth token exchange, which compares the callback URL against the
+# registered HTTPS redirect URI. ProxyFix rebuilds request.url from the proxy's
+# X-Forwarded-* headers. Gated behind TRUST_PROXY so it's off for direct local
+# dev (no proxy = no forwarded headers to trust, and trusting them when directly
+# reachable would let a client spoof its host/scheme).
+if os.getenv('TRUST_PROXY', '0') == '1':
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
 csrf = CSRFProtect(app)
 limiter = Limiter(
     get_remote_address,
@@ -197,9 +210,19 @@ def get_client_config(config):
     
     if not client_id or not client_secret:
         raise AuthenticationError("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables")
-    
+
+    # A Web OAuth client nests its credentials under "web"; a Desktop ("installed")
+    # client uses "installed". google_auth_oauthlib.Flow.from_client_config keys off
+    # whichever is present, so prod (Web client, HTTPS proxy redirect) and dev
+    # (Desktop client, http loopback redirect) select via OAUTH_CLIENT_TYPE.
+    client_type = os.getenv('OAUTH_CLIENT_TYPE', 'web').strip().lower()
+    if client_type not in ('web', 'installed'):
+        raise AuthenticationError(
+            f"Invalid OAUTH_CLIENT_TYPE '{client_type}' (expected 'web' or 'installed')")
+    app.logger.debug(f"get_client_config: building '{client_type}' OAuth client config")
+
     return {
-        "web": {
+        client_type: {
             "client_id": client_id,
             "client_secret": client_secret,
             "project_id": "streetview-app",  # This is optional but recommended
