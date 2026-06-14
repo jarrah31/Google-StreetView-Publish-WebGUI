@@ -22,7 +22,6 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from markupsafe import Markup, escape
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from math import radians, cos, sin, sqrt, atan2
 from google.oauth2.credentials import Credentials
@@ -40,7 +39,17 @@ load_dotenv()
 if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-APP_VERSION = "3.4.1"
+# Relax token scope validation. Google may return MORE scopes than requested when
+# include_granted_scopes='true' is used (the account has other Google scopes granted),
+# which makes oauthlib raise a non-deterministic "Scope has changed" error during
+# fetch_token() — the classic "fails sometimes, works on retry" OAuth symptom.
+os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
+
+APP_VERSION = "3.4.2"
+
+# OAuth scope requested for the Street View Publish API. Single source of truth so
+# the authorize, callback, and credential-load paths can never drift apart.
+STREETVIEW_SCOPE = 'https://www.googleapis.com/auth/streetviewpublish'
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -216,6 +225,12 @@ class APIError(StreetViewError):
 
 class AuthenticationError(StreetViewError):
     """Handles authentication and authorization errors"""
+    pass
+
+class TransientAuthError(StreetViewError):
+    """Raised when a token refresh fails for a transient reason (network blip,
+    Google 5xx). Credentials are deliberately preserved so the next attempt can
+    succeed — distinct from a permanently dead refresh token, which deletes them."""
     pass
 
 class FileOperationError(StreetViewError):
@@ -412,36 +427,94 @@ def format_capture_time(capture_time):
             return capture_time
         return "N/A"
 
-def refresh_credentials(credentials):
-    app.logger.debug(f"=== FUNCTION APP: refresh_credentials ===")
-    try:
-        credentials.refresh(Request())
-    except google.auth.exceptions.RefreshError:
-        os.remove('userdata/creds.data')
-        return None
-    save_credentials(credentials)
-    return credentials
+CREDS_FILE = 'userdata/creds.data'
 
-def get_credentials():
-    app.logger.debug(f"=== FUNCTION APP: get_credentials ===")
-    creds_file = 'userdata/creds.data'
-    if os.path.exists(creds_file):
-        credentials = Credentials.from_authorized_user_file(creds_file, ['https://www.googleapis.com/auth/streetviewpublish'])
-        if credentials is None or not credentials.valid:
-            if credentials and credentials.expired and credentials.refresh_token:
-                return refresh_credentials(credentials)
-            os.remove(creds_file)
-            return None
-        return credentials
-    return None
+def _delete_credentials_file(reason=""):
+    """Remove the stored credentials file, tolerating a concurrent removal."""
+    try:
+        os.remove(CREDS_FILE)
+        app.logger.info(f"Deleted stored credentials{(': ' + reason) if reason else ''}")
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        app.logger.error(f"Failed to delete credentials file: {e}")
 
 
 def save_credentials(credentials):
     app.logger.debug(f"=== FUNCTION APP: save_credentials ===")
-    creds_path = 'userdata/creds.data'
-    with open(creds_path, 'w') as f:
+    with open(CREDS_FILE, 'w') as f:
         f.write(credentials.to_json())
-    os.chmod(creds_path, 0o600)
+    os.chmod(CREDS_FILE, 0o600)
+
+
+def refresh_credentials(credentials):
+    """Single source of truth for refreshing an OAuth token.
+
+    Returns the refreshed credentials on success.
+    Returns None (and deletes creds.data) on a permanent failure — i.e. the
+    refresh token itself was rejected, which means the user must re-authorise.
+    Raises TransientAuthError on a transient failure (network/Google 5xx), leaving
+    creds.data in place so the next attempt can recover without re-login.
+    """
+    app.logger.debug(f"=== FUNCTION APP: refresh_credentials ===")
+    old_expiry = credentials.expiry.isoformat() if credentials.expiry else 'unknown'
+    app.logger.debug(f"refresh_credentials: token expired (was due {old_expiry}), attempting refresh")
+    try:
+        credentials.refresh(Request())
+    except google.auth.exceptions.RefreshError as e:
+        # Permanent: refresh token revoked/expired (e.g. months of inactivity, or
+        # an OAuth consent screen still in 'Testing' status — those tokens die in 7 days).
+        app.logger.warning(f"refresh_credentials: refresh token rejected, re-auth required: {e}")
+        _delete_credentials_file(reason="refresh token rejected")
+        return None
+    except google.auth.exceptions.TransportError as e:
+        # Transient: network/transport problem. Keep creds so a retry can succeed.
+        app.logger.error(f"refresh_credentials: transient transport error during refresh (creds preserved): {e}")
+        raise TransientAuthError(str(e))
+    save_credentials(credentials)
+    new_expiry = credentials.expiry.isoformat() if credentials.expiry else 'unknown'
+    app.logger.debug(f"refresh_credentials: refresh succeeded, new expiry {new_expiry}")
+    return credentials
+
+
+def get_credentials(raise_transient=False):
+    """Load stored credentials, refreshing them if expired.
+
+    Returns valid credentials, or None if the user needs to (re)authenticate.
+    Transient refresh failures are swallowed as None by default (logged, creds
+    preserved) so a momentary network blip doesn't force a full re-login. Callers
+    that want to surface a "try again" message can pass raise_transient=True to
+    let TransientAuthError propagate.
+    """
+    app.logger.debug(f"=== FUNCTION APP: get_credentials ===")
+    if not os.path.exists(CREDS_FILE):
+        app.logger.debug("get_credentials: no stored credentials file present")
+        return None
+
+    try:
+        credentials = Credentials.from_authorized_user_file(CREDS_FILE, [STREETVIEW_SCOPE])
+    except (ValueError, json.JSONDecodeError) as e:
+        app.logger.warning(f"get_credentials: stored credentials file is unreadable/corrupt: {e}")
+        _delete_credentials_file(reason="corrupt credentials file")
+        return None
+
+    if credentials and credentials.valid:
+        app.logger.debug("get_credentials: stored token is valid")
+        return credentials
+
+    if credentials and credentials.expired and credentials.refresh_token:
+        try:
+            return refresh_credentials(credentials)
+        except TransientAuthError:
+            if raise_transient:
+                raise
+            return None
+
+    # No usable refresh token — permanent, clean up so the UI prompts a fresh login.
+    app.logger.warning("get_credentials: stored credentials invalid and not refreshable, deleting")
+    _delete_credentials_file(reason="no usable refresh token")
+    return None
+
 
 def token_required(f):
     app.logger.debug(f"=== FUNCTION APP: token_required ===")
@@ -449,11 +522,9 @@ def token_required(f):
     def decorated_function(*args, **kwargs):
         credentials = get_credentials()
         if credentials is None or not credentials.valid:
-            if credentials and credentials.expired and credentials.refresh_token:
-                credentials.refresh(Request())
-                save_credentials(credentials)
-            else:
-                return redirect(url_for('authorize'))
+            app.logger.debug("token_required: no valid credentials, redirecting to /authorize")
+            return redirect(url_for('authorize'))
+        g.credentials = credentials
         return f(*args, **kwargs)
     return decorated_function
 
@@ -708,10 +779,11 @@ def logout():
 def authorize():
     app.logger.debug(f"=== FUNCTION APP: authorize ===")
     redirect_uri = os.getenv('REDIRECT_URI')
+    app.logger.info(f"OAuth[authorize]: starting flow, redirect_uri={redirect_uri}")
     try:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
             client_config,
-            scopes=['https://www.googleapis.com/auth/streetviewpublish'],
+            scopes=[STREETVIEW_SCOPE],
             redirect_uri=redirect_uri
         )
         authorization_url, state = flow.authorization_url(
@@ -720,8 +792,10 @@ def authorize():
             prompt='consent'  # Force consent screen to get refresh token
         )
         session['oauth_state'] = state  # Store state in session
+        app.logger.info(f"OAuth[authorize]: state stored in session ({state[:8]}…), redirecting to Google")
         return redirect(authorization_url)
     except Exception as e:
+        app.logger.error(f"OAuth[authorize]: failed to build authorization URL: {type(e).__name__}: {e}")
         if "invalid_client" in str(e):
             raise AuthenticationError(f"invalid_client: {str(e)}")
         raise
@@ -730,25 +804,60 @@ def authorize():
 def oauth2callback():
     app.logger.debug(f"=== FUNCTION APP: oauth2callback ===")
     redirect_uri = os.getenv('REDIRECT_URI')
-    state = session.get('oauth_state')  # Get state from session
-    if not state:
+
+    # Surface Google-side errors (e.g. user denied consent) instead of failing opaquely.
+    error = request.args.get('error')
+    if error:
+        app.logger.warning(f"OAuth[callback]: Google returned error='{error}'")
+        flash(f"Authentication was not completed: {error}. Please try again.", "error")
+        return redirect(url_for('index'))
+
+    stored_state = session.get('oauth_state')
+    returned_state = request.args.get('state')
+    app.logger.info(
+        f"OAuth[callback]: received callback; "
+        f"session_state={'present' if stored_state else 'MISSING'}, "
+        f"returned_state={'present' if returned_state else 'MISSING'}"
+    )
+    if not stored_state:
+        # Session cookie didn't survive the round-trip to Google (cleared cookie,
+        # regenerated FLASK_SECRET_KEY, or SameSite). Most common cause of the
+        # "fails then works on retry" symptom.
+        app.logger.warning("OAuth[callback]: no oauth_state in session — cannot verify callback")
         flash("OAuth state missing. Please try authenticating again.", "error")
         return redirect(url_for('authorize'))
-        
-    flow = InstalledAppFlow.from_client_config(
+    if returned_state and returned_state != stored_state:
+        app.logger.warning("OAuth[callback]: state mismatch between session and callback")
+        flash("OAuth state mismatch. Please try authenticating again.", "error")
+        return redirect(url_for('authorize'))
+
+    # Use the same Flow type as authorize() — mixing Flow/InstalledAppFlow is fragile.
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
         client_config,
-        scopes=['https://www.googleapis.com/auth/streetviewpublish'],
+        scopes=[STREETVIEW_SCOPE],
         redirect_uri=redirect_uri,
-        state=state
+        state=stored_state
     )
     authorization_response = request.url
     try:
+        app.logger.info("OAuth[callback]: exchanging authorization code for tokens")
         flow.fetch_token(authorization_response=authorization_response)
         credentials = flow.credentials
+        has_refresh = bool(credentials.refresh_token)
+        expiry = credentials.expiry.isoformat() if credentials.expiry else 'unknown'
+        app.logger.info(
+            f"OAuth[callback]: token exchange OK; refresh_token={'yes' if has_refresh else 'NO'}, "
+            f"granted_scopes={credentials.scopes}, expiry={expiry}"
+        )
+        if not has_refresh:
+            # Without a refresh token, the session dies in ~1h and silent refresh is impossible.
+            app.logger.warning("OAuth[callback]: no refresh_token returned — re-auth will be required when the access token expires")
         save_credentials(credentials)
+        session.pop('oauth_state', None)
         flash("Account successfully authenticated.")
         return redirect(url_for('index'))
     except Exception as e:
+        app.logger.error(f"OAuth[callback]: token exchange failed: {type(e).__name__}: {e}")
         if "invalid_client" in str(e):
             raise AuthenticationError(f"invalid_client: {str(e)}")
         raise
@@ -2672,32 +2781,23 @@ def database_viewer():
 def check_auth_status():
     app.logger.debug(f"=== FUNCTION APP: check_auth_status ===")
     """API endpoint to check if the user is authenticated without redirecting"""
-    credentials = get_credentials()
-    
-    if credentials is None:
+    # get_credentials() is the single source of truth: it loads, refreshes if
+    # needed, and returns valid credentials or None. We pass raise_transient=True
+    # so a network blip during refresh is reported distinctly from a dead token —
+    # the frontend can then say "try again" rather than "you're logged out".
+    try:
+        credentials = get_credentials(raise_transient=True)
+    except TransientAuthError as e:
+        app.logger.error(f"check_auth_status: transient error refreshing credentials: {e}")
+        return jsonify({
+            "authenticated": False,
+            "transient": True,
+            "message": "Temporary network problem verifying your session. Please try again."
+        })
+
+    if credentials is None or not credentials.valid:
         return jsonify({"authenticated": False, "message": "Not logged in"})
-        
-    # Check if credentials are still valid or can be refreshed
-    if not credentials.valid:
-        if credentials.expired and credentials.refresh_token:
-            try:
-                # Try to refresh the token
-                credentials = refresh_credentials(credentials)
-                if credentials and credentials.valid:
-                    return jsonify({
-                        "authenticated": True,
-                        "message": "Authenticated",
-                        "expires_in": credentials.expiry.isoformat() if credentials.expiry else None
-                    })
-                else:
-                    return jsonify({"authenticated": False, "message": "Credentials refresh failed"})
-            except Exception as e:
-                app.logger.error(f"Error refreshing credentials: {str(e)}")
-                return jsonify({"authenticated": False, "message": "Error refreshing credentials"})
-        else:
-            return jsonify({"authenticated": False, "message": "Credentials expired"})
-    
-    # Credentials are valid
+
     return jsonify({
         "authenticated": True,
         "message": "Authenticated",
