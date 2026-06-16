@@ -46,7 +46,7 @@ if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
 # fetch_token() — the classic "fails sometimes, works on retry" OAuth symptom.
 os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
-APP_VERSION = "3.4.4"
+APP_VERSION = "3.4.5"
 
 # OAuth scope requested for the Street View Publish API. Single source of truth so
 # the authorize, callback, and credential-load paths can never drift apart.
