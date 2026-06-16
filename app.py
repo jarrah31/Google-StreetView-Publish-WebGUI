@@ -46,7 +46,7 @@ if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
 # fetch_token() — the classic "fails sometimes, works on retry" OAuth symptom.
 os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
-APP_VERSION = "3.4.3"
+APP_VERSION = "3.4.4"
 
 # OAuth scope requested for the Street View Publish API. Single source of truth so
 # the authorize, callback, and credential-load paths can never drift apart.
@@ -2852,10 +2852,28 @@ def init_app():
         # Configure Flask application
         flask_secret = os.getenv('FLASK_SECRET_KEY')
         if not flask_secret:
-            # Auto-generate and warn if no dedicated secret key is set
+            # No explicit key set: persist an auto-generated one under userdata/ so
+            # the session signing key is stable across restarts. This also keeps it
+            # consistent if more than one process is ever used — separate processes
+            # each generating their own key would break the OAuth session/state
+            # round-trip. Set FLASK_SECRET_KEY in the environment to override.
             import secrets as _secrets
-            flask_secret = _secrets.token_hex(32)
-            app.logger.warning("FLASK_SECRET_KEY not set in .env - using auto-generated key. Sessions will not persist across restarts.")
+            secret_path = 'userdata/.flask_secret_key'
+            try:
+                if os.path.exists(secret_path):
+                    with open(secret_path) as f:
+                        flask_secret = f.read().strip()
+                if not flask_secret:
+                    flask_secret = _secrets.token_hex(32)
+                    with open(secret_path, 'w') as f:
+                        f.write(flask_secret)
+                    os.chmod(secret_path, 0o600)
+                    app.logger.info(f"FLASK_SECRET_KEY not set; generated a persistent key at {secret_path}")
+                else:
+                    app.logger.info(f"FLASK_SECRET_KEY not set; using persistent key from {secret_path}")
+            except Exception as e:
+                flask_secret = flask_secret or _secrets.token_hex(32)
+                app.logger.warning(f"Could not persist Flask secret key ({e}); using a per-process key. Set FLASK_SECRET_KEY to make sessions stable.")
         app.config.update({
             'SECRET_KEY': flask_secret,
             'DEBUG': config['app']['debug'],

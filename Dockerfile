@@ -41,5 +41,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Expose the port the app runs on
 EXPOSE ${PORT:-5001}
 
-# Command to run the application with gunicorn production server
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "-w", "4", "app:app"]
+# Command to run the application with gunicorn production server.
+# This is a single-user tool: one worker keeps the session signing key and the
+# in-memory stores (_preview_store, _filenames_cache) consistent (multiple
+# workers are separate processes that share neither, which breaks OAuth login
+# and Pannellum previews). Threads provide concurrency so a slow photo upload
+# doesn't block other requests.
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "-w", "1", "--threads", "4", "app:app"]
