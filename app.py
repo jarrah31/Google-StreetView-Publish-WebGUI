@@ -48,6 +48,17 @@ os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
 APP_VERSION = "3.4.5"
 
+# GitHub repo used for the "new release available" check on the home page.
+GITHUB_REPO = "jarrah31/Google-StreetView-Publish-WebGUI"
+GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
+UPDATE_INSTRUCTIONS_URL = f"https://github.com/{GITHUB_REPO}/wiki/Updating"
+
+# Cache for the latest-release lookup so we don't hit the GitHub API (60 req/hr
+# unauthenticated) on every home page load. Same pattern as _filenames_cache.
+_release_cache = None          # dict result of check_for_update(), or None
+_release_cache_time = 0        # epoch seconds of last successful fetch
+_RELEASE_CACHE_TTL = 6 * 60 * 60   # 6 hours
+
 # OAuth scope requested for the Street View Publish API. Single source of truth so
 # the authorize, callback, and credential-load paths can never drift apart.
 STREETVIEW_SCOPE = 'https://www.googleapis.com/auth/streetviewpublish'
@@ -215,7 +226,10 @@ def get_client_config(config):
     # client uses "installed". google_auth_oauthlib.Flow.from_client_config keys off
     # whichever is present, so prod (Web client, HTTPS proxy redirect) and dev
     # (Desktop client, http loopback redirect) select via OAUTH_CLIENT_TYPE.
-    client_type = os.getenv('OAUTH_CLIENT_TYPE', 'web').strip().lower()
+    # Treat unset/empty/whitespace as the default 'web'. An empty value is easy to
+    # produce via docker-compose (e.g. `- OAUTH_CLIENT_TYPE=${OAUTH_CLIENT_TYPE}`
+    # with the var absent from .env), and should fall back rather than error.
+    client_type = (os.getenv('OAUTH_CLIENT_TYPE') or '').strip().lower() or 'web'
     if client_type not in ('web', 'installed'):
         raise AuthenticationError(
             f"Invalid OAUTH_CLIENT_TYPE '{client_type}' (expected 'web' or 'installed')")
@@ -758,6 +772,58 @@ def blurify_photo():
         app.logger.error(f'Blurify error: {e}')
         return jsonify({'error': 'Image processing failed'}), 500
 
+
+def _parse_version(v):
+    """Turn '3.4.5' (or 'v3.4.5') into a tuple of ints for comparison.
+    Non-numeric/garbage parts are ignored so a malformed tag never crashes."""
+    parts = re.findall(r'\d+', v or '')
+    return tuple(int(p) for p in parts) if parts else (0,)
+
+def check_for_update():
+    """Return update info by querying the GitHub releases API, with a 6h cache.
+
+    Returns a dict:
+      {update_available, current_version, latest_version,
+       release_url, instructions_url}
+    On any network/parse error returns update_available=False (fail quiet) so
+    the home page never breaks because GitHub is unreachable or rate-limited.
+    """
+    global _release_cache, _release_cache_time
+    now = time.time()
+    if _release_cache is not None and (now - _release_cache_time) < _RELEASE_CACHE_TTL:
+        return _release_cache
+
+    result = {
+        "update_available": False,
+        "current_version": APP_VERSION,
+        "latest_version": None,
+        "release_url": GITHUB_RELEASES_URL,
+        "instructions_url": UPDATE_INSTRUCTIONS_URL,
+    }
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+            headers={"Accept": "application/vnd.github+json"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        tag = (resp.json() or {}).get("tag_name", "")
+        latest = tag.lstrip("vV").strip()
+        if latest:
+            result["latest_version"] = latest
+            result["update_available"] = _parse_version(latest) > _parse_version(APP_VERSION)
+        # Only cache successful lookups, so a transient failure retries next time.
+        _release_cache = result
+        _release_cache_time = now
+    except Exception as e:
+        app.logger.warning(f"Release check failed: {e}")
+    return result
+
+@app.route('/check_update')
+@limiter.limit("20 per minute")
+def check_update():
+    """JSON endpoint polled by the home page to show the update banner."""
+    return jsonify(check_for_update())
 
 @app.route('/')
 def index():
