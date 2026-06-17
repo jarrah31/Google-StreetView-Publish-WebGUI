@@ -46,7 +46,7 @@ if os.getenv('OAUTHLIB_INSECURE_TRANSPORT', '1') == '1':
 # fetch_token() — the classic "fails sometimes, works on retry" OAuth symptom.
 os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
-APP_VERSION = "3.4.6"
+APP_VERSION = "3.4.7"
 
 # GitHub repo used for the "new release available" check on the home page.
 GITHUB_REPO = "jarrah31/Google-StreetView-Publish-WebGUI"
