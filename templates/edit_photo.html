@@ -521,6 +521,19 @@
             // Initialize modal
             modal = document.getElementById("myModal");
             console.log('Modal found:', modal);
+
+            // On submit, disable the Submit Changes button(s) and show a wait
+            // message so it can't be double-clicked. The page reloads after the
+            // update, which restores the original button state automatically.
+            const editForm = document.getElementById('edit-form');
+            if (editForm) {
+                editForm.addEventListener('submit', function() {
+                    document.querySelectorAll('button[form="edit-form"][type="submit"]').forEach(function(btn) {
+                        btn.disabled = true;
+                        btn.textContent = 'Please wait...';
+                    });
+                });
+            }
             
             // Check if search button exists before setting up event listener
             const searchButton = document.getElementById('placeID-search-button');
