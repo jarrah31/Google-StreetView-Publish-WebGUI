@@ -773,6 +773,43 @@ def blurify_photo():
         return jsonify({'error': 'Image processing failed'}), 500
 
 
+@app.route('/photo_highres/<photo_id>', methods=['GET'])
+@token_required
+@limiter.limit("30 per minute")
+def photo_highres(photo_id):
+    """Stream the original full-resolution image for a photo.
+
+    The Street View Publish API only returns the photo's downloadUrl when
+    GetPhoto is called with view=INCLUDE_DOWNLOAD_URL, and that URL requires
+    the OAuth token to fetch. So we resolve and proxy the bytes server-side
+    rather than handing the URL to the browser. Loaded on demand (it can be
+    tens of MB) by the Zoom View's "Load high-resolution" button.
+    """
+    try:
+        credentials = get_credentials()
+        photo = get_photo(credentials.token, photo_id, view="INCLUDE_DOWNLOAD_URL")
+        download_url = photo.get('downloadUrl')
+        if not download_url:
+            return jsonify({'error': 'No high-resolution image available for this photo'}), 404
+
+        img_resp = requests.get(
+            download_url,
+            headers={"Authorization": f"Bearer {credentials.token}"},
+            timeout=120,
+        )
+        if img_resp.status_code != 200:
+            app.logger.error(f"High-res download failed ({img_resp.status_code}) for {photo_id}")
+            return jsonify({'error': 'Failed to download high-resolution image'}), 502
+
+        resp = Response(img_resp.content, mimetype=img_resp.headers.get('Content-Type', 'image/jpeg'))
+        # Safe to cache privately: original bytes for a photo never change.
+        resp.headers['Cache-Control'] = 'private, max-age=3600'
+        return resp
+    except Exception as e:
+        app.logger.error(f"Error fetching high-res photo {photo_id}: {e}")
+        return jsonify({'error': 'Failed to fetch high-resolution image'}), 500
+
+
 def _parse_version(v):
     """Turn '3.4.5' (or 'v3.4.5') into a tuple of ints for comparison.
     Non-numeric/garbage parts are ignored so a malformed tag never crashes."""
@@ -2364,16 +2401,22 @@ def list_photos(token, page_size=10, page_token=None, filters=None):
         app.logger.error(f"Error in list_photos: {str(e)}")
         raise APIError("Failed to list photos", response=getattr(e, 'response', None))
 
-def get_photo(token, photo_id):
+def get_photo(token, photo_id, view=None):
     app.logger.debug(f"=== FUNCTION APP: get_photo ===")
-    """Get a single photo with error handling"""
+    """Get a single photo with error handling.
+
+    Pass view="INCLUDE_DOWNLOAD_URL" to populate the photo's downloadUrl
+    (the original full-resolution upload); otherwise the API defaults to
+    BASIC and only thumbnailUrl is returned.
+    """
     try:
         url = f"https://streetviewpublish.googleapis.com/v1/photo/{photo_id}"
         headers = {
             "Authorization": f"Bearer {token}",
         }
+        params = {"view": view} if view else None
         app.logger.info(f"Fetching photo with ID: {photo_id}")
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, params=params, timeout=30)
         return handle_api_response(response, f"Failed to get photo {photo_id}")
     except Exception as e:
         app.logger.error(f"Error in get_photo: {str(e)}")

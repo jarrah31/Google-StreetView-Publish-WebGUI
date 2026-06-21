@@ -3,6 +3,22 @@
 {% block content %}
 <div class="container">
 
+    <div id="update-banner" class="update-banner" hidden>
+        <span class="update-banner-icon">🎉</span>
+        <div class="update-banner-content">
+            <p class="update-banner-title">
+                A new version is available —
+                <strong id="update-latest-version"></strong>
+                <span class="update-banner-current">(you have v{{ app_version }})</span>
+            </p>
+            <div class="update-banner-links">
+                <a id="update-instructions-link" href="#" target="_blank" rel="noopener">How to update →</a>
+                <a id="update-releases-link" href="#" target="_blank" rel="noopener">View release notes →</a>
+            </div>
+        </div>
+        <button type="button" id="update-banner-dismiss" class="update-banner-dismiss" aria-label="Dismiss">✕</button>
+    </div>
+
     <div class="hero">
         <h1>Your 360° photos,<br><span class="hero-accent">published everywhere.</span></h1>
         <p class="hero-subtitle">Upload, edit, and publish photospheres to Google Street View. Manage GPS coordinates, create connections, and track your views — all in one place.</p>
@@ -73,4 +89,39 @@
     </div>
 
 </div>
+
+<script>
+(function () {
+    var banner = document.getElementById('update-banner');
+
+    function refreshBanner() {
+        // Always start hidden, so a stale/bfcache-restored "visible" state can
+        // never persist a banner that no longer applies.
+        banner.hidden = true;
+        if (sessionStorage.getItem('updateBannerDismissed') === '1') return;
+
+        fetch('{{ url_for("check_update") }}', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                // Require a real version string before ever showing the banner.
+                if (!data || !data.update_available || !data.latest_version) return;
+                document.getElementById('update-latest-version').textContent = 'v' + data.latest_version;
+                document.getElementById('update-instructions-link').href = data.instructions_url;
+                document.getElementById('update-releases-link').href = data.release_url;
+                banner.hidden = false;
+            })
+            .catch(function () { /* offline / rate-limited — stay silent */ });
+    }
+
+    refreshBanner();
+    // Re-run when the page is restored from the back-forward cache (scripts
+    // don't otherwise re-execute on bfcache restore).
+    window.addEventListener('pageshow', function (e) { if (e.persisted) refreshBanner(); });
+
+    document.getElementById('update-banner-dismiss').addEventListener('click', function () {
+        banner.hidden = true;
+        sessionStorage.setItem('updateBannerDismissed', '1');
+    });
+})();
+</script>
 {% endblock %}

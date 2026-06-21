@@ -31,6 +31,7 @@
                 <!-- View Toggle Buttons -->
                 <div class="view-toggle-container" style="margin-bottom: 15px;">
                     <button id="flat-view-btn" class="view-btn active" onclick="togglePhotoView('flat')">Flat View</button>
+                    <button id="zoom-view-btn" class="view-btn" onclick="togglePhotoView('zoom')">Zoom View</button>
                     <button id="360-view-btn" class="view-btn" onclick="togglePhotoView('360')">360° View</button>
                 </div>
                 
@@ -42,6 +43,25 @@
                     </a>
                 </div>
                 
+                <!-- Zoom View -->
+                <div id="zoom-view-container" class="view-container" style="display: none;">
+                    <div id="zoom-view-viewport" class="zoom-view-viewport">
+                        <img id="zoom-view-img" class="zoom-view-img" src="{{ photo.thumbnailUrl }}" alt="Zoomable photo" draggable="false">
+                        <div class="dashed-line"></div>
+                    </div>
+                    <div class="heading-360-controls" style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                        <button type="button" class="view-btn" onclick="zoomViewStep(-1)" title="Zoom out">&minus;</button>
+                        <input type="range" id="zoom-view-slider" min="1" max="20" step="0.1" value="1" style="flex: 1;" oninput="zoomViewSetLevel(parseFloat(this.value))">
+                        <button type="button" class="view-btn" onclick="zoomViewStep(1)" title="Zoom in">+</button>
+                        <button type="button" class="view-btn" onclick="zoomViewReset()" title="Reset zoom">Reset</button>
+                        <button type="button" id="zoom-highres-btn" class="view-btn" onclick="zoomViewLoadHighRes()" title="Load the original full-resolution image">Load high-res</button>
+                    </div>
+                    <span class="heading-help" style="font-size: 12px; color: #666;">
+                        Zoom with the slider or mouse wheel; drag up/down to pan. The red line stays centred to show where the middle of the photo falls.
+                        Use <em>Load high-res</em> for the original full-resolution image (may take a moment for large photos).
+                    </span>
+                </div>
+
                 <!-- 360° Street View -->
                 <div id="360-view-container" class="view-container" style="display: none;">
                     <div id="streetview-panorama" style="height: 550px; position: relative; border-radius: 8px; overflow: hidden;">
@@ -790,6 +810,187 @@
             nearbyMarkers = [];
         }
         
+        // === ZOOM VIEW FUNCTIONS ===
+
+        let zoomViewInitialized = false;
+        let zoomViewLevel = 1;     // 1 = fit-to-width
+        let zoomViewPanY = 0;      // vertical offset of the image (px), top-relative
+
+        function applyZoomViewTransform() {
+            const viewport = document.getElementById('zoom-view-viewport');
+            const img = document.getElementById('zoom-view-img');
+            if (!viewport || !img || !img.naturalWidth) return;
+
+            const vpWidth = viewport.clientWidth;
+            const vpHeight = viewport.clientHeight;
+            const baseScale = vpWidth / img.naturalWidth;       // fit width at level 1
+            const scale = baseScale * zoomViewLevel;
+            const imgW = img.naturalWidth * scale;
+            const imgH = img.naturalHeight * scale;
+
+            // Horizontal: always centred so the red line stays on the photo's middle
+            const left = (vpWidth - imgW) / 2;
+
+            // Vertical: pan within bounds, or centre when shorter than the viewport
+            let top;
+            if (imgH <= vpHeight) {
+                top = (vpHeight - imgH) / 2;
+            } else {
+                const minY = vpHeight - imgH; // most negative
+                zoomViewPanY = Math.max(minY, Math.min(0, zoomViewPanY));
+                top = zoomViewPanY;
+            }
+            zoomViewPanY = top;
+
+            img.style.width = imgW + 'px';
+            img.style.height = imgH + 'px';
+            img.style.left = left + 'px';
+            img.style.top = top + 'px';
+        }
+
+        // Zoom to a new level while keeping the content at viewport y-coordinate
+        // `anchorY` fixed in place (so you zoom "into" that point).
+        function zoomViewZoomTo(level, anchorY) {
+            const viewport = document.getElementById('zoom-view-viewport');
+            const img = document.getElementById('zoom-view-img');
+            if (!viewport || !img || !img.naturalWidth) return;
+
+            const newLevel = Math.max(1, Math.min(20, level));
+            const baseScale = viewport.clientWidth / img.naturalWidth;
+            const oldImgH = img.naturalHeight * baseScale * zoomViewLevel;
+            const newImgH = img.naturalHeight * baseScale * newLevel;
+
+            if (oldImgH > 0) {
+                // Keep the content point under anchorY anchored as the image scales
+                zoomViewPanY = anchorY - (anchorY - zoomViewPanY) * (newImgH / oldImgH);
+            }
+
+            zoomViewLevel = newLevel;
+            const slider = document.getElementById('zoom-view-slider');
+            if (slider) slider.value = zoomViewLevel;
+            applyZoomViewTransform();
+        }
+
+        // Slider / buttons zoom around the vertical centre of the viewport
+        function zoomViewSetLevel(level) {
+            const viewport = document.getElementById('zoom-view-viewport');
+            zoomViewZoomTo(level, viewport ? viewport.clientHeight / 2 : 0);
+        }
+
+        function zoomViewStep(direction) {
+            zoomViewSetLevel(zoomViewLevel + direction * 0.5);
+        }
+
+        function zoomViewReset() {
+            zoomViewPanY = 0;
+            zoomViewSetLevel(1);
+        }
+
+        function initializeZoomView() {
+            const img = document.getElementById('zoom-view-img');
+            if (!img) return;
+
+            if (!zoomViewInitialized) {
+                zoomViewInitialized = true;
+                const viewport = document.getElementById('zoom-view-viewport');
+
+                // Mouse wheel zooms in/out toward the cursor position
+                viewport.addEventListener('wheel', function(e) {
+                    e.preventDefault();
+                    const rect = viewport.getBoundingClientRect();
+                    const anchorY = e.clientY - rect.top;
+                    zoomViewZoomTo(zoomViewLevel + (e.deltaY < 0 ? 0.3 : -0.3), anchorY);
+                }, { passive: false });
+
+                // Drag to pan vertically only
+                let dragging = false;
+                let lastY = 0;
+                viewport.addEventListener('mousedown', function(e) {
+                    dragging = true;
+                    lastY = e.clientY;
+                    viewport.classList.add('dragging');
+                });
+                window.addEventListener('mousemove', function(e) {
+                    if (!dragging) return;
+                    zoomViewPanY += e.clientY - lastY;
+                    lastY = e.clientY;
+                    applyZoomViewTransform();
+                });
+                window.addEventListener('mouseup', function() {
+                    dragging = false;
+                    viewport.classList.remove('dragging');
+                });
+
+                // Touch support (vertical pan)
+                let touchY = 0;
+                viewport.addEventListener('touchstart', function(e) {
+                    if (e.touches.length === 1) touchY = e.touches[0].clientY;
+                }, { passive: true });
+                viewport.addEventListener('touchmove', function(e) {
+                    if (e.touches.length !== 1) return;
+                    e.preventDefault();
+                    zoomViewPanY += e.touches[0].clientY - touchY;
+                    touchY = e.touches[0].clientY;
+                    applyZoomViewTransform();
+                }, { passive: false });
+
+                // Recompute on resize
+                window.addEventListener('resize', function() {
+                    if (current360View === 'zoom') applyZoomViewTransform();
+                });
+            }
+
+            // Wait for the image to have natural dimensions before laying out
+            if (img.complete && img.naturalWidth) {
+                applyZoomViewTransform();
+            } else {
+                img.addEventListener('load', applyZoomViewTransform, { once: true });
+            }
+
+            // Restore the high-res image if it was loaded earlier this session
+            // (survives view swaps and page reloads; served from browser cache).
+            const photoId = "{{ photo.photoId.id }}";
+            if (!zoomHighResLoaded) {
+                try {
+                    if (sessionStorage.getItem('zoomHighRes_' + photoId) === '1') {
+                        zoomViewLoadHighRes();
+                    }
+                } catch (e) {}
+            }
+        }
+
+        let zoomHighResLoaded = false;
+
+        // Swap the zoom image for the original full-resolution version on demand.
+        function zoomViewLoadHighRes() {
+            const img = document.getElementById('zoom-view-img');
+            const btn = document.getElementById('zoom-highres-btn');
+            if (!img || zoomHighResLoaded) return;
+
+            const photoId = "{{ photo.photoId.id }}";
+            const originalLabel = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+
+            const highRes = new Image();
+            highRes.onload = function() {
+                img.src = highRes.src;
+                zoomHighResLoaded = true;
+                btn.textContent = 'High-res loaded';
+                // Remember for this session so returning to the zoom view (or
+                // reloading the page) restores the high-res image instantly from
+                // the browser cache instead of falling back to the thumbnail.
+                try { sessionStorage.setItem('zoomHighRes_' + photoId, '1'); } catch (e) {}
+                applyZoomViewTransform();
+            };
+            highRes.onerror = function() {
+                btn.disabled = false;
+                btn.textContent = originalLabel;
+                alert('Could not load the high-resolution image for this photo.');
+            };
+            highRes.src = '/photo_highres/' + encodeURIComponent(photoId);
+        }
+
         // === 360° STREET VIEW FUNCTIONS ===
         
         // Function to toggle between flat and 360° views
@@ -797,29 +998,41 @@
             console.log('Toggling photo view to:', viewType);
             
             const flatContainer = document.getElementById('flat-view-container');
+            const zoomContainer = document.getElementById('zoom-view-container');
             const view360Container = document.getElementById('360-view-container');
             const flatBtn = document.getElementById('flat-view-btn');
+            const zoomBtn = document.getElementById('zoom-view-btn');
             const view360Btn = document.getElementById('360-view-btn');
-            
+
             // Update button states
             flatBtn.classList.remove('active');
+            zoomBtn.classList.remove('active');
             view360Btn.classList.remove('active');
-            
+
+            // Hide all views first
+            flatContainer.style.display = 'none';
+            zoomContainer.style.display = 'none';
+            view360Container.style.display = 'none';
+
             if (viewType === '360') {
                 // Show 360° view
-                flatContainer.style.display = 'none';
                 view360Container.style.display = 'block';
                 view360Btn.classList.add('active');
                 current360View = '360';
-                
+
                 // Initialize Street View if not already done
                 if (!streetViewInitialized) {
                     initializeStreetView();
                 }
+            } else if (viewType === 'zoom') {
+                // Show zoom view
+                zoomContainer.style.display = 'block';
+                zoomBtn.classList.add('active');
+                current360View = 'zoom';
+                initializeZoomView();
             } else {
                 // Show flat view
                 flatContainer.style.display = 'block';
-                view360Container.style.display = 'none';
                 flatBtn.classList.add('active');
                 current360View = 'flat';
             }
